@@ -12,18 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67d1ddb6b8fb495098c2ffbc47b7946f, type: 3}
   m_Name: Recipe_BL
   m_EditorClassIdentifier: 
-  _kitCode: 1
+  _kitCode: BL
   _boxSize: 1
   _items:
   - _componentId: blood_tube
     _shelfSlotId: B-1
+    _slotNumber: 1
     _slotLocalPosition: {x: -0.06, y: 0, z: 0.04}
   - _componentId: needle
     _shelfSlotId: B-2
+    _slotNumber: 2
     _slotLocalPosition: {x: 0.06, y: 0, z: 0.04}
   - _componentId: alcohol_pad
     _shelfSlotId: B-3
+    _slotNumber: 3
     _slotLocalPosition: {x: -0.06, y: 0, z: -0.04}
   - _componentId: tourniquet
     _shelfSlotId: B-4
+    _slotNumber: 4
     _slotLocalPosition: {x: 0.06, y: 0, z: -0.04}

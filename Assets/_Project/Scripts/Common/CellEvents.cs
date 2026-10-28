@@ -15,8 +15,8 @@ namespace MediKitTwin.Common
         /// <summary>박스가 검사 구역에 도착해 정지했다. (FR-05)</summary>
         public static event Action<KitData> AtInspection;
 
-        /// <summary>판정이 끝났다. KitData.Verdict에 결과가 들어 있다. (FR-06, FR-07)</summary>
-        public static event Action<KitData, InspectionVerdict> InspectionResult;
+        /// <summary>판정이 끝났다. 결과는 KitData.Verdict에 들어 있고, 발행하기 전에 채워진다. (FR-06, FR-07)</summary>
+        public static event Action<KitData> InspectionResult;
 
         /// <summary>불량 박스가 정원에 도달해 비워졌다. (FR-09)</summary>
         public static event Action RejectBinCleared;
@@ -39,14 +39,33 @@ namespace MediKitTwin.Common
         /// <summary>선반 칸이 보충되었다. 인자는 선반 칸 ID. (FR-13)</summary>
         public static event Action<string> StockRefilled;
 
-        /// <summary>설비 상태가 바뀌었다. 대시보드의 설비 상태 표시에 쓴다. (FR-14)</summary>
+        /// <summary>재고 부족으로 주문이 보류되었다. 인자는 주문 순번. (FR-13)</summary>
+        public static event Action<int> OrderHeld;
+
+        /// <summary>보류되었던 주문이 대기열 맨 앞으로 돌아와 다시 시작된다. 인자는 주문 순번. (FR-13)</summary>
+        public static event Action<int> OrderResumed;
+
+        /// <summary>
+        /// 설비 상태가 바뀌었거나 주기 통지(StationHeartbeat.IntervalSeconds)다. 상태가 같아도 다시 보내며,
+        /// 대시보드는 이 신호가 끊긴 시간으로 "응답 없음"을 판단한다. (FR-14)
+        /// </summary>
         public static event Action<StationId, StationState> StationStateChanged;
 
         public static void RaiseKitReady(KitData kit) => KitReady?.Invoke(kit);
 
         public static void RaiseAtInspection(KitData kit) => AtInspection?.Invoke(kit);
 
-        public static void RaiseInspectionResult(KitData kit, InspectionVerdict verdict) => InspectionResult?.Invoke(kit, verdict);
+        public static void RaiseInspectionResult(KitData kit)
+        {
+            // 구독자가 kit.Verdict를 읽으므로, 비어 있으면 신호를 보내지 않고 발행 순서 오류를 알린다.
+            if (kit == null || kit.Verdict == null)
+            {
+                Debug.LogError("InspectionResult는 KitData.Verdict를 채운 뒤에 발행해야 한다.");
+                return;
+            }
+
+            InspectionResult?.Invoke(kit);
+        }
 
         public static void RaiseRejectBinCleared() => RejectBinCleared?.Invoke();
 
@@ -61,6 +80,10 @@ namespace MediKitTwin.Common
         public static void RaiseStockEmpty(string shelfSlotId, int orderSequence) => StockEmpty?.Invoke(shelfSlotId, orderSequence);
 
         public static void RaiseStockRefilled(string shelfSlotId) => StockRefilled?.Invoke(shelfSlotId);
+
+        public static void RaiseOrderHeld(int orderSequence) => OrderHeld?.Invoke(orderSequence);
+
+        public static void RaiseOrderResumed(int orderSequence) => OrderResumed?.Invoke(orderSequence);
 
         public static void RaiseStationStateChanged(StationId station, StationState state) => StationStateChanged?.Invoke(station, state);
 
@@ -78,6 +101,8 @@ namespace MediKitTwin.Common
             KitShipped = null;
             StockEmpty = null;
             StockRefilled = null;
+            OrderHeld = null;
+            OrderResumed = null;
             StationStateChanged = null;
         }
     }
