@@ -12,12 +12,16 @@ namespace MediKitTwin.Common
         IReadOnlyList<string> ShelfSlotIds { get; }
 
         /// <summary>
-        /// 구성품 1개를 꺼낸다. 재고가 0이면 false를 돌려주고, 그 칸에서 처음 0이 될 때
-        /// CellEvents.StockEmpty를 발행하며 보충 대기를 시작한다. 알 수 없는 칸 ID도 false이다.
+        /// 구성품 1개를 꺼낸다. 재고가 0이면 false를 돌려주고, 꺼내기에 실패할 때마다
+        /// 그 주문 순번으로 CellEvents.StockEmpty를 발행한다. 보충 대기 중에 다른 주문이 같은 칸을 집으려 해도
+        /// 신호가 나가므로 그 주문도 보류된다. 보충 타이머는 칸마다 한 번만 건다. 알 수 없는 칸 ID도 false이다.
         /// </summary>
         bool TryTake(string shelfSlotId, int orderSequence);
 
-        /// <summary>반쯤 담긴 박스를 제거할 때 담겨 있던 구성품 1개를 재고로 되돌린다.</summary>
+        /// <summary>
+        /// 반쯤 담긴 박스를 제거할 때 담겨 있던 구성품 1개를 재고로 되돌린다.
+        /// 보충을 기다리는 칸에는 되돌리지 않는다(무시). 보충하면 그 칸은 어차피 보충 수량이 된다.
+        /// </summary>
         void Return(string shelfSlotId);
 
         /// <summary>현재 재고 수량. 알 수 없는 칸 ID이면 0이다.</summary>

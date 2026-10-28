@@ -19,7 +19,7 @@ namespace MediKitTwin.Common
             KitCode = kitCode?.Trim().ToUpperInvariant();
         }
 
-        /// <summary>셀에 투입되는 순서(1, 2, 3, ...). 실행 안에서 유일하다.</summary>
+        /// <summary>셀에 투입되는 순서(1, 2, 3, ...). 실행 안에서 유일하며, IKitSource가 키트를 내줄 때 부여한다(등록 순서가 아니다).</summary>
         public int KitSequence { get; }
 
         public int OrderSequence { get; }
@@ -47,7 +47,7 @@ namespace MediKitTwin.Common
         /// <summary>피킹을 시작한 시각. 시작 전에는 null이다.</summary>
         public float? StartTime { get; set; }
 
-        /// <summary>하역을 마치거나 불량 박스에 도달한 시각. 끝나기 전에는 null이다.</summary>
+        /// <summary>하역을 마치거나 불량 박스에 도달한 시각. 하역 로봇(KitShipped)이나 푸셔(KitRejected)가 신호를 보내기 전에 채운다. 끝나기 전에는 null이다.</summary>
         public float? CompleteTime { get; set; }
 
         /// <summary>누락 규칙(FR-04)이 빠뜨린 구성품의 슬롯 번호를 기록한다. 누락이 아니면 호출하지 않는다.</summary>
