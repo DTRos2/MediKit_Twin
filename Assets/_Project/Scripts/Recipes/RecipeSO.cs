@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using MediKitTwin.Common;
 using UnityEngine;
 
 namespace MediKitTwin.Recipes
@@ -11,13 +10,14 @@ namespace MediKitTwin.Recipes
     [CreateAssetMenu(menuName = "MediKitTwin/Recipe", fileName = "Recipe_")]
     public sealed class RecipeSO : ScriptableObject
     {
-        [SerializeField] private KitCode _kitCode;
+        [Tooltip("키트 종류 코드(EM, BL, DX). 대문자로 쓰고 레시피끼리 겹치면 안 된다.")]
+        [SerializeField] private string _kitCode;
         [SerializeField] private BoxSize _boxSize;
 
         [Tooltip("피킹 순서대로 나열한다. 항목 1개가 슬롯 1칸이다.")]
         [SerializeField] private List<RecipeItem> _items = new List<RecipeItem>();
 
-        public KitCode KitCode => _kitCode;
+        public string KitCode => _kitCode;
 
         public BoxSize BoxSize => _boxSize;
 
