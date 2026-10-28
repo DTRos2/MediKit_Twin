@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>aurix_bringup</name>
+  <version>0.1.0</version>
+  <description>Launch files for the aurix demo</description>
+  <maintainer email="ajtwlscldjs@gmail.com">coc</maintainer>
+  <license>Apache-2.0</license>
+  <exec_depend>ros_tcp_endpoint</exec_depend>
+  <exec_depend>ros_tcp_endpoint_cpp</exec_depend>
+  <exec_depend>aurix_arm</exec_depend>
+  <exec_depend>aurix_monitor</exec_depend>
+  <exec_depend>aurix_description</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

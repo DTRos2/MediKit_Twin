@@ -1,0 +1,17 @@
+# ros_tcp_endpoint
+endpoint:
+  ros__parameters:
+    ROS_IP: 0.0.0.0
+    ROS_TCP_PORT: 7777
+
+# 로봇암 A 커맨더
+arm_a_commander:
+  ros__parameters:
+    publish_rate: 20.0     # Hz
+    tolerance: 0.01        # rad, 도착 허용오차
+    wait_timeout: 10.0     # s, 도착 대기 제한
+
+# 공정 모니터
+cell_monitor:
+  ros__parameters:
+    csv_path: /home/coc/meditkit_ws/cell_log.csv

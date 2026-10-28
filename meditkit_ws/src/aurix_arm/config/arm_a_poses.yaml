@@ -1,0 +1,10 @@
+# 관절 각도 단위: rad
+joint_names: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6]
+
+poses:
+  home:   [0.0,  0.0,  0.0,  0.0,  0.0, 0.0]
+  pick:   [0.5,  0.6, -0.8,  0.0,  0.5, 0.0]
+  place:  [-0.5, 0.6, -0.8,  0.0,  0.5, 0.0]
+
+# 데모 순서 (위에서 아래로 반복)
+sequence: [home, pick, place, home]
