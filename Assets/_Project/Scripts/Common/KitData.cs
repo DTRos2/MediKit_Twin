@@ -34,7 +34,10 @@ namespace MediKitTwin.Common
         /// <summary>슬롯 감지 센서가 만든 박스 내용 목록(구성품 ID). 검사 전에는 null이다.</summary>
         public string[] DetectedComponentIds { get; set; }
 
-        /// <summary>판정 결과. 판정 전에는 null이다.</summary>
+        /// <summary>
+        /// 판정 결과. 판정 전에는 null이다. 판정 결과는 이 필드가 유일한 출처이며,
+        /// 검사 쪽은 이 값을 채운 뒤에 CellEvents.InspectionResult를 발행한다.
+        /// </summary>
         public InspectionVerdict? Verdict { get; set; }
 
         /// <summary>피킹을 시작한 시각. 시작 전에는 null이다.</summary>

@@ -15,8 +15,8 @@ namespace MediKitTwin.Common
         /// <summary>박스가 검사 구역에 도착해 정지했다. (FR-05)</summary>
         public static event Action<KitData> AtInspection;
 
-        /// <summary>판정이 끝났다. KitData.Verdict에 결과가 들어 있다. (FR-06, FR-07)</summary>
-        public static event Action<KitData, InspectionVerdict> InspectionResult;
+        /// <summary>판정이 끝났다. 결과는 KitData.Verdict에 들어 있고, 발행하기 전에 채워진다. (FR-06, FR-07)</summary>
+        public static event Action<KitData> InspectionResult;
 
         /// <summary>불량 박스가 정원에 도달해 비워졌다. (FR-09)</summary>
         public static event Action RejectBinCleared;
@@ -46,7 +46,7 @@ namespace MediKitTwin.Common
 
         public static void RaiseAtInspection(KitData kit) => AtInspection?.Invoke(kit);
 
-        public static void RaiseInspectionResult(KitData kit, InspectionVerdict verdict) => InspectionResult?.Invoke(kit, verdict);
+        public static void RaiseInspectionResult(KitData kit) => InspectionResult?.Invoke(kit);
 
         public static void RaiseRejectBinCleared() => RejectBinCleared?.Invoke();
 
