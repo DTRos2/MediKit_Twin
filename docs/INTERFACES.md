@@ -27,6 +27,23 @@
 
 `StationStateChanged`는 SRS 4.4의 신호 10개에 없다. 대시보드의 설비 상태 표시(FR-14)에 필요해서 추가했으며, 합의되면 SRS 4.4와 개정 이력에 반영한다.
 
+### 선반 칸 ID
+
+`StockEmpty`, `StockRefilled`의 선반 칸 ID와 `RecipeItem.ShelfSlotId`는 같은 형식이다.
+
+- 자재 선반은 3행 4열이다. 행은 키트 종류(A=EM, B=BL, C=DX), 열은 재료 박스(1~4)이며 박스 하나에 재료 하나를 담는다.
+- 형식은 `<행><열>` 사이에 `-`를 넣은 `A-1` ~ `C-4`이다. 칸은 모두 12개이다.
+- 레시피 항목 순서가 피킹 순서이고, 열 번호는 그 순서와 같다. (예: DX는 C-1 swab, C-2 buffer_vial, C-3 test_cassette, C-4 sample_bag)
+- 재고는 칸 단위로 센다. 키트 1개는 칸마다 1개씩 쓴다.
+
+| 행 | 키트 | 박스 | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|---|---|
+| A | EM | L | gauze | bandage | antiseptic | gloves |
+| B | BL | M | blood_tube | needle | alcohol_pad | tourniquet |
+| C | DX | M | swab | buffer_vial | test_cassette | sample_bag |
+
+구성품 이름은 EM 4종과 DX의 test_cassette만 시나리오서 기준이고 나머지는 임시이다.
+
 ## 3. StationState
 
 | 값 | 대시보드 표시 | 의미 |
