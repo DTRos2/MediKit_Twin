@@ -7,7 +7,7 @@
 
 - 설비끼리 직접 참조하지 않고 `CellEvents`로만 신호를 주고받는다.
 - `Common`은 ROS를 알지 못한다. ROS 코드(`Ros/` 폴더)가 `Common`을 사용하는 한 방향만 허용한다.
-- 시간은 모두 시뮬레이션 시간(배속 반영)이다. 예외는 ROS 토픽 발행 주기(실제 시간 20Hz)이다.
+- 시간은 모두 시뮬레이션 시간(배속 반영)이며 `SimClock`에서 읽는다. 예외는 ROS 토픽 발행 주기(실제 시간 20Hz)와 설비 상태 주기 통지(실제 시간 1초)이다.
 
 ## 2. CellEvents
 
@@ -23,11 +23,15 @@
 | `KitShipped` | `KitData` | 하역 로봇 | 대시보드 | FR-12 |
 | `StockEmpty` | 선반 칸 ID, 주문 순번 | 재고 | 주문 관리, 대시보드 | FR-13 |
 | `StockRefilled` | 선반 칸 ID | 재고 | 주문 관리, 대시보드 | FR-13 |
+| `OrderHeld` | 주문 순번 | 주문 관리 | 대시보드, 로거 | FR-13 |
+| `OrderResumed` | 주문 순번 | 주문 관리 | 대시보드, 로거 | FR-13 |
 | `StationStateChanged` | `StationId`, `StationState` | 각 설비 | 대시보드 | FR-14 |
 
 `InspectionResult`는 판정 결과를 인자로 싣지 않는다. 검사는 `KitData.Verdict`를 먼저 채운 뒤 신호를 보내고, 구독자는 `kit.Verdict`를 읽는다. 판정 결과의 출처는 `KitData.Verdict` 하나이다. `Verdict`가 비어 있으면 `RaiseInspectionResult`가 신호를 보내지 않고 오류 로그를 남긴다.
 
-`StationStateChanged`는 SRS 4.4의 신호 10개에 없다. 대시보드의 설비 상태 표시(FR-14)에 필요해서 추가했으며, 합의되면 SRS 4.4와 개정 이력에 반영한다.
+`OrderHeld`, `OrderResumed`, `StationStateChanged`는 SRS 4.4의 원래 신호 10개에 없다. 대시보드의 보류 주문 수(FR-13)와 설비 상태(FR-14) 표시에 필요해서 추가했고, SRS 4.4에는 반영했다.
+
+`StockEmpty`와 `OrderHeld`는 함께 발행된다. 재고가 비면 재고(`IStock`)가 `StockEmpty`를 보내고, 주문 관리가 이를 받아 주문을 보류하며 `OrderHeld`를 보낸다. `StockRefilled`도 같다. 보충되면 주문 관리가 보류 주문을 대기열 맨 앞으로 옮기며 `OrderResumed`를 보낸다.
 
 ### 선반 칸 ID
 
@@ -57,6 +61,8 @@
 | `Fault` | 정지 | 목표 자세에 3초 안에 도달하지 못하는 등 오류 |
 
 - "응답 없음"은 설비가 보내는 값이 아니다. 대시보드가 신호를 10초 넘게 받지 못할 때 표시한다. (FR-14)
+- **주기 통지:** 각 설비는 상태가 바뀌지 않아도 `StationHeartbeat.IntervalSeconds`(1초)마다 `StationStateChanged`를 같은 값으로 다시 보낸다. 대시보드는 `StationHeartbeat.TimeoutSeconds`(10초) 넘게 받지 못한 설비를 "응답 없음"으로 표시한다.
+- 두 값은 실제 시간(`Time.unscaledTime`) 기준이다. 일시정지나 배속 중에도 "응답 없음"으로 오판하지 않기 위해서이다.
 
 ## 4. KitData
 
@@ -127,9 +133,68 @@
 - 발행 주기는 실제 시간 기준 20Hz(`Time.unscaledDeltaTime`)이다. 도착 판단 타임아웃은 시뮬레이션 시간 기준이다.
 - 관절 이름은 URDF 하나(ROS 패키지의 URDF)를 기준으로 하고, Unity는 URDF Importer로 같은 파일을 불러온다.
 
-## 7. 확정이 필요한 항목
+## 7. 설비가 공통으로 쓰는 인터페이스
 
-- [ ] 로봇암 A의 URDF 관절 이름 목록 (URDF 확정 후 기재)
-- [ ] `StationStateChanged` 추가를 SRS 4.4에 반영할지
-- [ ] 주문 보류·재개와 대기 키트 수를 대시보드가 어떻게 받을지 (`StockEmpty`/`StockRefilled`와 주문 큐 직접 조회 중 선택)
-- [ ] 설비의 "응답 없음" 판단을 위해 설비가 주기적으로 상태를 다시 알려야 하는지
+### 7-1. 재고 (`IStock`)
+
+로봇암 A는 재고 클래스를 직접 참조하지 않고 이 인터페이스로만 재고를 다룬다. 선반 칸 ID는 위 「선반 칸 ID」 형식이다.
+
+| 멤버 | 설명 |
+|---|---|
+| `ShelfSlotIds` | 재고를 관리하는 칸 ID 전체(12개). 대시보드의 선반별 재고 표시에 쓴다 |
+| `TryTake(shelfSlotId, orderSequence)` | 구성품 1개를 꺼낸다. 재고가 0이면 `false`이고, 그 칸이 처음 0이 될 때 `StockEmpty`를 발행하며 보충 대기를 시작한다 |
+| `Return(shelfSlotId)` | 반쯤 담긴 박스를 제거할 때 담겨 있던 구성품 1개를 되돌린다 |
+| `GetQuantity(shelfSlotId)` | 현재 수량 |
+| `GetRefillRemainingSeconds(shelfSlotId)` | 보충까지 남은 시간(초). 기다리는 중이 아니면 `null` |
+
+- 피킹은 레시피 순서대로 한 개씩 `TryTake`를 호출한다. 누락 규칙으로 건너뛰는 구성품은 `TryTake`를 호출하지 않으므로 재고가 줄지 않는다.
+- 보충은 칸 단위로 한다. 한 칸의 보충 대기가 진행 중이면 같은 칸에 타이머를 다시 걸지 않는다. 대기 시간과 수량은 `ScenarioConfigSO`가 정한다.
+
+### 7-2. 주문 현황 (`IOrderStatus`)
+
+대시보드가 1초마다 읽는 현재 값이다. 변화는 `OrderHeld`, `OrderResumed`로 알리고, 이 인터페이스는 현재 값만 준다.
+
+| 멤버 | 설명 |
+|---|---|
+| `HeldOrderCount` | 보류 중인 주문 수 |
+| `PendingKitCount` | 아직 피킹을 시작하지 않은 키트 수(대기열과 보류 주문의 남은 키트) |
+
+보충까지 남은 시간은 주문이 아니라 칸의 값이므로 `IStock.GetRefillRemainingSeconds`로 읽는다. 대시보드는 보류 주문의 부족한 칸을 `StockEmpty`로 받아 둔 칸 ID로 이 값을 조회한다. 이 전달 방식은 임시이며 대시보드 구현 때 조정한다.
+
+### 7-3. 시뮬레이션 시간 (`SimClock`)
+
+- `SimClock.Now`는 시뮬레이션 시간(초)이다. 시작·완료 시각, 보충 대기, 센서 타임아웃, 로그 시각이 모두 이 값을 읽는다.
+- 배속은 `Time.timeScale`로 반영한다. `TrySetSpeed`는 0.5, 1, 2, 4만 받고, `Pause`와 `Resume`으로 일시정지한다. (FR-15)
+
+### 7-4. 검사 판정기 (`IInspector`)
+
+- 규칙 판정과 CNN 판정이 같은 인터페이스를 구현한다. `TryJudge(kit, out verdict)`가 `false`이면 호출하는 쪽이 규칙 판정기로 대체하고 로그를 남긴다. (FR-07 예외 처리)
+- 판정기는 `KitData.Verdict`를 채우지 않는다. 호출하는 쪽이 채운 뒤 `InspectionResult`를 발행한다.
+- 판정기는 `GetMissingAnswerForEvaluation()`을 호출하지 않는다.
+
+### 7-5. 생산 로그 (`IProductionLog`)
+
+- 열은 시각, 이벤트명, 로트번호, 설비 ID, 판정 방식, 비고이다. 실행마다 CSV 1개를 새로 만들고 덮어쓰지 않는다.
+- 로그를 쓰는 쪽은 `CellEvents`를 구독하는 로거 하나이다. 설비는 로그 파일을 직접 다루지 않는다.
+- 판정과 정답 비교(FR-06, FR-07)는 판정이 끝난 뒤 로거가 비고에 적는다.
+
+### 7-6. 시나리오 설정 (`ScenarioConfigSO`)
+
+시나리오마다 에셋 하나를 두고, 시나리오를 바꿔도 코드는 바꾸지 않는다.
+
+| 필드 | 설명 |
+|---|---|
+| 누락 확률(%), 고정 누락 키트 순번, 고정 누락 슬롯 번호 | FR-04. 슬롯 번호가 0이면 무작위로 고른다. 시연에서 빠지는 슬롯을 미리 알릴 때 쓴다 |
+| 난수 시드 | 같은 시드와 같은 주문 파일은 같은 결과를 낸다 (NFR-06) |
+| 기본 재고, 칸별 재고 | FR-13. 목록에 없는 칸은 기본 재고를 쓴다 |
+| 보충 대기(초), 보충 수량 | 기본 30초, 20개 |
+
+| 시나리오 | 누락 | 재고 |
+|---|---|---|
+| S2 누락 키트 불량 배출 | 10%, 고정 3번 | 기본 20 |
+| S4 재고 소진·복구 | 0%, 고정 없음 | C-3 = 2 |
+
+## 8. 확정이 필요한 항목
+
+- [ ] 로봇암 A의 URDF 관절 이름 목록. URDF가 확정되면 기재한다. 팀원이 추가한 ROS-TCP-Connector는 통신 패키지일 뿐 관절 이름을 정하지 않는다
+- [ ] 보류 주문의 부족한 칸과 보충 남은 시간을 대시보드에 전달하는 방식(7-2의 임시안을 구현하면서 조정)

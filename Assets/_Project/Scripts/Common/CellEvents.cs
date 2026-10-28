@@ -39,7 +39,16 @@ namespace MediKitTwin.Common
         /// <summary>선반 칸이 보충되었다. 인자는 선반 칸 ID. (FR-13)</summary>
         public static event Action<string> StockRefilled;
 
-        /// <summary>설비 상태가 바뀌었다. 대시보드의 설비 상태 표시에 쓴다. (FR-14)</summary>
+        /// <summary>재고 부족으로 주문이 보류되었다. 인자는 주문 순번. (FR-13)</summary>
+        public static event Action<int> OrderHeld;
+
+        /// <summary>보류되었던 주문이 대기열 맨 앞으로 돌아와 다시 시작된다. 인자는 주문 순번. (FR-13)</summary>
+        public static event Action<int> OrderResumed;
+
+        /// <summary>
+        /// 설비 상태가 바뀌었거나 주기 통지(StationHeartbeat.IntervalSeconds)다. 상태가 같아도 다시 보내며,
+        /// 대시보드는 이 신호가 끊긴 시간으로 "응답 없음"을 판단한다. (FR-14)
+        /// </summary>
         public static event Action<StationId, StationState> StationStateChanged;
 
         public static void RaiseKitReady(KitData kit) => KitReady?.Invoke(kit);
@@ -72,6 +81,10 @@ namespace MediKitTwin.Common
 
         public static void RaiseStockRefilled(string shelfSlotId) => StockRefilled?.Invoke(shelfSlotId);
 
+        public static void RaiseOrderHeld(int orderSequence) => OrderHeld?.Invoke(orderSequence);
+
+        public static void RaiseOrderResumed(int orderSequence) => OrderResumed?.Invoke(orderSequence);
+
         public static void RaiseStationStateChanged(StationId station, StationState state) => StationStateChanged?.Invoke(station, state);
 
         // Domain Reload를 끈 에디터에서 이전 Play의 구독이 남지 않도록 시작할 때 비운다.
@@ -88,6 +101,8 @@ namespace MediKitTwin.Common
             KitShipped = null;
             StockEmpty = null;
             StockRefilled = null;
+            OrderHeld = null;
+            OrderResumed = null;
             StationStateChanged = null;
         }
     }
