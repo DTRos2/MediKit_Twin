@@ -60,3 +60,15 @@ venv/
 
 # Office 임시 잠금 파일
 ~$*
+
+# 서드파티 에셋의 데모·샘플·문서 (프로젝트에 불필요, 용량 큼)
+/[Aa]ssets/Conveyor System/Demo/
+/[Aa]ssets/Conveyor System/Demo.meta
+/[Aa]ssets/Warehouse_Robot_Controller/Scenes/
+/[Aa]ssets/Warehouse_Robot_Controller/Scenes.meta
+/[Aa]ssets/Warehouse_Robot_Controller/Documentation/
+/[Aa]ssets/Warehouse_Robot_Controller/Documentation.meta
+/[Aa]ssets/Conveyor System/*.unity
+/[Aa]ssets/Conveyor System/*.unity.meta
+/[Aa]ssets/Conveyor System/Documentation.pdf
+/[Aa]ssets/Conveyor System/Documentation.pdf.meta
