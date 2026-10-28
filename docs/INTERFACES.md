@@ -15,7 +15,7 @@
 |---|---|---|---|---|
 | `KitReady` | `KitData` | 로봇암 A | 컨베이어 | FR-03 |
 | `AtInspection` | `KitData` | 컨베이어 | 검사 | FR-05 |
-| `InspectionResult` | `KitData`, `InspectionVerdict` | 검사 | 컨베이어, 푸셔, 대시보드 | FR-06, FR-07 |
+| `InspectionResult` | `KitData` | 검사 | 컨베이어, 푸셔, 대시보드 | FR-06, FR-07 |
 | `RejectBinCleared` | - | 푸셔 | 대시보드 | FR-09 |
 | `AtPacking` | `KitData` | 컨베이어 | 로봇암 B | FR-05 |
 | `LidClosed` | `KitData` | 로봇암 B(MVP는 자동 처리) | 컨베이어, 라벨 | FR-10, FR-11 |
@@ -24,6 +24,8 @@
 | `StockEmpty` | 선반 칸 ID, 주문 순번 | 재고 | 주문 관리, 대시보드 | FR-13 |
 | `StockRefilled` | 선반 칸 ID | 재고 | 주문 관리, 대시보드 | FR-13 |
 | `StationStateChanged` | `StationId`, `StationState` | 각 설비 | 대시보드 | FR-14 |
+
+`InspectionResult`는 판정 결과를 인자로 싣지 않는다. 검사는 `KitData.Verdict`를 먼저 채운 뒤 신호를 보내고, 구독자는 `kit.Verdict`를 읽는다. 판정 결과의 출처는 `KitData.Verdict` 하나이다.
 
 `StationStateChanged`는 SRS 4.4의 신호 10개에 없다. 대시보드의 설비 상태 표시(FR-14)에 필요해서 추가했으며, 합의되면 SRS 4.4와 개정 이력에 반영한다.
 
@@ -34,7 +36,9 @@
 - 자재 선반은 3행 4열이다. 행은 키트 종류(A=EM, B=BL, C=DX), 열은 재료 박스(1~4)이며 박스 하나에 재료 하나를 담는다.
 - 형식은 `<행><열>` 사이에 `-`를 넣은 `A-1` ~ `C-4`이다. 칸은 모두 12개이다.
 - 레시피 항목 순서가 피킹 순서이고, 열 번호는 그 순서와 같다. (예: DX는 C-1 swab, C-2 buffer_vial, C-3 test_cassette, C-4 sample_bag)
-- 재고는 칸 단위로 센다. 키트 1개는 칸마다 1개씩 쓴다.
+- 재고는 칸 단위로 센다. **키트 1개는 칸마다 1개씩 쓴다.** 같은 구성품이 한 키트에 2개 필요한 레시피는 지원하지 않는다.
+- 그래서 한 레시피 안에서 구성품 ID, 선반 칸 ID, 슬롯 번호는 각각 겹치지 않는다. 구성품은 최대 4개(열 수)이다.
+- 이 규칙은 `RecipeSO.OnValidate`가 검사한다.
 
 | 행 | 키트 | 박스 | 1 | 2 | 3 | 4 |
 |---|---|---|---|---|---|---|
@@ -60,13 +64,49 @@
 
 | 필드 | 설명 |
 |---|---|
-| `KitSequence`, `OrderSequence`, `LotNumber`, `HospitalName`, `KitCode` | 생성할 때 정해지며 바뀌지 않는다 |
+| `KitSequence`, `OrderSequence`, `LotNumber`, `HospitalName`, `KitCode` | 생성할 때 정해지며 바뀌지 않는다. `KitCode`는 `string`(대문자 EM, BL, DX)이다 |
 | `DetectedComponentIds` | 슬롯 감지 센서가 만든 박스 내용 목록 |
-| `Verdict` | 판정 결과 (판정 전에는 null) |
+| `Verdict` | `InspectionVerdict?` (판정 전에는 null). 판정 결과의 유일한 출처 |
 | `StartTime`, `CompleteTime` | 시뮬레이션 시간(초) |
 | 누락 정답 | `SetMissingAnswer`로 기록(FR-04), `GetMissingAnswerForEvaluation()`으로 읽음 |
 
 - **검사 판정 코드(FR-06, FR-07)는 `GetMissingAnswerForEvaluation()`을 호출하지 않는다.** 판정이 끝난 뒤 로그 비교에만 쓴다.
+
+## 4-1. InspectionVerdict
+
+`readonly struct`이며 규칙 판정과 ML 판정이 같은 형식을 쓴다.
+
+| 필드 | 설명 |
+|---|---|
+| `IsPass` | 정상이면 true, 누락이면 false |
+| `MissingSlots` | 비어 있던 슬롯 번호 목록. 규칙 판정만 채운다. CNN은 정상·누락 2클래스 분류라 위치를 알 수 없어 `null`이다. 빈 목록은 "누락 슬롯 없음"이다 |
+| `Confidence` | 0~1. 규칙 판정은 항상 1 |
+| `Method` | `JudgeMethod.Rule` 또는 `JudgeMethod.Cnn`. 대시보드의 판정 방식 표시와 생산 로그에 쓴다 |
+
+- 로그에서 정답 라벨과 비교할 때는 `IsPass`만 쓰고, `MissingSlots`는 값이 있을 때만 쓴다.
+- `default` 값이 "규칙 판정 불합격"으로 읽히므로 판정 전 상태는 `KitData.Verdict == null`로 나타낸다.
+
+## 4-2. RecipeSO
+
+키트 종류 하나당 에셋 하나이다. 코드: `Assets/_Project/Scripts/Recipes/` (네임스페이스 `MediKitTwin.Recipes`)
+
+| 필드 | 설명 |
+|---|---|
+| `KitCode` | `string`. 대문자(EM, BL, DX)이며 레시피끼리 겹치지 않는다 |
+| `BoxSize` | L 또는 M. 뚜껑 크기도 이 값을 따른다 |
+| `Items` | 피킹 순서대로 나열한 `RecipeItem` 목록 (항목 1개 = 슬롯 1칸) |
+
+| `RecipeItem` 필드 | 설명 |
+|---|---|
+| `ComponentId` | 구성품 종류 ID. 슬롯 감지 센서가 보고하는 ID와 같다 |
+| `ShelfSlotId` | 자재 선반 칸 ID (`A-1` ~ `C-4`) |
+| `SlotNumber` | 박스 슬롯 번호(1부터). 슬롯 센서와 `MissingSlots`가 쓰는 번호 |
+| `SlotLocalPosition` | 그 슬롯 번호에 대응하는 박스 기준 로컬 좌표(m) |
+
+- 조회: `TryGetItemBySlot(slotNumber)`(센서가 보고한 번호로 구성품과 좌표를 얻음), `TryGetItemByComponent(componentId)`(구성품 기준으로 선반 칸과 슬롯을 얻음).
+- 슬롯 번호는 피킹 순서와 따로 정할 수 있다. 1부터 항목 수까지 겹치지 않아야 한다.
+- 슬롯 위치의 출처는 레시피이다. 박스 프리팹의 슬롯 센서 콜라이더는 레시피 좌표와 같은 위치에 둔다.
+- 키트 코드로 레시피를 찾는 조회(없으면 주문 보류, FR-02)는 주문 처리 구현에서 만든다.
 
 ## 5. 로봇암 A 입력 (IArmTarget)
 
