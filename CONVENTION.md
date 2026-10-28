@@ -1,6 +1,6 @@
 # MediKit_Twin 협업 컨벤션
 
-> Unity · GitHub (2인 팀) · 요구사항 기준 문서: [docs/AURIX_SRS_V1.1.docx](docs/AURIX_SRS_V1.1.docx)
+> Unity · GitHub (2인 팀) · 요구사항 기준 문서: [docs/AURIX_SRS.docx](docs/AURIX_SRS.docx)
 > 커밋 메시지 규칙은 [COMMIT_RULES.md](COMMIT_RULES.md) 참고
 
 ---
@@ -113,6 +113,7 @@ git push -u origin feature/<이니셜>-<기능>
 - 네임스페이스는 `MediKitTwin.<영역>` 형식을 쓴다. (예: `MediKitTwin.Conveyor`, `MediKitTwin.Inspection`)
 - 불리언은 `is/has/can`으로 시작한다.
 - 설비 사이의 신호는 **`CellEvents` 이벤트 버스로만** 주고받고, 설비끼리 직접 참조하지 않는다.
+- 의존 방향은 어셈블리 정의(asmdef)로 강제한다. `MediKitTwin.Recipes`는 아무것도 참조하지 않고, `MediKitTwin.Common`은 `Recipes`만 참조한다. `Ros`는 `Common`만 참조하고, `Common`은 `Ros`를 참조하지 않는다. 새 폴더(Orders, ArmA 등)에 asmdef를 만들 때는 `Common`만 참조한다.
 
 ### 6-2. 작성 규칙
 
@@ -125,12 +126,12 @@ git push -u origin feature/<이니셜>-<기능>
 ### 6-3. 시뮬레이션 규칙
 
 - **난수는 시드를 받는 `System.Random` 인스턴스**로 만든다. 같은 시드면 같은 키트에서 누락이 발생해야 한다. (FR-04, NFR-06) `UnityEngine.Random` 전역 상태는 누락 규칙에 쓰지 않는다.
-- 시간은 `SimClock.Now`(시작·완료 시각, 보충 대기, 타임아웃, 로그 시각)와 `Time.deltaTime`(프레임 이동량)처럼 **시뮬레이션 시간** 기준으로 계산한다. 배속(0.5, 1, 2, 4배)이 로봇, 컨베이어, 하역 로봇, 대시보드 지표에 모두 적용되어야 한다. (FR-15) 실제 시간(`DateTime`, `Time.unscaledTime`)은 지표 계산에 쓰지 않는다. 예외는 ROS 토픽 발행 주기와 설비 상태 주기 통지(`StationHeartbeat`)뿐이다.
+- 시간은 `SimClock.Now`(시작·완료 시각, 보충 대기, 타임아웃, 로그 시각)와 `Time.deltaTime`(프레임 이동량)처럼 **시뮬레이션 시간** 기준으로 계산한다. 배속(0.5, 1, 2, 4배)이 로봇, 컨베이어, 하역 로봇, 대시보드 지표에 모두 적용되어야 한다. (FR-15) 실제 시간(`DateTime`, `Time.unscaledTime`)은 지표 계산에 쓰지 않는다. 예외는 ROS 토픽 발행 주기와 설비 주기 통지(`StationAlive`)뿐이다. ROS 제어 모드에서는 `SimClock.SetSpeedLocked(true)`로 1배속에 고정한다.
 - **검사 판정 코드는 누락 정답 라벨을 읽지 않는다.** 정답 라벨은 판정이 끝난 뒤 로그 비교에만 쓴다. (FR-06)
 - 키트 종류는 `RecipeSO`로만 구분한다. 키트를 추가할 때 스크립트를 고치지 않고 레시피 파일 1개만 추가해야 한다. (NFR-07)
-- 설비 상태는 `가동 / 대기 / 정지` 중 하나로 통일하고, 상태가 바뀌지 않아도 1초마다 `StationStateChanged`를 다시 보낸다. (`StationHeartbeat`, FR-14)
+- 설비 상태는 `가동 / 대기 / 정지` 중 하나로 통일하고, 상태가 바뀔 때 `StationStateChanged`를 보내고, 상태가 같아도 1초마다 `StationAlive`를 보낸다. (`StationHeartbeat`, FR-14) 로거와 주문 관리는 `StationStateChanged`만 구독한다.
 - 생산 로그 CSV는 실행마다 새 파일로 저장한다. (덮어쓰지 않음) 설비는 로그 파일을 직접 다루지 않고, `CellEvents`를 구독하는 로거(`IProductionLog`)가 기록한다.
-- 키트 코드는 대문자 `string`(EM, BL, DX)이다. 재고는 `IStock`, 주문 현황은 `IOrderStatus`, 판정기는 `IInspector`로만 접근하고 구체 클래스를 직접 참조하지 않는다.
+- 키트 코드는 대문자 `string`(EM, BL, DX)이다. 재고는 `IStock`, 주문 현황은 `IOrderStatus`, 다음 키트는 `IKitSource`, 박스는 `IBoxSupply`, 판정기는 `IInspector`로만 접근하고 구체 클래스를 직접 참조하지 않는다.
 
 ### 6-4. Unity 메시지 메서드 순서
 
