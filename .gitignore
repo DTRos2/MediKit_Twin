@@ -41,6 +41,19 @@ crashlytics-build.properties
 /[Aa]ssets/AssetStoreTools*
 /[Aa]ssets/Plugins/Editor/JetBrains*
 
-# ML-Agents
-/results/
-*.onnx.meta.bak
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# 생산 로그 CSV (실행마다 생성)
+/ProductionLogs/
+
+# ML (Python 학습 환경, 합성 데이터셋)
+__pycache__/
+*.pyc
+venv/
+.venv/
+.ipynb_checkpoints/
+/ml/data/
+/ml/runs/
