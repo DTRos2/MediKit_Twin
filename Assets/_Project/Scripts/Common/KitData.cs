@@ -9,7 +9,7 @@ namespace MediKitTwin.Common
     {
         private string _missingAnswer;
 
-        public KitData(int kitSequence, int orderSequence, string lotNumber, string hospitalName, KitCode kitCode)
+        public KitData(int kitSequence, int orderSequence, string lotNumber, string hospitalName, string kitCode)
         {
             KitSequence = kitSequence;
             OrderSequence = orderSequence;
@@ -28,7 +28,8 @@ namespace MediKitTwin.Common
 
         public string HospitalName { get; }
 
-        public KitCode KitCode { get; }
+        /// <summary>키트 종류 코드(EM, BL, DX). 레시피의 KitCode와 같은 문자열이며 대문자로 쓴다. enum이 아닌 이유는 레시피 파일만 추가해 키트 종류를 늘리기 위해서다. (NFR-07)</summary>
+        public string KitCode { get; }
 
         /// <summary>슬롯 감지 센서가 만든 박스 내용 목록(구성품 ID). 검사 전에는 null이다.</summary>
         public string[] DetectedComponentIds { get; set; }

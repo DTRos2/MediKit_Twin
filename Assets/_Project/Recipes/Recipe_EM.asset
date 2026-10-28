@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67d1ddb6b8fb495098c2ffbc47b7946f, type: 3}
   m_Name: Recipe_EM
   m_EditorClassIdentifier: 
-  _kitCode: 0
+  _kitCode: EM
   _boxSize: 0
   _items:
   - _componentId: gauze
