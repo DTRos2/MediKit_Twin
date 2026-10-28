@@ -25,7 +25,7 @@
 | `StockRefilled` | 선반 칸 ID | 재고 | 주문 관리, 대시보드 | FR-13 |
 | `StationStateChanged` | `StationId`, `StationState` | 각 설비 | 대시보드 | FR-14 |
 
-`InspectionResult`는 판정 결과를 인자로 싣지 않는다. 검사는 `KitData.Verdict`를 먼저 채운 뒤 신호를 보내고, 구독자는 `kit.Verdict`를 읽는다. 판정 결과의 출처는 `KitData.Verdict` 하나이다.
+`InspectionResult`는 판정 결과를 인자로 싣지 않는다. 검사는 `KitData.Verdict`를 먼저 채운 뒤 신호를 보내고, 구독자는 `kit.Verdict`를 읽는다. 판정 결과의 출처는 `KitData.Verdict` 하나이다. `Verdict`가 비어 있으면 `RaiseInspectionResult`가 신호를 보내지 않고 오류 로그를 남긴다.
 
 `StationStateChanged`는 SRS 4.4의 신호 10개에 없다. 대시보드의 설비 상태 표시(FR-14)에 필요해서 추가했으며, 합의되면 SRS 4.4와 개정 이력에 반영한다.
 
@@ -64,7 +64,7 @@
 
 | 필드 | 설명 |
 |---|---|
-| `KitSequence`, `OrderSequence`, `LotNumber`, `HospitalName`, `KitCode` | 생성할 때 정해지며 바뀌지 않는다. `KitCode`는 `string`(대문자 EM, BL, DX)이다 |
+| `KitSequence`, `OrderSequence`, `LotNumber`, `HospitalName`, `KitCode` | 생성할 때 정해지며 바뀌지 않는다. `KitCode`는 `string`(EM, BL, DX)이며 생성할 때 대문자로 맞춘다 |
 | `DetectedComponentIds` | 슬롯 감지 센서가 만든 박스 내용 목록 |
 | `Verdict` | `InspectionVerdict?` (판정 전에는 null). 판정 결과의 유일한 출처 |
 | `StartTime`, `CompleteTime` | 시뮬레이션 시간(초) |
@@ -79,7 +79,7 @@
 | 필드 | 설명 |
 |---|---|
 | `IsPass` | 정상이면 true, 누락이면 false |
-| `MissingSlots` | 비어 있던 슬롯 번호 목록. 규칙 판정만 채운다. CNN은 정상·누락 2클래스 분류라 위치를 알 수 없어 `null`이다. 빈 목록은 "누락 슬롯 없음"이다 |
+| `MissingSlots` | 비어 있던 슬롯 번호 목록. 규칙 판정만 채운다. CNN은 정상·누락 2클래스 분류라 위치를 알 수 없어 `null`이다. 빈 목록은 "누락 슬롯 없음"이다. 생성할 때 복사해 두므로 넘긴 리스트를 나중에 바꿔도 영향이 없다 |
 | `Confidence` | 0~1. 규칙 판정은 항상 1 |
 | `Method` | `JudgeMethod.Rule` 또는 `JudgeMethod.Cnn`. 대시보드의 판정 방식 표시와 생산 로그에 쓴다 |
 

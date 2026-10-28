@@ -15,7 +15,8 @@ namespace MediKitTwin.Common
             OrderSequence = orderSequence;
             LotNumber = lotNumber;
             HospitalName = hospitalName;
-            KitCode = kitCode;
+            // 레시피의 키트 코드(대문자)와 조회가 어긋나지 않도록 대문자로 맞춘다.
+            KitCode = kitCode?.Trim().ToUpperInvariant();
         }
 
         /// <summary>셀에 투입되는 순서(1, 2, 3, ...). 실행 안에서 유일하다.</summary>
