@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ros_tcp_endpoint_cpp</name>
+  <version>0.1.0</version>
+  <description>C++ implementation of the Unity ROS-TCP-Endpoint server (ROS2)</description>
+  <maintainer email="ajtwlscldjs@gmail.com">coc</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>
