@@ -65,10 +65,10 @@
 | 필드 | 설명 |
 |---|---|
 | `KitSequence`, `OrderSequence`, `LotNumber`, `HospitalName`, `KitCode` | 생성할 때 정해지며 바뀌지 않는다. `KitCode`는 `string`(EM, BL, DX)이며 생성할 때 대문자로 맞춘다 |
-| `DetectedComponentIds` | 슬롯 감지 센서가 만든 박스 내용 목록 |
+| `DetectedComponentIds` | 슬롯 감지 센서가 만든 박스 내용. 인덱스는 슬롯 번호 - 1, 값은 감지된 구성품 ID, 빈 슬롯은 `null`이다. 길이는 레시피의 슬롯 수와 같다 |
 | `Verdict` | `InspectionVerdict?` (판정 전에는 null). 판정 결과의 유일한 출처 |
 | `StartTime`, `CompleteTime` | 시뮬레이션 시간(초) |
-| 누락 정답 | `SetMissingAnswer`로 기록(FR-04), `GetMissingAnswerForEvaluation()`으로 읽음 |
+| 누락 정답 | 빠진 슬롯 번호(`int?`). `SetMissingAnswer(slotNumber)`로 기록(FR-04), `GetMissingAnswerForEvaluation()`으로 읽음. 판정의 `MissingSlots`와 같은 번호 체계이다 |
 
 - **검사 판정 코드(FR-06, FR-07)는 `GetMissingAnswerForEvaluation()`을 호출하지 않는다.** 판정이 끝난 뒤 로그 비교에만 쓴다.
 
@@ -79,11 +79,12 @@
 | 필드 | 설명 |
 |---|---|
 | `IsPass` | 정상이면 true, 누락이면 false |
-| `MissingSlots` | 비어 있던 슬롯 번호 목록. 규칙 판정만 채운다. CNN은 정상·누락 2클래스 분류라 위치를 알 수 없어 `null`이다. 빈 목록은 "누락 슬롯 없음"이다. 생성할 때 복사해 두므로 넘긴 리스트를 나중에 바꿔도 영향이 없다 |
+| `MissingSlots` | 비어 있던 슬롯 번호 목록. 규칙 판정만 채운다. 위치를 알 수 없으면 `null`이다. CNN은 2클래스 분류라 위치를 모르고, 규칙 판정도 슬롯 센서가 응답하지 않으면(FR-06 예외) `IsPass=false`, `MissingSlots=null`로 보낸다. 빈 목록은 "누락 슬롯 없음"이며 `IsPass`가 true일 때만 쓴다. 생성할 때 복사해 두므로 넘긴 리스트를 나중에 바꿔도 영향이 없다 |
 | `Confidence` | 0~1. 규칙 판정은 항상 1 |
 | `Method` | `JudgeMethod.Rule` 또는 `JudgeMethod.Cnn`. 대시보드의 판정 방식 표시와 생산 로그에 쓴다 |
 
-- 로그에서 정답 라벨과 비교할 때는 `IsPass`만 쓰고, `MissingSlots`는 값이 있을 때만 쓴다.
+- 로그에서 정답과 비교할 때는 `IsPass`를 먼저 비교하고, `MissingSlots`가 있으면 정답 슬롯 번호가 그 안에 있는지도 비교한다. 정답은 슬롯 번호 하나라 구성품 ID로 바꿀 필요가 없다.
+- 규칙 판정은 레시피의 각 항목에 대해 `DetectedComponentIds[SlotNumber - 1]`이 `ComponentId`와 다르면 그 슬롯을 누락으로 본다. 빈 슬롯과 다른 구성품이 들어간 슬롯을 같은 방식으로 잡는다.
 - `default` 값이 "규칙 판정 불합격"으로 읽히므로 판정 전 상태는 `KitData.Verdict == null`로 나타낸다.
 
 ## 4-2. RecipeSO

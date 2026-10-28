@@ -22,7 +22,9 @@ namespace MediKitTwin.Common
 
         /// <summary>
         /// 비어 있던 슬롯 번호(레시피의 슬롯 번호). 규칙 판정만 채운다.
-        /// CNN은 정상·누락 2클래스 분류라 위치를 알 수 없으므로 null이다. 빈 목록은 "누락 슬롯 없음"이다.
+        /// 위치를 알 수 없으면 null이다. CNN은 정상·누락 2클래스 분류라 위치를 모르고,
+        /// 규칙 판정도 슬롯 센서가 응답하지 않으면(FR-06 예외) 어느 슬롯인지 알 수 없다.
+        /// 빈 목록은 "누락 슬롯 없음"이며 IsPass가 true일 때만 쓴다.
         /// </summary>
         public IReadOnlyList<int> MissingSlots { get; }
 
