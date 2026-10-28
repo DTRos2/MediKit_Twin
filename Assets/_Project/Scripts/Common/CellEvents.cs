@@ -46,7 +46,17 @@ namespace MediKitTwin.Common
 
         public static void RaiseAtInspection(KitData kit) => AtInspection?.Invoke(kit);
 
-        public static void RaiseInspectionResult(KitData kit) => InspectionResult?.Invoke(kit);
+        public static void RaiseInspectionResult(KitData kit)
+        {
+            // 구독자가 kit.Verdict를 읽으므로, 비어 있으면 신호를 보내지 않고 발행 순서 오류를 알린다.
+            if (kit == null || kit.Verdict == null)
+            {
+                Debug.LogError("InspectionResult는 KitData.Verdict를 채운 뒤에 발행해야 한다.");
+                return;
+            }
+
+            InspectionResult?.Invoke(kit);
+        }
 
         public static void RaiseRejectBinCleared() => RejectBinCleared?.Invoke();
 

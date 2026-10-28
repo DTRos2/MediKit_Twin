@@ -11,7 +11,8 @@ namespace MediKitTwin.Common
         public InspectionVerdict(bool isPass, IReadOnlyList<int> missingSlots, float confidence, JudgeMethod method)
         {
             IsPass = isPass;
-            MissingSlots = missingSlots;
+            // 호출한 쪽이 리스트를 나중에 바꿔도 판정 결과가 변하지 않도록 복사해 둔다.
+            MissingSlots = missingSlots == null ? null : new List<int>(missingSlots).AsReadOnly();
             Confidence = confidence;
             Method = method;
         }
