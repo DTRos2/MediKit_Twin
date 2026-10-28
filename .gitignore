@@ -57,3 +57,6 @@ venv/
 .ipynb_checkpoints/
 /ml/data/
 /ml/runs/
+
+# Office 임시 잠금 파일
+~$*
