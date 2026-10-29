@@ -133,39 +133,6 @@ namespace MediKitTwin.EditorTools
             Debug.Log("[CellSceneBuilder] PF_KittingJig 재생성 완료");
         }
 
-        // 열려 있는 씬에 뚜껑 박스(PF_LidSupplyTable)가 없으면 ArmB 옆에 놓는다. 이미 있으면 아무것도 하지 않는다.
-        [MenuItem("Tools/MediKit/Place LidSupplyTable Next To ArmB")]
-        public static void PlaceLidSupplyTable()
-        {
-            var armB = GameObject.Find("ArmB");
-            if (armB == null)
-            {
-                Debug.LogError("[CellSceneBuilder] 열려 있는 씬에 ArmB가 없습니다. Scene_Cell을 연 뒤 다시 실행하세요.");
-                return;
-            }
-
-            if (GameObject.Find("LidSupplyTable") != null)
-            {
-                Debug.Log("[CellSceneBuilder] LidSupplyTable이 이미 씬에 있습니다.");
-                return;
-            }
-
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabDir}/PF_LidSupplyTable.prefab");
-            if (prefab == null)
-            {
-                Debug.LogError("[CellSceneBuilder] PF_LidSupplyTable 프리팹이 없습니다.");
-                return;
-            }
-
-            var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, armB.transform.parent);
-            instance.name = "LidSupplyTable";
-            instance.transform.SetPositionAndRotation(armB.transform.position + new Vector3(-0.9f, 0f, 0.4f), Quaternion.identity);
-            Undo.RegisterCreatedObjectUndo(instance, "Place LidSupplyTable");
-            EditorSceneManager.MarkSceneDirty(instance.scene);
-            Selection.activeGameObject = instance;
-            Debug.Log("[CellSceneBuilder] ArmB 옆에 LidSupplyTable을 놓았습니다. Ctrl+S로 씬을 저장하세요.");
-        }
-
         [MenuItem("Tools/MediKit/Rebuild LidSupplyTable Prefab")]
         public static void RebuildLidSupplyTablePrefab()
         {
