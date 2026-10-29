@@ -7,3 +7,10 @@ Assets/fr5_description/**/*.STL filter=lfs diff=lfs merge=lfs -text
 Assets/fr5_description/**/*.dae filter=lfs diff=lfs merge=lfs -text
 Assets/fr5_description/**/*.DAE filter=lfs diff=lfs merge=lfs -text
 Assets/fr5_description/**/*.asset filter=lfs diff=lfs merge=lfs -text
+
+# UR3 + Robotiq URDF 대용량 에셋은 Git LFS로 관리
+Assets/ur3_with_gripper/**/*.stl filter=lfs diff=lfs merge=lfs -text
+Assets/ur3_with_gripper/**/*.STL filter=lfs diff=lfs merge=lfs -text
+Assets/ur3_with_gripper/**/*.dae filter=lfs diff=lfs merge=lfs -text
+Assets/ur3_with_gripper/**/*.DAE filter=lfs diff=lfs merge=lfs -text
+Assets/ur3_with_gripper/**/*.asset filter=lfs diff=lfs merge=lfs -text
