@@ -5,9 +5,16 @@ namespace MediKitTwin.Common
 {
     /// <summary>
     /// 로봇암의 현재 상태를 읽는 쪽. 강화학습 관측, IK 시드, 대시보드가 이 인터페이스만 보고 구체 클래스는 모른다.
+    /// 관절 각도는 모두 URDF 기준(rad)이다.
     /// </summary>
     public interface IArmState
     {
+        /// <summary>
+        /// 물리 엔진이 준비되어 관절 각도와 순기구학을 쓸 수 있으면 true.
+        /// 첫 물리 스텝 뒤에야 true가 되므로, Start에서 상태를 읽는 쪽은 이 값을 기다린다.
+        /// </summary>
+        bool IsReady { get; }
+
         /// <summary>URDF 관절 이름. 배열 인자의 순서는 항상 이 순서다.</summary>
         IReadOnlyList<string> JointNames { get; }
 

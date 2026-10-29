@@ -49,6 +49,7 @@ namespace MediKitTwin.Rl
         private int _episodeStep;
         private int _fixedStepCounter;
         private bool _ready;
+        private bool _needsFirstReset;
 
         public int ObservationSize { get; private set; }
         public int ActionSize { get; private set; }
@@ -91,15 +92,22 @@ namespace MediKitTwin.Rl
                 Array.Copy(_homePose, _home, jointCount);
             }
 
+            // 로봇은 첫 물리 스텝 뒤에야 관절 각도와 순기구학을 쓸 수 있다. 첫 에피소드는 FixedUpdate에서 시작한다.
             _ready = true;
-            ResetEpisode();
+            _needsFirstReset = true;
         }
 
         private void FixedUpdate()
         {
-            if (!_ready)
+            if (!_ready || !_state.IsReady)
             {
                 return;
+            }
+
+            if (_needsFirstReset)
+            {
+                _needsFirstReset = false;
+                ResetEpisode();
             }
 
             _fixedStepCounter++;

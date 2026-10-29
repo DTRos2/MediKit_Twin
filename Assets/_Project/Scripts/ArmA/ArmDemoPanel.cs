@@ -64,14 +64,14 @@ namespace MediKitTwin.ArmA
                 _grip.Close();
             }
 
-            if (GUILayout.Button("홈 자세(모든 관절 0)") && _arm != null)
+            if (GUILayout.Button("홈 자세") && _arm != null)
             {
                 if (_task != null)
                 {
                     _task.Cancel();
                 }
 
-                _arm.SetJointTargets(new float[_arm.JointCount]);
+                _arm.SetJointTargets(_arm.HomePoseRad);
                 _status = "홈으로 이동";
             }
 
