@@ -10,6 +10,9 @@ namespace MediKitTwin.Common
         /// <summary>마지막으로 푼 IK가 수렴했으면 true. 닿을 수 없는 목표면 false.</summary>
         bool LastSolveSucceeded { get; }
 
+        /// <summary>마지막으로 푼 IK의 오차와 반복 횟수. 푼 적이 없으면 기본값.</summary>
+        IkResult LastResult { get; }
+
         /// <summary>월드 기준 목표 자세를 준다. 접근 방향이 +Z(forward)다.</summary>
         void SetToolTarget(Pose worldPose);
 

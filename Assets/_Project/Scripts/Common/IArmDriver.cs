@@ -7,6 +7,9 @@ namespace MediKitTwin.Common
     {
         float MaxJointSpeedRadPerSec { get; }
 
+        /// <summary>시작 자세(rad, JointNames 순서). 에피소드 시작이나 "홈으로" 명령에 쓴다.</summary>
+        float[] HomePoseRad { get; }
+
         /// <summary>관절 목표 각도(rad)를 JointNames 순서로 준다. 목표까지 가는 속도는 구현체가 제한한다.</summary>
         void SetJointTargets(float[] anglesRad);
 

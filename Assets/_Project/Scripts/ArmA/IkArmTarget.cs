@@ -11,7 +11,8 @@ namespace MediKitTwin.ArmA
     /// </summary>
     public class IkArmTarget : MonoBehaviour, IArmTarget, IToolPoseTarget
     {
-        [SerializeField] private ArmController _arm;
+        [Tooltip("로봇의 운동학 정보를 주는 쪽(IArmModel 구현체, 보통 ArmController).")]
+        [SerializeField] private MonoBehaviour _arm;
 
         [Tooltip("지정하면 이 Transform의 자세를 도구 끝점 목표로 따라간다. 접근 방향이 +Z(forward)다.")]
         [SerializeField] private Transform _followTarget;
@@ -19,6 +20,7 @@ namespace MediKitTwin.ArmA
         [Tooltip("IK가 수렴하지 못해도 가장 가까운 해로 움직인다. 끄면 닿지 않는 목표에서는 제자리에 둔다.")]
         [SerializeField] private bool _moveWhenUnreachable;
 
+        private IArmModel _model;
         private IInverseKinematics _solver;
         private float[] _seed;
         private float[] _solution;
@@ -27,10 +29,20 @@ namespace MediKitTwin.ArmA
         private bool _dirty;
         private bool _hasSolution;
 
-        public IReadOnlyList<string> JointNames => _arm.JointNames;
+        public IReadOnlyList<string> JointNames => _model.JointNames;
         public bool HasToolTarget => _hasTarget;
         public bool LastSolveSucceeded { get; private set; }
         public IkResult LastResult { get; private set; }
+
+        private void Awake()
+        {
+            _model = _arm as IArmModel;
+            if (_model == null)
+            {
+                Debug.LogError($"{name}: Arm이 IArmModel을 구현해야 한다.", this);
+                enabled = false;
+            }
+        }
 
         public void SetToolTarget(Pose worldPose)
         {
@@ -53,7 +65,7 @@ namespace MediKitTwin.ArmA
                 return false;
             }
 
-            Pose tool = _arm.ToolPose;
+            Pose tool = _model.ToolPose;
             return Vector3.Distance(tool.position, _targetWorld.position) <= positionToleranceM
                 && Quaternion.Angle(tool.rotation, _targetWorld.rotation) <= rotationToleranceDeg;
         }
@@ -102,9 +114,9 @@ namespace MediKitTwin.ArmA
             EnsureSolver();
 
             // 시드는 현재 자세다. 가까운 해를 찾아 팔이 갑자기 다른 자세로 뒤집히는 것을 막는다.
-            _arm.GetJointPositions(_seed);
+            _model.GetJointPositions(_seed);
 
-            Transform baseLink = _arm.BaseLink;
+            Transform baseLink = _model.BaseLink;
             var targetInBase = new Pose(
                 baseLink.InverseTransformPoint(_targetWorld.position),
                 Quaternion.Inverse(baseLink.rotation) * _targetWorld.rotation);
@@ -123,14 +135,16 @@ namespace MediKitTwin.ArmA
                 return;
             }
 
-            DlsIkSettings settings = _arm.Profile.Ik;
+            DlsIkSettings settings = _model.IkSettings;
             _solver = new MultiStartInverseKinematics(
-                new DlsInverseKinematics(_arm.Chain, settings),
-                _arm.Chain,
+                new DlsInverseKinematics(_model.Chain, settings),
+                _model.Chain,
                 settings.Restarts,
                 settings.RestartSeed);
-            _seed = new float[_arm.JointCount];
-            _solution = new float[_arm.JointCount];
+
+            int count = _model.JointNames.Count;
+            _seed = new float[count];
+            _solution = new float[count];
         }
     }
 }

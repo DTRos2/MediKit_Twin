@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using MediKitTwin.Common;
 using UnityEngine;
 
@@ -12,7 +13,8 @@ namespace MediKitTwin.ArmA
     /// </summary>
     public class JointGripper : MonoBehaviour, IGripper
     {
-        [SerializeField] private ArmController _arm;
+        [Tooltip("그리퍼가 붙은 로봇(IGripperHost 구현체, 보통 ArmController).")]
+        [SerializeField] private MonoBehaviour _arm;
 
         [Tooltip("완전히 열린 상태에서 닫히기까지(또는 반대) 걸리는 시간.")]
         [SerializeField, Min(0.05f)] private float _travelSeconds = 0.8f;
@@ -25,8 +27,9 @@ namespace MediKitTwin.ArmA
 
         [SerializeField] private LayerMask _graspMask = ~0;
 
+        private IGripperHost _host;
         private ArticulationBody[] _joints;
-        private ArmProfileSO.GripperJointEntry[] _entries;
+        private IReadOnlyList<ArmProfileSO.GripperJointEntry> _entries;
         private readonly GraspAttachment _attachment = new GraspAttachment();
         private float _opening = 1f;
         private float _targetOpening = 1f;
@@ -42,18 +45,19 @@ namespace MediKitTwin.ArmA
 
         private void Start()
         {
-            if (_arm == null || _arm.Profile == null)
+            _host = _arm as IGripperHost;
+            if (_host == null)
             {
-                Debug.LogError($"{name}: ArmController 또는 프로필이 없다.", this);
+                Debug.LogError($"{name}: Arm이 IGripperHost를 구현해야 한다.", this);
                 enabled = false;
                 return;
             }
 
-            _entries = _arm.Profile.GripperJoints;
-            _joints = new ArticulationBody[_entries.Length];
-            for (int i = 0; i < _entries.Length; i++)
+            _entries = _host.GripperJoints;
+            _joints = new ArticulationBody[_entries.Count];
+            for (int i = 0; i < _entries.Count; i++)
             {
-                Transform link = TransformSearch.FindDeep(_arm.transform, _entries[i].LinkName);
+                Transform link = TransformSearch.FindDeep(_host.RobotRoot, _entries[i].LinkName);
                 _joints[i] = link != null ? link.GetComponent<ArticulationBody>() : null;
                 if (_joints[i] == null)
                 {
@@ -136,13 +140,13 @@ namespace MediKitTwin.ArmA
                 return;
             }
 
-            _attachment.Attach(nearest, _arm.ToolBody);
+            _attachment.Attach(nearest, _host.ToolBody);
             Grasped?.Invoke();
         }
 
         private Graspable FindNearestGraspable()
         {
-            Vector3 center = _arm.ToolPose.position;
+            Vector3 center = _host.ToolPose.position;
             Collider[] hits = Physics.OverlapSphere(center, _graspRadius, _graspMask, QueryTriggerInteraction.Ignore);
 
             Graspable nearest = null;
@@ -179,13 +183,13 @@ namespace MediKitTwin.ArmA
 
         private void OnDrawGizmosSelected()
         {
-            if (_arm == null || !_ready)
+            if (_host == null || !_ready)
             {
                 return;
             }
 
             Gizmos.color = new Color(1f, 0.8f, 0f, 0.4f);
-            Gizmos.DrawWireSphere(_arm.ToolPose.position, _graspRadius);
+            Gizmos.DrawWireSphere(_host.ToolPose.position, _graspRadius);
         }
     }
 }
