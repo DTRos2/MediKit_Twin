@@ -169,19 +169,42 @@ Unity 데이터 생성기(FR-08) → PNG + labels.csv → PyTorch 학습 → ONN
 ```
 Assets/
 ├─ _Project/
-│  ├─ Scripts/{Orders, Recipes, ArmA, ArmB, Conveyor, Inspection, Pusher, Inventory, Unloader, Dashboard, ML, Common}
+│  ├─ Scripts/{Orders, Recipes, ArmA, ArmB, Conveyor, Inspection, Pusher, Label, Inventory, Unloader, Logging, Dashboard, ML, Ros, Common}
 │  ├─ Recipes/          # RecipeSO 파일
+│  ├─ Config/           # ScenarioConfigSO 파일 (시드, 누락 확률 등)
 │  ├─ Prefabs/
 │  ├─ Scenes/
 │  ├─ Materials/
 │  ├─ Models/
 │  └─ ML/Models/        # .onnx
+├─ StreamingAssets/Orders/   # 주문 파일 (FR-01, 빌드에서도 읽기 위해)
+├─ Resources/                # ROSConnectionPrefab (ROS-TCP-Connector가 생성)
 └─ (서드파티 에셋은 _Project 밖에 둔다)
 ml/                    # 파이썬 학습 코드 (데이터셋은 커밋하지 않음)
+meditkit_ws/           # ROS 2 워크스페이스 (colcon)
 docs/                  # SRS, 기획표, WBS, 공정 흐름도
 ```
 
-- ROS 2 연동(선택 확장)은 10/30 판단 뒤에 필요할 때 `ros2/` 폴더를 추가한다.
+| Scripts 폴더 | 내용 | 요구사항 |
+|---|---|---|
+| `Orders` | 주문 대기열, 보류·재개 | FR-01, FR-13, FR-16 |
+| `Recipes` | `RecipeSO`와 레시피 데이터 타입 | FR-02 |
+| `ArmA` | 피킹·키팅, 누락 발생 규칙 | FR-03, FR-04 |
+| `Conveyor` | 구역 이송, 구역 점유 | FR-05 |
+| `Inspection` | 슬롯 센서 규칙 판정 (`IInspector`) | FR-06 |
+| `ML` | Sentis 추론, 합성 데이터 생성기 | FR-07, FR-08 |
+| `Pusher` | 불량 배출, 불량 박스 | FR-09 |
+| `ArmB` | 뚜껑 덮기 | FR-10 |
+| `Label` | 병원명·로트 라벨 표시 | FR-11 |
+| `Unloader` | 하역 로봇, AGV 경로 | FR-12 |
+| `Inventory` | 선반 재고, 보충 (`IStock`) | FR-13 |
+| `Logging` | `IProductionLog` 구현, 생산 로그 CSV | FR-14 |
+| `Dashboard` | 지표 표시, 배속 UI | FR-14, FR-15 |
+| `Ros` | 관절 명령 구독, 상태 발행 | FR-17, FR-18 |
+| `Common` | `CellEvents`, `SimClock`, 공통 인터페이스 | - |
+
+- 각 Scripts 폴더에는 같은 이름의 asmdef(`MediKitTwin.<폴더명>`)가 있다. `Recipes`와 `Common`을 뺀 나머지는 `Common`만 참조한다. (6-1)
+- ROS 2 노드는 `meditkit_ws/`, Unity 쪽 ROS 코드는 `Assets/_Project/Scripts/Ros/`에 둔다.
 
 | 에셋 | 접두사 | 예시 |
 |---|---|---|

@@ -1,0 +1,16 @@
+{
+    "name": "MediKitTwin.Inspection",
+    "rootNamespace": "MediKitTwin.Inspection",
+    "references": [
+        "MediKitTwin.Common"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
