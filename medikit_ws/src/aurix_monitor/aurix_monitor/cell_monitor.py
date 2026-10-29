@@ -12,7 +12,7 @@ class CellMonitor(Node):
 
     def __init__(self):
         super().__init__('cell_monitor')
-        self.declare_parameter('csv_path', os.path.expanduser('~/meditkit_ws/cell_log.csv'))
+        self.declare_parameter('csv_path', os.path.expanduser('~/medikit_ws/cell_log.csv'))
         path = self.get_parameter('csv_path').value
         os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
         self.file = open(path, 'a', newline='')

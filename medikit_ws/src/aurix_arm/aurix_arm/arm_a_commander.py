@@ -1,4 +1,7 @@
-"""자세 순서대로 /arm_a/joint_command를 발행하고 /arm_a/joint_states로 도착을 판정."""
+"""자세 순서대로 최종 목표 각도를 /arm_a/joint_command로 발행하고 /arm_a/joint_states로 도착을 판정.
+
+보간 궤적은 보내지 않는다. 목표까지의 이동은 Unity가 배속에 맞춰 처리한다.
+"""
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
@@ -16,13 +19,12 @@ class ArmACommander(Node):
         self.declare_parameter('poses_file', default_cfg)
         self.declare_parameter('publish_rate', 20.0)
         self.declare_parameter('tolerance', 0.01)
-        self.declare_parameter('wait_timeout', 10.0)
-        self.declare_parameter('move_duration', 2.0)
+        # ROS는 Unity 시뮬레이션 시간을 알 수 없으므로 실제 시간 기준이다. 1배속 동작 시간보다 충분히 길게 둔다.
+        self.declare_parameter('wait_timeout', 30.0)
 
         self.table = PoseTable(self.get_parameter('poses_file').value)
         self.tol = self.get_parameter('tolerance').value
         self.timeout = self.get_parameter('wait_timeout').value
-        self.duration = self.get_parameter('move_duration').value
         rate = self.get_parameter('publish_rate').value
 
         self.pub = self.create_publisher(JointState, '/arm_a/joint_command', 10)
@@ -30,8 +32,7 @@ class ArmACommander(Node):
         self.current = None
 
         self.idx = 0
-        self.start = list(self.table.poses[self.table.sequence[0]])
-        self.goal = self.start
+        self.goal = list(self.table.poses[self.table.sequence[0]])
         self.phase = 'idle'
         self.phase_t0 = self.get_clock().now()
         self.create_timer(1.0 / rate, self.tick)
@@ -47,7 +48,6 @@ class ArmACommander(Node):
     def next_pose(self):
         name = self.table.sequence[self.idx % len(self.table.sequence)]
         self.idx += 1
-        self.start = self.current if self.current is not None else self.goal
         self.goal = self.table.poses[name]
         self.phase = 'moving'
         self.phase_t0 = self.get_clock().now()
@@ -60,21 +60,18 @@ class ArmACommander(Node):
     def tick(self):
         if self.phase == 'idle':
             self.next_pose()
-        t = self.elapsed()
-        cmd = self.table.interpolate(self.start, self.goal, t / self.duration)
 
         msg = JointState()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.name = self.table.joint_names
-        msg.position = cmd
+        msg.position = self.goal
         self.pub.publish(msg)
 
-        if t >= self.duration:
-            if self.arrived():
-                self.next_pose()
-            elif t > self.duration + self.timeout:
-                self.get_logger().warn('도착 대기 시간 초과, 다음 자세로 진행')
-                self.next_pose()
+        if self.arrived():
+            self.next_pose()
+        elif self.elapsed() > self.timeout:
+            self.get_logger().warn('도착 대기 시간 초과, 다음 자세로 진행')
+            self.next_pose()
 
 
 def main(args=None):

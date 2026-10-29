@@ -1,4 +1,4 @@
-# meditkit_ws
+# medikit_ws
 
 ROS2 Humble 워크스페이스. 다른 PC의 Unity와 TCP로 연동해 로봇암 A를 구동하고 공정을 모니터링한다.
 Unity ↔ ROS 중계는 직접 구현한 **C++ 엔드포인트**(`ros_tcp_endpoint_cpp`)가 맡는다.
@@ -25,7 +25,7 @@ Unity PC                                  이 PC (ROS2 Humble)
 ```
 
 ```
-meditkit_ws/src/
+medikit_ws/src/
 ├── ROS-TCP-Endpoint/        Unity 공식 Python 엔드포인트 (main-ros2). 대체용으로 보관
 ├── ros_tcp_endpoint_cpp/    ★ C++ 엔드포인트 (아래 4장)
 ├── aurix_description/       로봇암 A URDF (6축, 자리표시용 형상)
@@ -37,7 +37,7 @@ meditkit_ws/src/
 | 패키지 | 빌드 | 내용 |
 |---|---|---|
 | `aurix_description` | ament_cmake | `urdf/arm_a.urdf` (joint_1~6), `meshes/` |
-| `aurix_arm` | ament_python | `arm_a_commander.py` 자세 순서 발행·도착 판정, `pose_table.py` yaml 로드·보간, `config/arm_a_poses.yaml` |
+| `aurix_arm` | ament_python | `arm_a_commander.py` 자세 순서대로 최종 목표 각도 발행·도착 판정, `pose_table.py` yaml 로드, `config/arm_a_poses.yaml` |
 | `aurix_monitor` | ament_python | `cell_monitor.py` — `/cell/events·station_state·kpi` 구독 → 로그, CSV 저장 |
 | `aurix_bringup` | ament_python | `aurix.launch.py`, `endpoint_only.launch.py`, `config/params.yaml` |
 | `ros_tcp_endpoint_cpp` | ament_cmake | Unity용 C++ TCP 엔드포인트 |
@@ -50,7 +50,7 @@ meditkit_ws/src/
 
 ```bash
 source /opt/ros/humble/setup.bash          # ROS2 기본 환경
-cd ~/meditkit_ws
+cd ~/medikit_ws
 colcon build --symlink-install             # 전체 빌드 (--symlink-install: 설정·launch 수정이 재빌드 없이 반영)
 source install/setup.bash                  # 이 워크스페이스 환경
 ```
@@ -65,7 +65,7 @@ colcon build --symlink-install --packages-select ros_tcp_endpoint_cpp
 
 ```bash
 echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
-echo "source ~/meditkit_ws/install/setup.bash" >> ~/.bashrc
+echo "source ~/medikit_ws/install/setup.bash" >> ~/.bashrc
 ```
 
 ---
@@ -102,8 +102,8 @@ ros2 launch aurix_bringup aurix.launch.py monitor:=true    # + cell_monitor (CSV
 | `endpoint` | `ROS_TCP_PORT` | `7777` | Unity와 맞춰야 하는 포트 |
 | `arm_a_commander` | `publish_rate` | `20.0` Hz | 관절 명령 발행 주기 |
 | `arm_a_commander` | `tolerance` | `0.01` rad | 도착 판정 허용오차 |
-| `arm_a_commander` | `wait_timeout` | `10.0` s | 도착 대기 제한 (초과 시 경고 후 다음 자세) |
-| `cell_monitor` | `csv_path` | `/home/coc/meditkit_ws/cell_log.csv` | 모니터 로그 저장 경로 |
+| `arm_a_commander` | `wait_timeout` | `30.0` s | 도착 대기 제한, 실제 시간 기준 (초과 시 경고 후 다음 자세) |
+| `cell_monitor` | `csv_path` | `/home/coc/medikit_ws/cell_log.csv` | 모니터 로그 저장 경로 |
 
 로봇암 자세와 데모 순서는 `aurix_arm/config/arm_a_poses.yaml`에서 바꾼다 (`poses`, `sequence`).
 

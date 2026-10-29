@@ -181,7 +181,7 @@ Assets/
 ├─ Resources/                # ROSConnectionPrefab (ROS-TCP-Connector가 생성)
 └─ (서드파티 에셋은 _Project 밖에 둔다)
 ml/                    # 파이썬 학습 코드 (데이터셋은 커밋하지 않음)
-meditkit_ws/           # ROS 2 워크스페이스 (colcon)
+medikit_ws/           # ROS 2 워크스페이스 (colcon)
 docs/                  # SRS, 기획표, WBS, 공정 흐름도
 ```
 
@@ -204,7 +204,7 @@ docs/                  # SRS, 기획표, WBS, 공정 흐름도
 | `Common` | `CellEvents`, `SimClock`, 공통 인터페이스 | - |
 
 - 각 Scripts 폴더에는 같은 이름의 asmdef(`MediKitTwin.<폴더명>`)가 있다. `Recipes`와 `Common`을 뺀 나머지는 `Common`만 참조한다. (6-1)
-- ROS 2 노드는 `meditkit_ws/`, Unity 쪽 ROS 코드는 `Assets/_Project/Scripts/Ros/`에 둔다.
+- ROS 2 노드는 `medikit_ws/`, Unity 쪽 ROS 코드는 `Assets/_Project/Scripts/Ros/`에 둔다.
 
 | 에셋 | 접두사 | 예시 |
 |---|---|---|

@@ -2,7 +2,10 @@
     "name": "MediKitTwin.Ros",
     "rootNamespace": "MediKitTwin.Ros",
     "references": [
-        "MediKitTwin.Common"
+        "MediKitTwin.Common",
+        "Unity.Robotics.ROSTCPConnector",
+        "Unity.Robotics.ROSTCPConnector.Messages",
+        "Unity.Robotics.ROSTCPConnector.MessageGeneration"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
