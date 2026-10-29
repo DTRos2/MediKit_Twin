@@ -169,7 +169,7 @@ Unity 데이터 생성기(FR-08) → PNG + labels.csv → PyTorch 학습 → ONN
 ```
 Assets/
 ├─ _Project/
-│  ├─ Scripts/{Orders, Recipes, ArmA, ArmB, Conveyor, Inspection, Pusher, Label, Inventory, Unloader, Logging, Dashboard, CameraRig, ML, Ros, Common}
+│  ├─ Scripts/{Orders, Recipes, ArmA, ArmB, Conveyor, Inspection, Pusher, Label, Inventory, Unloader, Logging, Dashboard, CameraRig, ML, Rl, Ros, Common}
 │  ├─ Recipes/          # RecipeSO 파일
 │  ├─ Config/           # ScenarioConfigSO 파일 (시드, 누락 확률 등)
 │  ├─ Prefabs/
@@ -189,7 +189,7 @@ docs/                  # SRS, 기획표, WBS, 공정 흐름도
 |---|---|---|
 | `Orders` | 주문 대기열, 보류·재개 | FR-01, FR-13, FR-16 |
 | `Recipes` | `RecipeSO`와 레시피 데이터 타입 | FR-02 |
-| `ArmA` | 피킹·키팅, 누락 발생 규칙 | FR-03, FR-04 |
+| `ArmA` | 피킹·키팅, 누락 발생 규칙, 관절 구동·IK·그리퍼(`ArmController`, `IkArmTarget`, `JointGripper`) | FR-03, FR-04 |
 | `Conveyor` | 구역 이송, 구역 점유 | FR-05 |
 | `Inspection` | 슬롯 센서 규칙 판정 (`IInspector`) | FR-06 |
 | `ML` | Sentis 추론, 합성 데이터 생성기 | FR-07, FR-08 |
@@ -201,7 +201,8 @@ docs/                  # SRS, 기획표, WBS, 공정 흐름도
 | `Logging` | `IProductionLog` 구현, 생산 로그 CSV | FR-14 |
 | `Dashboard` | 지표 표시, 배속 UI | FR-14, FR-15 |
 | `CameraRig` | 마우스 오른쪽 버튼 카메라 조작 (Input System 사용) | - |
-| `Ros` | 관절 명령 구독, 상태 발행 | FR-17, FR-18 |
+| `Rl` | 강화학습 환경(관측, 행동 해석, 보상, 목표 뽑기). `Common` 인터페이스만 본다 | - |
+| `Ros` | 관절 명령 구독, 상태 발행, 정책 노드 연동(`RosPolicy`) | FR-17, FR-18 |
 | `Common` | `CellEvents`, `SimClock`, 공통 인터페이스 | - |
 
 - 각 Scripts 폴더에는 같은 이름의 asmdef(`MediKitTwin.<폴더명>`)가 있다. `Recipes`, `Common`, `CameraRig`를 뺀 나머지는 `Common`만 참조한다. `CameraRig`는 `Unity.InputSystem`만 참조한다. (6-1)
