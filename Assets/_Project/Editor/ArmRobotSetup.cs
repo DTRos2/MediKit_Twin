@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using MediKitTwin.ArmA;
+using MediKitTwin.Demo;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,28 +18,10 @@ public static class ArmRobotSetup
 
     private static void Setup(ArmProfileSO profile, string defaultRobotName, Vector2 panelPosition, string title, Vector3 cubeOffset)
     {
-        // 선택이 없으면 기본 이름으로 씬에서 찾는다. 씬 오브젝트가 아닌 에셋을 선택한 경우도 선택 없음으로 본다.
-        GameObject robot = Selection.activeGameObject != null && Selection.activeGameObject.scene.IsValid()
-            ? Selection.activeGameObject
-            : GameObject.Find(defaultRobotName);
-
+        GameObject robot = FindRobot(profile, defaultRobotName);
         if (robot == null || profile == null)
         {
-            Debug.LogError($"로봇을 찾지 못했다. Hierarchy에서 로봇 최상위 오브젝트('{defaultRobotName}')를 클릭해 선택한 뒤 다시 실행한다.");
-            return;
-        }
-
-        // 하위 링크를 골랐으면 최상위 로봇으로 올라간다.
-        Transform root = robot.transform;
-        while (root.parent != null && root.GetComponentInChildren<ArticulationBody>(true) == null)
-        {
-            root = root.parent;
-        }
-
-        robot = root.gameObject;
-        if (!HasLink(robot, profile.BaseLinkName) || !HasLink(robot, profile.ToolLinkName))
-        {
-            Debug.LogError($"{robot.name}에서 링크 '{profile.BaseLinkName}' 또는 '{profile.ToolLinkName}'를 찾지 못했다. 선택한 로봇과 프로필이 맞는지 확인한다.");
+            Debug.LogError($"로봇을 찾지 못했다. 씬에 '{defaultRobotName}'가 있고 링크 '{profile?.BaseLinkName}', '{profile?.ToolLinkName}'를 가졌는지 확인한다.");
             return;
         }
 
@@ -71,6 +54,60 @@ public static class ArmRobotSetup
         EditorUtility.SetDirty(robot);
         Debug.Log($"[{robot.name}] 설정 완료: ArmController, IkArmTarget, JointGripper, PickAndLiftTask, ArmDemoPanel 연결, 시험 큐브 '{cube.name}'. " +
                   "씬을 저장하려면 Ctrl+S. 큐브는 추정 위치이므로 IK가 실패하면 로봇이 닿는 곳으로 옮긴다.");
+    }
+
+    // 선택한 오브젝트가 로봇이면 그것을, 로봇을 품은 부모(예: Cell)면 그 안의 기본 이름 로봇을, 아니면 씬 전체에서 기본 이름으로 찾는다.
+    private static GameObject FindRobot(ArmProfileSO profile, string defaultRobotName)
+    {
+        if (profile == null)
+        {
+            return null;
+        }
+
+        GameObject selected = Selection.activeGameObject;
+        if (selected != null && selected.scene.IsValid())
+        {
+            if (IsRobot(selected, profile))
+            {
+                return selected;
+            }
+
+            Transform inside = FindByName(selected.transform, defaultRobotName);
+            if (inside != null && IsRobot(inside.gameObject, profile))
+            {
+                return inside.gameObject;
+            }
+
+            // 하위 링크를 골랐으면 위로 올라가며 로봇 최상위를 찾는다.
+            for (Transform parent = selected.transform.parent; parent != null; parent = parent.parent)
+            {
+                if (IsRobot(parent.gameObject, profile))
+                {
+                    return parent.gameObject;
+                }
+            }
+        }
+
+        GameObject byName = GameObject.Find(defaultRobotName);
+        return byName != null && IsRobot(byName, profile) ? byName : null;
+    }
+
+    private static bool IsRobot(GameObject candidate, ArmProfileSO profile)
+    {
+        return HasLink(candidate, profile.BaseLinkName) && HasLink(candidate, profile.ToolLinkName);
+    }
+
+    private static Transform FindByName(Transform root, string name)
+    {
+        foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (t.name == name)
+            {
+                return t;
+            }
+        }
+
+        return null;
     }
 
     private static bool HasLink(GameObject robot, string linkName)
