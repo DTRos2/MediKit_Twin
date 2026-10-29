@@ -20,6 +20,7 @@ namespace MediKitTwin.EditorTools
         private const string PrefabDir = ProjectRoot + "/Prefabs";
         private const string MaterialDir = ProjectRoot + "/Materials";
         private const string ConveyorPrefabDir = "Assets/Conveyor System/Prefab";
+        private const string UnloaderRobotModelPath = "Assets/Warehouse_Robot_Controller/Prefabs/robot_boxy.prefab";
 
         // 각 구간의 직선 컨베이어 개수 (1개 = 1m)
         private const int KittingLength = 4;
@@ -98,6 +99,14 @@ namespace MediKitTwin.EditorTools
             RebuildPrefab("PF_Shelf", BuildShelf);
             AssetDatabase.SaveAssets();
             Debug.Log("[CellSceneBuilder] PF_RejectBin, PF_Shelf 재생성 완료");
+        }
+
+        [MenuItem("Tools/MediKit/Rebuild UnloaderRobot Prefab")]
+        public static void RebuildUnloaderRobotPrefab()
+        {
+            RebuildPrefab("PF_UnloaderRobot", BuildUnloaderRobot);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CellSceneBuilder] PF_UnloaderRobot 재생성 완료");
         }
 
         private static void RebuildPrefab(string prefabName, Action<Transform> build)
@@ -424,8 +433,22 @@ namespace MediKitTwin.EditorTools
 
         private static void BuildUnloaderRobot(Transform root)
         {
-            Prim("Body", root, new Vector3(0f, 0.3f, 0f), new Vector3(0.7f, 0.4f, 0.7f), ColorOrange, "M_Orange");
-            Prim("Light", root, new Vector3(0.3f, 0.35f, 0.3f), new Vector3(0.1f, 0.1f, 0.1f), ColorRed, "M_Red");
+            var robotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(UnloaderRobotModelPath);
+            if (robotPrefab == null) throw new FileNotFoundException("하역 로봇 프리팹이 없습니다: " + UnloaderRobotModelPath);
+
+            var robot = (GameObject)PrefabUtility.InstantiatePrefab(robotPrefab, root);
+            robot.name = "Robot";
+            robot.transform.localPosition = Vector3.zero;
+            robot.transform.localRotation = Quaternion.Euler(0f, 90f, 0f); // 컨베이어 끝(+X) 쪽을 본다
+
+            // 키보드 조작용 스크립트는 끈다. 시뮬레이션에서는 하역 스크립트가 움직임을 맡는다.
+            // GridRobotController는 잠그면 입력을 읽지 않고 애니메이션만 갱신한다.
+            // RobotCargoInteractor는 Update에서 Input.GetKeyDown을 쓰므로 꺼 둔다. (활성 입력 처리 방식이 Input System 전용이면 오류가 난다)
+            var controller = robot.GetComponent<Warcool.WarehouseRobot.GridRobotController>();
+            if (controller != null) controller.controlsLocked = true;
+
+            var interactor = robot.GetComponent<Warcool.WarehouseRobot.RobotCargoInteractor>();
+            if (interactor != null) interactor.enabled = false;
         }
 
         private static void BuildUnloadingDock(Transform root)
