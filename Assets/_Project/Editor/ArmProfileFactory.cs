@@ -51,9 +51,9 @@ public static class ArmProfileFactory
             new Vector3(-90f, 0f, 0f),
             new[]
             {
-                // 열림/닫힘 방향은 URDF만으로 알 수 없다. 열고 닫아 보고 반대면 두 값을 바꾼다.
-                new ArmProfileSO.GripperJointEntry("finger_link1", 0.04f, 0f),
-                new ArmProfileSO.GripperJointEntry("finger_link2", 0.04f, 0f),
+                // 열림/닫힘 방향은 URDF만으로 알 수 없어 실제로 열고 닫아 확인했다(0이 열림, 0.04가 닫힘). 반대로 움직이면 두 값을 바꾼다.
+                new ArmProfileSO.GripperJointEntry("finger_link1", 0f, 0.04f),
+                new ArmProfileSO.GripperJointEntry("finger_link2", 0f, 0.04f),
             },
             // 윗팔 수직(j2 -90), 앞팔 수평(j3 +90), 그리퍼가 아래를 향하는(j4 -90, j5 -90) 세운 자세.
             // URDF 기구학으로 계산한 값이다. 모든 관절 0도는 팔을 수평으로 뻗어 로봇이 누운 것처럼 보인다.

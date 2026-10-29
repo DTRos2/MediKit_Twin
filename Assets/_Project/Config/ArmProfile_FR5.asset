@@ -39,11 +39,11 @@ MonoBehaviour:
   _toolEulerOffset: {x: -90, y: 0, z: 0}
   _gripperJoints:
   - _linkName: finger_link1
-    _openValue: 0.04
-    _closedValue: 0
+    _openValue: 0
+    _closedValue: 0.04
   - _linkName: finger_link2
-    _openValue: 0.04
-    _closedValue: 0
+    _openValue: 0
+    _closedValue: 0.04
   _ik:
     _maxIterations: 60
     _positionToleranceM: 0.002
