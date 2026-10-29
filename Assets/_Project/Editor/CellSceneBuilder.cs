@@ -45,14 +45,22 @@ namespace MediKitTwin.EditorTools
         private const float KitBoxWall = 0.01f;
         private static readonly Color ColorCardboard = new Color(0.78f, 0.60f, 0.38f);
 
-        // 뚜껑: 바깥 크기(키트 박스 0.44 x 0.34m를 여유 있게 덮는 0.48 x 0.38m), 높이, 벽 두께, 쌓을 때 한 장당 높이
-        // 뚜껑 박스: 뚜껑 최대 수, 벽 두께
-        private static readonly Vector3 LidSize = new Vector3(0.48f, LidHeight, 0.38f);
+        // 뚜껑: 바깥 크기(0.46 x 0.04 x 0.36m), 벽 두께. 값은 씬에서 직접 고친 PF_LidSupplyTable과 같다.
+        private static readonly Vector3 LidSize = new Vector3(0.46f, LidHeight, 0.36f);
         private const float LidHeight = 0.04f;
         private const float LidWall = 0.01f;
-        private const float LidStackPitch = 0.02f;
-        private const int LidCapacity = 5;
+
+        // 뚜껑 박스: 맨 위 뚜껑이 항상 같은 높이(LidPositionY)에 나와 있고, 박스 윗면(림)은 뚜껑 아래쪽보다 LidRimClearance만큼 낮다.
+        // 그래야 로봇암 B의 손가락이 벽에 걸리지 않고 뚜껑 테두리를 잡는다. 남은 뚜껑 수와 상관없이 높이가 같도록 구현 때 맞춘다.
+        private const float LidPositionY = 0.639f;
+        private const float LidRimClearance = 0.02f;
+        private const float LidBoxBottomY = 0.004f;
+        private const float LidBoxHeight = LidPositionY - LidHeight * 0.5f - LidRimClearance - LidBoxBottomY; // 0.595
+        private const float LidBoxCenterY = LidBoxBottomY + LidBoxHeight * 0.5f; // 0.3015
+        private static readonly Vector3 LidBoxSize = new Vector3(0.54f, LidBoxHeight, 0.44f);
+        private static readonly Vector3 LidPositionInBox = new Vector3(0f, LidPositionY, 0.008f);
         private const float LidBoxWall = 0.01f;
+        private const int LidCapacity = 5;
         private static readonly Color ColorLid = new Color(0.93f, 0.90f, 0.82f);
 
         // 컨베이어 위 박스가 놓이는 높이. 컨베이어를 깐 뒤에 정해진다.
@@ -131,14 +139,6 @@ namespace MediKitTwin.EditorTools
             RebuildPrefab("PF_KittingJig", BuildJig);
             AssetDatabase.SaveAssets();
             Debug.Log("[CellSceneBuilder] PF_KittingJig 재생성 완료");
-        }
-
-        [MenuItem("Tools/MediKit/Rebuild LidSupplyTable Prefab")]
-        public static void RebuildLidSupplyTablePrefab()
-        {
-            RebuildPrefab("PF_LidSupplyTable", BuildLidSupplyTable);
-            AssetDatabase.SaveAssets();
-            Debug.Log("[CellSceneBuilder] PF_LidSupplyTable 재생성 완료");
         }
 
         [MenuItem("Tools/MediKit/Rebuild UnloaderRobot Prefab")]
@@ -547,14 +547,9 @@ namespace MediKitTwin.EditorTools
 
         private static void BuildLidSupplyTable(Transform root)
         {
-            // 뚜껑 박스: 바닥에 놓인 위가 뚫린 빈 상자. 뚜껑을 LidCapacity(5)장까지 쌓을 수 있는 높이로 만든다.
-            // 뚜껑 재생성(최대 5장)은 나중에 구현하고, 지금은 뚜껑 1장만 놓는다.
-            float boxHeight = LidBoxWall + LidHeight + LidStackPitch * (LidCapacity - 1) + 0.03f;
-            var boxSize = new Vector3(LidSize.x + 0.06f, boxHeight, LidSize.z + 0.06f);
-            OpenBox("LidBox", root, new Vector3(0f, boxHeight * 0.5f, 0f), boxSize, LidBoxWall, ColorCardboard, "M_KitBox", openTop: true, openFront: false);
-
-            // 박스 바닥 위 맨 아래에 뚜껑 1장
-            BuildLid("Lid_01", root, new Vector3(0f, LidBoxWall + LidHeight * 0.5f, 0f));
+            // 뚜껑 박스: 바닥에 놓인 위가 뚫린 빈 상자. 뚜껑 재생성(최대 LidCapacity장)은 나중에 구현하고, 지금은 뚜껑 1장만 놓는다.
+            OpenBox("LidBox", root, new Vector3(0f, LidBoxCenterY, 0f), LidBoxSize, LidBoxWall, ColorCardboard, "M_KitBox", openTop: true, openFront: false);
+            BuildLid("Lid_01", root, LidPositionInBox);
         }
 
         // 키트 박스(0.44 x 0.34m)에 씌우는 뚜껑: 윗판과 아래로 내려온 테두리 4면, 아래는 뚫려 있다. 중심은 부모 기준 위치이다.
