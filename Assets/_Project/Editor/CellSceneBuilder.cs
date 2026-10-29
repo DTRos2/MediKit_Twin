@@ -426,6 +426,9 @@ namespace MediKitTwin.EditorTools
             {
                 Sensor($"Sensor_Slot{i + 1}", root, new Vector3(slots[i].x, beltY + 0.06f, slots[i].y), new Vector3(0.06f, 0.06f, 0.06f));
             }
+
+            // 지그 위 박스가 없어지면 새 박스를 자동으로 놓는다.
+            root.gameObject.AddComponent<MediKitTwin.ArmA.KitBoxSupply>();
         }
 
         private static void BuildArm(Transform root, Color color, float scale)
