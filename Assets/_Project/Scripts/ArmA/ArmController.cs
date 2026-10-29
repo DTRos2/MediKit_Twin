@@ -6,20 +6,19 @@ using UnityEngine;
 namespace MediKitTwin.ArmA
 {
     /// <summary>
-    /// 프로필에 적힌 관절을 찾아 목표 각도로 구동한다. 목표는 IArmTarget(IK, ROS)이 주거나 SetJointTargets로 직접 준다.
-    /// 목표까지는 프로필의 최대 각속도로 접근하므로 ROS도 최종 각도만 보내면 된다.
-    /// 밖으로 내보내는 관절 각도는 항상 URDF 기준이다. 에디터에서 링크를 돌려 둔 로봇은 Unity가 그 자세를 0도 기준으로
-    /// 잡을 수도, 이미 돌아간 자세로 읽을 수도 있어서, 첫 물리 스텝 뒤에 어느 쪽인지 판별해 기준 차이(offset)를 보정한다.
-    /// 로봇 종류를 모르고 ArmProfileSO만 읽는다.
+    /// 로봇암 한 대를 조립하는 컴포넌트. 실제 일은 다른 클래스에 맡기고 순서만 정한다.
+    ///   링크 찾기 = ArmRig, 관절 구동 = JointBank, 기준 보정 = ReferenceOffsetCalibrator,
+    ///   순기구학 = KinematicChainBuilder, 시작 자세 선택 = HomePoseSelector.
+    /// 밖으로 내보내는 관절 각도는 항상 URDF 기준(rad)이다. 로봇 종류를 모르고 ArmProfileSO만 읽는다.
+    /// 첫 물리 스텝 뒤에 초기화한다(그 전에는 관절 각도를 믿을 수 없다).
     /// </summary>
     // 다른 컴포넌트(IK, 그리퍼, 강화학습 환경)가 Start에서 JointNames를 읽으므로 먼저 초기화한다.
     [DefaultExecutionOrder(-50)]
     [RequireComponent(typeof(ArmDriveSetup))]
-    public class ArmController : MonoBehaviour, IArmState, IArmDriver, IForwardKinematics
+    public class ArmController : MonoBehaviour, IArmModel, IArmDriver, IForwardKinematics, IGripperHost
     {
         // 물리 엔진이 관절 상태를 안정적으로 돌려주기까지 기다리는 FixedUpdate 횟수.
         private const int WarmupFixedSteps = 2;
-        private const float ReferenceToleranceRad = 0.05f;
 
         [SerializeField] private ArmProfileSO _profile;
 
@@ -35,12 +34,8 @@ namespace MediKitTwin.ArmA
         [SerializeField] private bool _drawToolGizmo = true;
 
         private ArmRig _rig;
+        private JointBank _bank;
         private string[] _jointNames;
-        private float[] _command;
-        private float[] _goal;
-        private float[] _lowerRad;
-        private float[] _upperRad;
-        private float[] _offsetRad;
         private float[] _pendingPose;
         private IArmTarget _target;
         private KinematicChain _chain;
@@ -53,6 +48,9 @@ namespace MediKitTwin.ArmA
         public ArmProfileSO Profile => _profile;
         public KinematicChain Chain => _chain;
         public Transform BaseLink => _rig.Base;
+        public DlsIkSettings IkSettings => _profile.Ik;
+        public Transform RobotRoot => transform;
+        public IReadOnlyList<ArmProfileSO.GripperJointEntry> GripperJoints => _profile.GripperJoints;
         public ArticulationBody ToolBody => _rig.Tool != null ? _rig.Tool.GetComponent<ArticulationBody>() : null;
         public float MaxJointSpeedRadPerSec => _profile.MaxJointSpeedRadPerSec;
 
@@ -90,19 +88,13 @@ namespace MediKitTwin.ArmA
                 return;
             }
 
-            int count = _rig.Joints.Length;
-            _jointNames = new string[count];
-            for (int i = 0; i < count; i++)
+            _jointNames = new string[_rig.Joints.Length];
+            for (int i = 0; i < _jointNames.Length; i++)
             {
                 _jointNames[i] = _profile.Joints[i].JointName;
             }
 
-            _command = new float[count];
-            _goal = new float[count];
-            _lowerRad = new float[count];
-            _upperRad = new float[count];
-            _offsetRad = new float[count];
-            ReadLimits();
+            _bank = new JointBank(_rig.Joints);
             _resolved = true;
         }
 
@@ -125,30 +117,26 @@ namespace MediKitTwin.ArmA
             }
 
             // 목표가 없으면 직전 목표를 그대로 유지한다.
-            _target?.TryGetTargets(_goal);
-
-            float maxStep = MaxJointSpeedRadPerSec * Time.fixedDeltaTime;
-            for (int i = 0; i < _rig.Joints.Length; i++)
-            {
-                float goal = Mathf.Clamp(_goal[i], _lowerRad[i], _upperRad[i]);
-                _command[i] = Mathf.MoveTowards(_command[i], goal, maxStep);
-                ApplyDriveTarget(i, _command[i]);
-            }
+            _target?.TryGetTargets(_bank.Goal);
+            _bank.Step(MaxJointSpeedRadPerSec * Time.fixedDeltaTime);
         }
 
-        // 첫 물리 스텝 뒤에 한 번만 실행한다. 그 전에는 관절 각도를 믿을 수 없다.
+        // 첫 물리 스텝 뒤에 한 번만 실행한다.
         private void Initialize()
         {
-            DetectReferenceOffset();
+            _bank.SetOffsets(ReferenceOffsetCalibrator.Calibrate(_rig.Joints, _editorPoseRad, out string warning));
+            if (warning != null)
+            {
+                Debug.LogWarning($"{name}: {warning} Tools > Arm > Revert 후 다시 적용한다.", this);
+            }
 
-            var urdfAngles = new float[_rig.Joints.Length];
-            ReadUrdfAngles(urdfAngles);
+            _bank.SyncToCurrent();
 
+            var current = new float[_bank.Count];
+            _bank.ReadAngles(current);
             _chain = KinematicChainBuilder.Build(
-                _rig.Base, _rig.Joints, _rig.Tool, _profile.ToolPositionOffset, _profile.ToolRotationOffset, urdfAngles);
+                _rig.Base, _rig.Joints, _rig.Tool, _profile.ToolPositionOffset, _profile.ToolRotationOffset, current);
 
-            Array.Copy(urdfAngles, _command, urdfAngles.Length);
-            Array.Copy(urdfAngles, _goal, urdfAngles.Length);
             IsReady = true;
 
             if (_pendingPose != null)
@@ -162,57 +150,29 @@ namespace MediKitTwin.ArmA
             }
         }
 
-        // 편집 모드에서 링크를 돌려 둔 로봇인지 보고, Unity가 그 자세를 0도 기준으로 잡았는지(기준이 밀림) 판별한다.
-        private void DetectReferenceOffset()
-        {
-            if (_editorPoseRad == null || _editorPoseRad.Length != _rig.Joints.Length)
-            {
-                return;
-            }
-
-            var raw = new float[_rig.Joints.Length];
-            for (int i = 0; i < raw.Length; i++)
-            {
-                raw[i] = _rig.Joints[i].jointPosition[0];
-            }
-
-            if (MaxAbsDifference(raw, _editorPoseRad) <= ReferenceToleranceRad)
-            {
-                return; // 돌려 둔 자세를 그대로 URDF 각도로 읽었다. 보정 필요 없음.
-            }
-
-            if (MaxAbsDifference(raw, null) <= ReferenceToleranceRad)
-            {
-                // 돌려 둔 자세가 0도 기준이 되었다. URDF 각도 = 읽은 값 + 돌려 둔 각도.
-                Array.Copy(_editorPoseRad, _offsetRad, _offsetRad.Length);
-                ShiftDriveLimits();
-                return;
-            }
-
-            Debug.LogWarning($"{name}: 편집 모드 자세와 첫 관절 각도가 어느 쪽과도 맞지 않아 각도 기준을 보정하지 못했다. Tools > Arm > Revert 후 다시 적용한다.", this);
-        }
-
-        // 기준이 밀리면 Unity의 관절 한계도 새 0도 기준으로 해석되므로, URDF 한계에서 offset만큼 빼서 다시 쓴다.
-        private void ShiftDriveLimits()
-        {
-            for (int i = 0; i < _rig.Joints.Length; i++)
-            {
-                ArticulationBody body = _rig.Joints[i];
-                if (body.twistLock != ArticulationDofLock.LimitedMotion)
-                {
-                    continue;
-                }
-
-                ArticulationDrive drive = body.xDrive;
-                drive.lowerLimit -= _offsetRad[i] * Mathf.Rad2Deg;
-                drive.upperLimit -= _offsetRad[i] * Mathf.Rad2Deg;
-                body.xDrive = drive;
-            }
-        }
-
         public void SetJointTargets(float[] anglesRad)
         {
-            Array.Copy(anglesRad, _goal, _goal.Length);
+            if (HasValidLength(anglesRad, nameof(SetJointTargets)))
+            {
+                _bank.SetGoal(anglesRad);
+            }
+        }
+
+        public void ResetToPose(float[] anglesRad)
+        {
+            if (!HasValidLength(anglesRad, nameof(ResetToPose)))
+            {
+                return;
+            }
+
+            // 물리 엔진 준비 전에는 값만 기억해 두었다가 Initialize에서 적용한다.
+            if (!IsReady)
+            {
+                _pendingPose = (float[])anglesRad.Clone();
+                return;
+            }
+
+            _bank.ResetTo(anglesRad);
         }
 
         public Pose ComputeToolPose(float[] anglesRad)
@@ -223,98 +183,29 @@ namespace MediKitTwin.ArmA
                 _rig.Base.rotation * inBase.rotation);
         }
 
-        public void ResetToPose(float[] anglesRad)
+        public bool IsAtTarget(float toleranceRad) => _bank.IsAtGoal(toleranceRad);
+
+        public void GetJointPositions(float[] anglesRad) => _bank.ReadAngles(anglesRad);
+
+        public void GetJointVelocities(float[] velocitiesRadPerSec) => _bank.ReadVelocities(velocitiesRadPerSec);
+
+        public void GetJointLimits(float[] lowerRad, float[] upperRad) => _bank.GetLimits(lowerRad, upperRad);
+
+        // 호출한 쪽이 관절 수와 다른 길이의 배열을 주면 예외로 죽지 않고, 어디서 호출했는지 스택과 함께 알린다.
+        private bool HasValidLength(float[] anglesRad, string caller)
         {
-            // 물리 엔진 준비 전에는 값만 기억해 두었다가 Initialize에서 적용한다.
-            if (!IsReady)
+            int expected = _jointNames != null ? _jointNames.Length : 0;
+            if (anglesRad != null && anglesRad.Length == expected)
             {
-                _pendingPose = (float[])anglesRad.Clone();
-                return;
+                return true;
             }
 
-            for (int i = 0; i < _rig.Joints.Length; i++)
-            {
-                float urdfAngle = Mathf.Clamp(anglesRad[i], _lowerRad[i], _upperRad[i]);
-                float raw = urdfAngle - _offsetRad[i];
-
-                _rig.Joints[i].jointPosition = new ArticulationReducedSpace(raw);
-                _rig.Joints[i].jointVelocity = new ArticulationReducedSpace(0f);
-                ApplyDriveTarget(i, urdfAngle);
-
-                _command[i] = urdfAngle;
-                _goal[i] = urdfAngle;
-            }
-        }
-
-        public bool IsAtTarget(float toleranceRad)
-        {
-            for (int i = 0; i < _rig.Joints.Length; i++)
-            {
-                float current = _rig.Joints[i].jointPosition[0] + _offsetRad[i];
-                if (Mathf.Abs(current - _goal[i]) > toleranceRad)
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        public void GetJointPositions(float[] anglesRad)
-        {
-            ReadUrdfAngles(anglesRad);
-        }
-
-        public void GetJointVelocities(float[] velocitiesRadPerSec)
-        {
-            for (int i = 0; i < _rig.Joints.Length; i++)
-            {
-                velocitiesRadPerSec[i] = _rig.Joints[i].jointVelocity[0];
-            }
-        }
-
-        public void GetJointLimits(float[] lowerRad, float[] upperRad)
-        {
-            Array.Copy(_lowerRad, lowerRad, _lowerRad.Length);
-            Array.Copy(_upperRad, upperRad, _upperRad.Length);
-        }
-
-        private void ReadUrdfAngles(float[] urdfAngles)
-        {
-            for (int i = 0; i < _rig.Joints.Length; i++)
-            {
-                urdfAngles[i] = _rig.Joints[i].jointPosition[0] + _offsetRad[i];
-            }
-        }
-
-        private void ApplyDriveTarget(int index, float urdfAngle)
-        {
-            ArticulationDrive drive = _rig.Joints[index].xDrive;
-            drive.target = (urdfAngle - _offsetRad[index]) * Mathf.Rad2Deg;
-            _rig.Joints[index].xDrive = drive;
-        }
-
-        private void ReadLimits()
-        {
-            for (int i = 0; i < _rig.Joints.Length; i++)
-            {
-                bool limited = _rig.Joints[i].twistLock == ArticulationDofLock.LimitedMotion;
-                _lowerRad[i] = limited ? _rig.Joints[i].xDrive.lowerLimit * Mathf.Deg2Rad : -Mathf.PI;
-                _upperRad[i] = limited ? _rig.Joints[i].xDrive.upperLimit * Mathf.Deg2Rad : Mathf.PI;
-            }
-        }
-
-        // reference가 null이면 0과 비교한다.
-        private static float MaxAbsDifference(float[] values, float[] reference)
-        {
-            float largest = 0f;
-            for (int i = 0; i < values.Length; i++)
-            {
-                float difference = Mathf.Abs(values[i] - (reference != null ? reference[i] : 0f));
-                largest = Mathf.Max(largest, difference);
-            }
-
-            return largest;
+            Debug.LogError(
+                $"{name}: {caller}에 준 각도 배열 길이({(anglesRad == null ? "null" : anglesRad.Length.ToString())})가 관절 수({expected})와 다르다. " +
+                $"프로필 '{(_profile != null ? _profile.name : "없음")}'의 관절 목록과 호출한 쪽을 확인한다. " +
+                $"{StackTraceUtility.ExtractStackTrace()}",
+                this);
+            return false;
         }
 
         // TCP 축이 맞는지 눈으로 확인한다. 파랑(+Z)이 손가락 쪽 접근 방향이어야 한다.

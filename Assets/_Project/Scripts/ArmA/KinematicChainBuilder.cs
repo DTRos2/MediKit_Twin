@@ -41,7 +41,9 @@ namespace MediKitTwin.ArmA
                 Quaternion before = previousRotation * localRotation;
                 Vector3 localPosition = inversePrevious * (link.position - previousPosition - before * (pivot - spin * pivot));
 
-                specs[i] = new KinematicChain.JointSpec(localPosition, localRotation, axis, pivot, LowerLimitRad(body), UpperLimitRad(body));
+                specs[i] = new KinematicChain.JointSpec(
+                    localPosition, localRotation, axis, pivot,
+                    ArticulationJointLimits.LowerRad(body), ArticulationJointLimits.UpperRad(body));
 
                 previousPosition = link.position;
                 previousRotation = link.rotation;
@@ -55,16 +57,6 @@ namespace MediKitTwin.ArmA
                 specs,
                 inverseLast * (toolWorldPosition - previousPosition),
                 inverseLast * toolWorldRotation);
-        }
-
-        private static float LowerLimitRad(ArticulationBody body)
-        {
-            return body.twistLock == ArticulationDofLock.LimitedMotion ? body.xDrive.lowerLimit * Mathf.Deg2Rad : -Mathf.PI;
-        }
-
-        private static float UpperLimitRad(ArticulationBody body)
-        {
-            return body.twistLock == ArticulationDofLock.LimitedMotion ? body.xDrive.upperLimit * Mathf.Deg2Rad : Mathf.PI;
         }
     }
 }
