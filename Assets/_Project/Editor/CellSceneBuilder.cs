@@ -40,6 +40,21 @@ namespace MediKitTwin.EditorTools
         private const float WallThickness = 0.04f;
         private static readonly Vector3 BinSize = new Vector3(0.98f, 0.45f, 1.68f);
 
+        // 지그 위 키트 박스의 바깥 크기(x 0.44 · y 0.10 · z 0.34m)와 벽 두께. 지그 판(0.5 x 0.4m)보다 작다.
+        private static readonly Vector3 KitBoxSize = new Vector3(0.44f, 0.10f, 0.34f);
+        private const float KitBoxWall = 0.01f;
+        private static readonly Color ColorCardboard = new Color(0.78f, 0.60f, 0.38f);
+
+        // 뚜껑: 바깥 크기(키트 박스 0.44 x 0.34m를 여유 있게 덮는 0.48 x 0.38m), 높이, 벽 두께, 쌓을 때 한 장당 높이
+        // 뚜껑 박스: 뚜껑 최대 수, 벽 두께
+        private static readonly Vector3 LidSize = new Vector3(0.48f, LidHeight, 0.38f);
+        private const float LidHeight = 0.04f;
+        private const float LidWall = 0.01f;
+        private const float LidStackPitch = 0.02f;
+        private const int LidCapacity = 5;
+        private const float LidBoxWall = 0.01f;
+        private static readonly Color ColorLid = new Color(0.93f, 0.90f, 0.82f);
+
         // 컨베이어 위 박스가 놓이는 높이. 컨베이어를 깐 뒤에 정해진다.
         private static float beltY;
 
@@ -99,6 +114,31 @@ namespace MediKitTwin.EditorTools
             RebuildPrefab("PF_Shelf", BuildShelf);
             AssetDatabase.SaveAssets();
             Debug.Log("[CellSceneBuilder] PF_RejectBin, PF_Shelf 재생성 완료");
+        }
+
+        [MenuItem("Tools/MediKit/Rebuild KittingJig Prefab")]
+        public static void RebuildKittingJigPrefab()
+        {
+            // 지그 높이는 열려 있는 씬의 컨베이어 높이를 따른다. 컨베이어가 없으면 중단한다.
+            var conveyor = UnityEngine.Object.FindFirstObjectByType<ConveyorBase>();
+            if (conveyor == null)
+            {
+                Debug.LogError("[CellSceneBuilder] 열려 있는 씬에 컨베이어가 없습니다. Scene_Cell을 연 뒤 다시 실행하세요.");
+                return;
+            }
+
+            beltY = conveyor.CenterPoint.position.y;
+            RebuildPrefab("PF_KittingJig", BuildJig);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CellSceneBuilder] PF_KittingJig 재생성 완료");
+        }
+
+        [MenuItem("Tools/MediKit/Rebuild LidSupplyTable Prefab")]
+        public static void RebuildLidSupplyTablePrefab()
+        {
+            RebuildPrefab("PF_LidSupplyTable", BuildLidSupplyTable);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CellSceneBuilder] PF_LidSupplyTable 재생성 완료");
         }
 
         [MenuItem("Tools/MediKit/Rebuild UnloaderRobot Prefab")]
@@ -357,6 +397,11 @@ namespace MediKitTwin.EditorTools
         {
             Prim("JigPlate", root, new Vector3(0f, beltY + 0.02f, 0f), new Vector3(0.5f, 0.03f, 0.4f), ColorBlue, "M_Blue");
 
+            // 지그 위 빈 키트 박스. 레이아웃 확인용이며, 나중에 박스 공급(IBoxSupply)이 지그가 비면 만들어 놓는다.
+            // 박스 중심이 지그 중심에 오므로 슬롯 센서의 박스 기준 좌표와 같다.
+            float plateTop = beltY + 0.02f + 0.015f;
+            OpenBox("KitBox", root, new Vector3(0f, plateTop + KitBoxSize.y * 0.5f, 0f), KitBoxSize, KitBoxWall, ColorCardboard, "M_KitBox", openTop: true, openFront: false);
+
             // 슬롯 센서 위치는 RecipeSO.SlotLocalPosition과 같다. (박스 기준 로컬 좌표, 지그 회전 0)
             var slots = new[]
             {
@@ -382,19 +427,96 @@ namespace MediKitTwin.EditorTools
             const float cellHeight = 0.5f;
             Vector3 cellSize = new Vector3(0.56f, 0.46f, 0.5f);
 
+            var componentByShelfSlot = LoadComponentsByShelfSlot();
+
             // 3행(A=EM, B=BL, C=DX) x 4열. 칸 이름은 선반 칸 ID(`A-1` ~ `C-4`)와 같다.
-            // 칸은 속이 빈 상자이고, 로봇암이 있는 쪽(로컬 +Z) 면이 뚫려 있다.
+            // 칸은 속이 빈 상자이고, 로봇암이 있는 쪽(로컬 +Z) 면이 뚫려 있다. 칸마다 레시피의 구성품 1개를 놓는다.
             for (int row = 0; row < 3; row++)
             {
                 for (int col = 1; col <= 4; col++)
                 {
                     string id = $"{(char)('A' + row)}-{col}";
                     Vector3 pos = new Vector3((col - 2.5f) * cellWidth, 0.3f + row * cellHeight, 0f);
-                    OpenBox($"Shelf_{id}", root, pos, cellSize, WallThickness, ColorOrange, "M_Orange", openTop: false, openFront: true);
+                    Transform cell = OpenBox($"Shelf_{id}", root, pos, cellSize, WallThickness, ColorOrange, "M_Orange", openTop: false, openFront: true);
+
+                    if (componentByShelfSlot.TryGetValue(id, out string componentId))
+                        AddShelfItem(cell, componentId, -cellSize.y * 0.5f + WallThickness);
+                    else
+                        Debug.LogWarning($"[CellSceneBuilder] 레시피에 선반 칸 {id}의 구성품이 없어 비워 둡니다.");
                 }
             }
 
             Prim("Base", root, new Vector3(0f, 0.03f, 0f), new Vector3(2.5f, 0.06f, 0.55f), ColorDark, "M_Dark");
+        }
+
+        // 레시피(RecipeSO)에서 선반 칸 ID → 구성품 ID를 읽는다. 구성품 이름은 레시피가 정하므로 여기서 따로 적지 않는다.
+        private static Dictionary<string, string> LoadComponentsByShelfSlot()
+        {
+            var result = new Dictionary<string, string>();
+            foreach (string guid in AssetDatabase.FindAssets("t:RecipeSO"))
+            {
+                var recipe = AssetDatabase.LoadAssetAtPath<MediKitTwin.Recipes.RecipeSO>(AssetDatabase.GUIDToAssetPath(guid));
+                if (recipe == null) continue;
+                foreach (var item in recipe.Items) result[item.ShelfSlotId] = item.ComponentId;
+            }
+            return result;
+        }
+
+        // 구성품 모양(자리표시): 종류, 전체 크기(m, 원기둥은 x=지름·y=높이), 색
+        private struct ItemLook
+        {
+            public PrimitiveType Shape;
+            public Vector3 Size;
+            public Color Color;
+
+            public ItemLook(PrimitiveType shape, Vector3 size, Color color)
+            {
+                Shape = shape;
+                Size = size;
+                Color = color;
+            }
+        }
+
+        private static readonly Dictionary<string, ItemLook> ItemLooks = new Dictionary<string, ItemLook>
+        {
+            // A행 EM
+            { "gauze", new ItemLook(PrimitiveType.Cube, new Vector3(0.20f, 0.06f, 0.20f), new Color(0.96f, 0.96f, 0.94f)) },
+            { "bandage", new ItemLook(PrimitiveType.Cylinder, new Vector3(0.12f, 0.06f, 0.12f), new Color(0.95f, 0.88f, 0.75f)) },
+            { "antiseptic", new ItemLook(PrimitiveType.Cylinder, new Vector3(0.08f, 0.20f, 0.08f), new Color(0.55f, 0.30f, 0.15f)) },
+            { "gloves", new ItemLook(PrimitiveType.Cube, new Vector3(0.22f, 0.10f, 0.14f), new Color(0.25f, 0.55f, 0.95f)) },
+            // B행 BL
+            { "blood_tube", new ItemLook(PrimitiveType.Cylinder, new Vector3(0.04f, 0.18f, 0.04f), new Color(0.75f, 0.10f, 0.15f)) },
+            { "needle", new ItemLook(PrimitiveType.Cube, new Vector3(0.04f, 0.04f, 0.20f), new Color(0.65f, 0.67f, 0.70f)) },
+            { "alcohol_pad", new ItemLook(PrimitiveType.Cube, new Vector3(0.12f, 0.02f, 0.12f), new Color(0.95f, 0.65f, 0.75f)) },
+            { "tourniquet", new ItemLook(PrimitiveType.Cylinder, new Vector3(0.14f, 0.04f, 0.14f), new Color(0.15f, 0.65f, 0.60f)) },
+            // C행 DX
+            { "swab", new ItemLook(PrimitiveType.Cube, new Vector3(0.02f, 0.02f, 0.22f), new Color(0.85f, 0.72f, 0.50f)) },
+            { "buffer_vial", new ItemLook(PrimitiveType.Cylinder, new Vector3(0.06f, 0.14f, 0.06f), new Color(0.20f, 0.70f, 0.85f)) },
+            { "test_cassette", new ItemLook(PrimitiveType.Cube, new Vector3(0.16f, 0.02f, 0.10f), new Color(0.97f, 0.97f, 0.97f)) },
+            { "sample_bag", new ItemLook(PrimitiveType.Cube, new Vector3(0.20f, 0.03f, 0.14f), new Color(0.80f, 0.82f, 0.86f)) },
+        };
+
+        // 칸 바닥(floorY, 칸 기준 로컬) 위에 구성품 1개를 칸 중앙에 놓는다. 이름은 Item_<구성품 ID>.
+        private static void AddShelfItem(Transform cell, string componentId, float floorY)
+        {
+            if (!ItemLooks.TryGetValue(componentId, out ItemLook look))
+            {
+                Debug.LogWarning($"[CellSceneBuilder] 구성품 {componentId}의 모양이 없어 회색 큐브로 대체합니다.");
+                look = new ItemLook(PrimitiveType.Cube, new Vector3(0.10f, 0.10f, 0.10f), ColorGray);
+            }
+
+            var item = GameObject.CreatePrimitive(look.Shape);
+            item.name = $"Item_{componentId}";
+            item.transform.SetParent(cell, false);
+            item.transform.localPosition = new Vector3(0f, floorY + look.Size.y * 0.5f, 0f);
+
+            // 원기둥 프리미티브는 높이가 scale.y의 2배이다.
+            item.transform.localScale = look.Shape == PrimitiveType.Cylinder
+                ? new Vector3(look.Size.x, look.Size.y * 0.5f, look.Size.z)
+                : look.Size;
+
+            item.GetComponent<Renderer>().sharedMaterial = GetMaterial($"M_Item_{componentId}", look.Color);
+            UnityEngine.Object.DestroyImmediate(item.GetComponent<Collider>());
         }
 
         private static void BuildInspectionStation(Transform root)
@@ -421,8 +543,33 @@ namespace MediKitTwin.EditorTools
 
         private static void BuildLidSupplyTable(Transform root)
         {
-            Prim("Table", root, new Vector3(0f, 0.3f, 0f), new Vector3(0.6f, 0.6f, 0.6f), ColorGray, "M_Gray");
-            Prim("Lids", root, new Vector3(0f, 0.65f, 0f), new Vector3(0.45f, 0.08f, 0.45f), ColorYellow, "M_AgvPath");
+            // 뚜껑 박스: 바닥에 놓인 위가 뚫린 빈 상자. 뚜껑을 LidCapacity(5)장까지 쌓을 수 있는 높이로 만든다.
+            // 뚜껑 재생성(최대 5장)은 나중에 구현하고, 지금은 뚜껑 1장만 놓는다.
+            float boxHeight = LidBoxWall + LidHeight + LidStackPitch * (LidCapacity - 1) + 0.03f;
+            var boxSize = new Vector3(LidSize.x + 0.06f, boxHeight, LidSize.z + 0.06f);
+            OpenBox("LidBox", root, new Vector3(0f, boxHeight * 0.5f, 0f), boxSize, LidBoxWall, ColorCardboard, "M_KitBox", openTop: true, openFront: false);
+
+            // 박스 바닥 위 맨 아래에 뚜껑 1장
+            BuildLid("Lid_01", root, new Vector3(0f, LidBoxWall + LidHeight * 0.5f, 0f));
+        }
+
+        // 키트 박스(0.44 x 0.34m)에 씌우는 뚜껑: 윗판과 아래로 내려온 테두리 4면, 아래는 뚫려 있다. 중심은 부모 기준 위치이다.
+        private static void BuildLid(string name, Transform parent, Vector3 center)
+        {
+            var lid = new GameObject(name).transform;
+            lid.SetParent(parent, false);
+            lid.localPosition = center;
+
+            float t = LidWall;
+            Vector3 h = LidSize * 0.5f;
+            float skirtHeight = LidHeight - t;
+            float skirtY = -LidHeight * 0.5f + skirtHeight * 0.5f;
+
+            Prim("Top", lid, new Vector3(0f, LidHeight * 0.5f - t * 0.5f, 0f), new Vector3(LidSize.x, t, LidSize.z), ColorLid, "M_Lid");
+            Prim("Skirt_NegX", lid, new Vector3(-h.x + t * 0.5f, skirtY, 0f), new Vector3(t, skirtHeight, LidSize.z), ColorLid, "M_Lid");
+            Prim("Skirt_PosX", lid, new Vector3(h.x - t * 0.5f, skirtY, 0f), new Vector3(t, skirtHeight, LidSize.z), ColorLid, "M_Lid");
+            Prim("Skirt_NegZ", lid, new Vector3(0f, skirtY, -h.z + t * 0.5f), new Vector3(LidSize.x, skirtHeight, t), ColorLid, "M_Lid");
+            Prim("Skirt_PosZ", lid, new Vector3(0f, skirtY, h.z - t * 0.5f), new Vector3(LidSize.x, skirtHeight, t), ColorLid, "M_Lid");
         }
 
         private static void BuildLabelStation(Transform root)
@@ -489,7 +636,7 @@ namespace MediKitTwin.EditorTools
 
         // 바닥과 벽으로 이루어진 속이 빈 상자. size는 바깥 크기이고 center는 부모 기준 위치이다.
         // openTop이면 윗면이, openFront이면 +Z 쪽 면이 뚫린다.
-        private static void OpenBox(string name, Transform parent, Vector3 center, Vector3 size, float t, Color color, string materialName, bool openTop, bool openFront)
+        private static Transform OpenBox(string name, Transform parent, Vector3 center, Vector3 size, float t, Color color, string materialName, bool openTop, bool openFront)
         {
             var root = new GameObject(name).transform;
             root.SetParent(parent, false);
@@ -505,6 +652,8 @@ namespace MediKitTwin.EditorTools
             Prim("Wall_NegZ", root, new Vector3(0f, 0f, -h.z + t * 0.5f), new Vector3(size.x, size.y, t), color, materialName);
             if (!openFront)
                 Prim("Wall_PosZ", root, new Vector3(0f, 0f, h.z - t * 0.5f), new Vector3(size.x, size.y, t), color, materialName);
+
+            return root;
         }
 
         private static void Sensor(string name, Transform parent, Vector3 position, Vector3 size)
