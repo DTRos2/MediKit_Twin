@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9ecde70d98482f449962b4b1418ef3d, type: 3}
+  m_Name: ArmProfile_FR5
+  m_EditorClassIdentifier: MediKitTwin.ArmA::MediKitTwin.ArmA.ArmProfileSO
+  _baseLinkName: base_link
+  _joints:
+  - _jointName: j1
+    _linkName: shoulder_Link
+  - _jointName: j2
+    _linkName: upperarm_Link
+  - _jointName: j3
+    _linkName: forearm_Link
+  - _jointName: j4
+    _linkName: wrist1_Link
+  - _jointName: j5
+    _linkName: wrist2_Link
+  - _jointName: j6
+    _linkName: wrist3_Link
+  _maxJointSpeedDegPerSec: 90
+  _homePoseDeg:
+  - 0
+  - -90
+  - 90
+  - -90
+  - -90
+  - 0
+  _toolLinkName: hand_base_link
+  _toolPositionOffset: {x: 0, y: 0.11, z: 0}
+  _toolEulerOffset: {x: -90, y: 0, z: 0}
+  _gripperJoints:
+  - _linkName: finger_link1
+    _openValue: 0.04
+    _closedValue: 0
+  - _linkName: finger_link2
+    _openValue: 0.04
+    _closedValue: 0
+  _ik:
+    _maxIterations: 60
+    _positionToleranceM: 0.002
+    _rotationToleranceDeg: 2
+    _damping: 0.05
+    _rotationWeight: 0.5
+    _maxStepDeg: 10
+    _restarts: 10
+    _restartSeed: 2024

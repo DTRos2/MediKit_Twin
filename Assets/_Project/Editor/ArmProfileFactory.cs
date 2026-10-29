@@ -12,6 +12,27 @@ public static class ArmProfileFactory
     [MenuItem("Tools/Arm/Create FR5 Profile")]
     private static void CreateFr5()
     {
+        GetOrCreateFr5();
+    }
+
+    /// <summary>프로필이 있으면 불러오고 없으면 기본값으로 만든다.</summary>
+    public static ArmProfileSO GetOrCreateFr5()
+    {
+        const string fileName = "ArmProfile_FR5";
+        string path = $"{Folder}/{fileName}.asset";
+
+        var existing = AssetDatabase.LoadAssetAtPath<ArmProfileSO>(path);
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        Save(BuildFr5(), fileName);
+        return AssetDatabase.LoadAssetAtPath<ArmProfileSO>(path);
+    }
+
+    private static ArmProfileSO BuildFr5()
+    {
         var profile = ScriptableObject.CreateInstance<ArmProfileSO>();
         profile.Configure(
             "base_link",
@@ -33,9 +54,12 @@ public static class ArmProfileFactory
                 // 열림/닫힘 방향은 URDF만으로 알 수 없다. 열고 닫아 보고 반대면 두 값을 바꾼다.
                 new ArmProfileSO.GripperJointEntry("finger_link1", 0.04f, 0f),
                 new ArmProfileSO.GripperJointEntry("finger_link2", 0.04f, 0f),
-            });
+            },
+            // 윗팔 수직(j2 -90), 앞팔 수평(j3 +90), 그리퍼가 아래를 향하는(j4 -90, j5 -90) 세운 자세.
+            // URDF 기구학으로 계산한 값이다. 모든 관절 0도는 팔을 수평으로 뻗어 로봇이 누운 것처럼 보인다.
+            new[] { 0f, -90f, 90f, -90f, -90f, 0f });
 
-        Save(profile, "ArmProfile_FR5");
+        return profile;
     }
 
     [MenuItem("Tools/Arm/Create UR3 Robotiq Profile")]

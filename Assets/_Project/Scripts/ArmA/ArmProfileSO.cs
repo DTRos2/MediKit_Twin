@@ -61,6 +61,9 @@ namespace MediKitTwin.ArmA
         [SerializeField] private JointEntry[] _joints = Array.Empty<JointEntry>();
         [SerializeField, Min(1f)] private float _maxJointSpeedDegPerSec = 90f;
 
+        [Tooltip("시작 자세(도, 관절 순서). 비우면 모든 관절 0도로 시작한다. 모든 관절 0도는 팔을 수평으로 뻗은 자세라 로봇이 누운 것처럼 보인다.")]
+        [SerializeField] private float[] _homePoseDeg = Array.Empty<float>();
+
         [Header("도구 끝점(TCP)")]
         [Tooltip("끝점이 붙는 링크. 보통 그리퍼 베이스 링크.")]
         [SerializeField] private string _toolLinkName;
@@ -78,6 +81,26 @@ namespace MediKitTwin.ArmA
         public string BaseLinkName => _baseLinkName;
         public JointEntry[] Joints => _joints;
         public float MaxJointSpeedRadPerSec => _maxJointSpeedDegPerSec * Mathf.Deg2Rad;
+
+        /// <summary>시작 자세(rad). 관절 수와 맞지 않으면 모든 관절 0.</summary>
+        public float[] HomePoseRad
+        {
+            get
+            {
+                var pose = new float[_joints.Length];
+                if (_homePoseDeg != null && _homePoseDeg.Length == _joints.Length)
+                {
+                    for (int i = 0; i < pose.Length; i++)
+                    {
+                        pose[i] = _homePoseDeg[i] * Mathf.Deg2Rad;
+                    }
+                }
+
+                return pose;
+            }
+        }
+
+        public bool HasHomePose => _homePoseDeg != null && _homePoseDeg.Length == _joints.Length && _joints.Length > 0;
         public string ToolLinkName => _toolLinkName;
         public Vector3 ToolPositionOffset => _toolPositionOffset;
         public Quaternion ToolRotationOffset => Quaternion.Euler(_toolEulerOffset);
@@ -92,8 +115,10 @@ namespace MediKitTwin.ArmA
             string toolLinkName,
             Vector3 toolPositionOffset,
             Vector3 toolEulerOffset,
-            GripperJointEntry[] gripperJoints)
+            GripperJointEntry[] gripperJoints,
+            float[] homePoseDeg = null)
         {
+            _homePoseDeg = homePoseDeg ?? Array.Empty<float>();
             _baseLinkName = baseLinkName;
             _joints = joints;
             _maxJointSpeedDegPerSec = maxJointSpeedDegPerSec;

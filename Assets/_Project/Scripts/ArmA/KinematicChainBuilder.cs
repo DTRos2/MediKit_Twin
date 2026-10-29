@@ -7,6 +7,7 @@ namespace MediKitTwin.ArmA
     /// 씬에 import된 ArticulationBody 체인에서 KinematicChain을 만든다.
     /// 현재 자세에서 각 링크의 실제 변환을 읽고 관절 각도만큼 되돌려, 각도 0 기준의 상수 변환을 얻는다.
     /// 그래서 어느 자세에서 만들어도 같은 결과가 나오고, 로봇 종류(FR5, UR3)별 코드가 필요 없다.
+    /// 현재 각도는 호출하는 쪽이 준다(물리 엔진이 아직 준비되지 않았거나 기준이 밀린 경우를 호출하는 쪽이 판단한다).
     /// </summary>
     public static class KinematicChainBuilder
     {
@@ -15,7 +16,8 @@ namespace MediKitTwin.ArmA
             IReadOnlyList<ArticulationBody> joints,
             Transform toolLink,
             Vector3 toolPositionInToolLink,
-            Quaternion toolRotationInToolLink)
+            Quaternion toolRotationInToolLink,
+            IReadOnlyList<float> currentAnglesRad)
         {
             var specs = new KinematicChain.JointSpec[joints.Count];
             Vector3 previousPosition = baseLink.position;
@@ -32,8 +34,7 @@ namespace MediKitTwin.ArmA
                 Transform link = body.transform;
                 Vector3 axis = (body.anchorRotation * Vector3.right).normalized;
                 Vector3 pivot = body.anchorPosition;
-                float currentRad = body.dofCount > 0 ? body.jointPosition[0] : 0f;
-                Quaternion spin = Quaternion.AngleAxis(currentRad * Mathf.Rad2Deg, axis);
+                Quaternion spin = Quaternion.AngleAxis(currentAnglesRad[i] * Mathf.Rad2Deg, axis);
 
                 Quaternion inversePrevious = Quaternion.Inverse(previousRotation);
                 Quaternion localRotation = inversePrevious * link.rotation * Quaternion.Inverse(spin);
