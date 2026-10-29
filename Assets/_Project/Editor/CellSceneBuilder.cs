@@ -65,6 +65,12 @@ namespace MediKitTwin.EditorTools
         private static readonly Vector3 LidPositionInBox = new Vector3(0f, LidPositionY, 0.008f);
         private const float LidBoxWall = 0.01f;
         private const int LidCapacity = 5;
+
+        // 뚜껑은 위로 쌓으므로 한 장씩 LidHeight만큼 올라간다. 맨 위(Lid_01)가 로봇암이 잡는 높이(LidPositionY)이고,
+        // 아래 뚜껑은 Lid_02, Lid_03, ... 순서이다. 쌓인 뚜껑은 아래에서 받치는 승강판(LidLift)과 기둥 위에 놓인다.
+        private const float LidStackPitch = LidHeight;
+        private const float LidLiftThickness = 0.01f;
+        private const float LidLiftPostSize = 0.06f;
         private static readonly Color ColorLid = new Color(0.93f, 0.90f, 0.82f);
 
         // 컨베이어 위 박스가 놓이는 높이. 컨베이어를 깐 뒤에 정해진다.
@@ -551,9 +557,34 @@ namespace MediKitTwin.EditorTools
 
         private static void BuildLidSupplyTable(Transform root)
         {
-            // 뚜껑 박스: 바닥에 놓인 위가 뚫린 빈 상자. 뚜껑 재생성(최대 LidCapacity장)은 나중에 구현하고, 지금은 뚜껑 1장만 놓는다.
+            // 뚜껑 박스: 바닥에 놓인 위가 뚫린 상자. 안에 뚜껑이 LidCapacity(5)장 쌓여 있다.
+            // 뚜껑을 집으면 아래에서 올라오는 동작은 나중에 스크립트로 구현한다.
             OpenBox("LidBox", root, new Vector3(0f, LidBoxCenterY, 0f), LidBoxSize, LidBoxWall, ColorCardboard, "M_KitBox", openTop: true, openFront: false);
-            BuildLid("Lid_01", root, LidPositionInBox);
+            BuildLidStack(root);
+            root.gameObject.AddComponent<MediKitTwin.ArmB.LidDispenser>();
+        }
+
+        // 뚜껑 LidCapacity장을 위로 쌓고, 맨 아래 뚜껑 밑에 승강판과 기둥을 둔다. 이미 있는 Lid_*, LidLift, LidLiftPost는 호출 전에 지운다.
+        private static void BuildLidStack(Transform root)
+        {
+            for (int i = 0; i < LidCapacity; i++)
+            {
+                Vector3 position = LidPositionInBox - Vector3.up * (LidStackPitch * i);
+                BuildLid($"Lid_{i + 1:00}", root, position);
+            }
+
+            // 승강판은 맨 아래 뚜껑의 아래쪽에 붙고, 기둥은 박스 바닥에서 승강판까지 이어진다.
+            float bottomLidY = LidPositionInBox.y - LidStackPitch * (LidCapacity - 1);
+            float liftTopY = bottomLidY - LidHeight * 0.5f;
+            float liftCenterY = liftTopY - LidLiftThickness * 0.5f;
+            Prim("LidLift", root, new Vector3(LidPositionInBox.x, liftCenterY, LidPositionInBox.z),
+                new Vector3(LidSize.x - 2f * LidWall, LidLiftThickness, LidSize.z - 2f * LidWall), ColorGray, "M_Gray");
+
+            float postBottomY = LidBoxBottomY + LidBoxWall;
+            float postTopY = liftCenterY - LidLiftThickness * 0.5f;
+            float postHeight = postTopY - postBottomY;
+            Prim("LidLiftPost", root, new Vector3(LidPositionInBox.x, postBottomY + postHeight * 0.5f, LidPositionInBox.z),
+                new Vector3(LidLiftPostSize, postHeight, LidLiftPostSize), ColorGray, "M_Gray");
         }
 
         // 키트 박스(0.44 x 0.34m)에 씌우는 뚜껑: 윗판과 아래로 내려온 테두리 4면, 아래는 뚫려 있다. 중심은 부모 기준 위치이다.
