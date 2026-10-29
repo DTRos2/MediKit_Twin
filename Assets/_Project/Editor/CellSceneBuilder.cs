@@ -35,6 +35,10 @@ namespace MediKitTwin.EditorTools
         private static readonly Color ColorYellow = new Color(0.98f, 0.88f, 0.45f);
         private static readonly Color ColorFloor = new Color(0.90f, 0.92f, 0.95f);
 
+        // 속이 빈 상자의 벽 두께와 불량 박스의 바깥 크기(x 0.98 · y 0.45 · z 1.68m)
+        private const float WallThickness = 0.04f;
+        private static readonly Vector3 BinSize = new Vector3(0.98f, 0.45f, 1.68f);
+
         // 컨베이어 위 박스가 놓이는 높이. 컨베이어를 깐 뒤에 정해진다.
         private static float beltY;
 
@@ -84,6 +88,40 @@ namespace MediKitTwin.EditorTools
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             Debug.Log("[CellSceneBuilder] Scene_Cell 생성 완료: " + ScenePath);
+        }
+
+        // 이미 저장된 PF_RejectBin, PF_Shelf의 내용을 새 모양으로 다시 만든다. 씬에 놓인 인스턴스의 위치는 그대로 유지된다.
+        [MenuItem("Tools/MediKit/Rebuild RejectBin And Shelf Prefabs")]
+        public static void RebuildHollowPrefabs()
+        {
+            RebuildPrefab("PF_RejectBin", BuildRejectBin);
+            RebuildPrefab("PF_Shelf", BuildShelf);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CellSceneBuilder] PF_RejectBin, PF_Shelf 재생성 완료");
+        }
+
+        private static void RebuildPrefab(string prefabName, Action<Transform> build)
+        {
+            string path = $"{PrefabDir}/{prefabName}.prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
+            {
+                Debug.LogWarning("[CellSceneBuilder] 프리팹이 없어 건너뜁니다: " + path);
+                return;
+            }
+
+            var root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                for (int i = root.transform.childCount - 1; i >= 0; i--)
+                    UnityEngine.Object.DestroyImmediate(root.transform.GetChild(i).gameObject);
+
+                build(root.transform);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         // ───────────────────────── 컨베이어 ─────────────────────────
@@ -333,19 +371,21 @@ namespace MediKitTwin.EditorTools
         {
             const float cellWidth = 0.6f;
             const float cellHeight = 0.5f;
+            Vector3 cellSize = new Vector3(0.56f, 0.46f, 0.5f);
 
             // 3행(A=EM, B=BL, C=DX) x 4열. 칸 이름은 선반 칸 ID(`A-1` ~ `C-4`)와 같다.
+            // 칸은 속이 빈 상자이고, 로봇암이 있는 쪽(로컬 +Z) 면이 뚫려 있다.
             for (int row = 0; row < 3; row++)
             {
                 for (int col = 1; col <= 4; col++)
                 {
                     string id = $"{(char)('A' + row)}-{col}";
                     Vector3 pos = new Vector3((col - 2.5f) * cellWidth, 0.3f + row * cellHeight, 0f);
-                    Prim($"Shelf_{id}", root, pos, new Vector3(0.5f, 0.35f, 0.5f), ColorOrange, "M_Orange");
+                    OpenBox($"Shelf_{id}", root, pos, cellSize, WallThickness, ColorOrange, "M_Orange", openTop: false, openFront: true);
                 }
             }
 
-            Prim("Frame", root, new Vector3(0f, 0.05f, 0.28f), new Vector3(2.5f, 0.1f, 0.05f), ColorDark, "M_Dark");
+            Prim("Base", root, new Vector3(0f, 0.03f, 0f), new Vector3(2.5f, 0.06f, 0.55f), ColorDark, "M_Dark");
         }
 
         private static void BuildInspectionStation(Transform root)
@@ -365,7 +405,9 @@ namespace MediKitTwin.EditorTools
 
         private static void BuildRejectBin(Transform root)
         {
-            Prim("Bin", root, new Vector3(0f, 0.2f, 0f), new Vector3(0.7f, 0.4f, 0.7f), ColorRed, "M_Red");
+            // 위가 뚫린 상자. 키트 박스(약 0.5 x 0.4m)를 바닥에 3 x 2로 놓으면 6개가 들어간다.
+            // 벽 높이(0.45m)는 컨베이어 윗면보다 낮아서, 푸셔가 민 박스가 벽 위로 넘어 떨어진다.
+            OpenBox("Bin", root, new Vector3(0f, BinSize.y * 0.5f, 0f), BinSize, WallThickness, ColorRed, "M_Red", openTop: true, openFront: false);
         }
 
         private static void BuildLidSupplyTable(Transform root)
@@ -420,6 +462,26 @@ namespace MediKitTwin.EditorTools
             go.transform.localScale = scale;
             go.GetComponent<Renderer>().sharedMaterial = GetMaterial(materialName, color);
             return go;
+        }
+
+        // 바닥과 벽으로 이루어진 속이 빈 상자. size는 바깥 크기이고 center는 부모 기준 위치이다.
+        // openTop이면 윗면이, openFront이면 +Z 쪽 면이 뚫린다.
+        private static void OpenBox(string name, Transform parent, Vector3 center, Vector3 size, float t, Color color, string materialName, bool openTop, bool openFront)
+        {
+            var root = new GameObject(name).transform;
+            root.SetParent(parent, false);
+            root.localPosition = center;
+
+            Vector3 h = size * 0.5f;
+            Prim("Floor", root, new Vector3(0f, -h.y + t * 0.5f, 0f), new Vector3(size.x, t, size.z), color, materialName);
+            if (!openTop)
+                Prim("Top", root, new Vector3(0f, h.y - t * 0.5f, 0f), new Vector3(size.x, t, size.z), color, materialName);
+
+            Prim("Wall_NegX", root, new Vector3(-h.x + t * 0.5f, 0f, 0f), new Vector3(t, size.y, size.z), color, materialName);
+            Prim("Wall_PosX", root, new Vector3(h.x - t * 0.5f, 0f, 0f), new Vector3(t, size.y, size.z), color, materialName);
+            Prim("Wall_NegZ", root, new Vector3(0f, 0f, -h.z + t * 0.5f), new Vector3(size.x, size.y, t), color, materialName);
+            if (!openFront)
+                Prim("Wall_PosZ", root, new Vector3(0f, 0f, h.z - t * 0.5f), new Vector3(size.x, size.y, t), color, materialName);
         }
 
         private static void Sensor(string name, Transform parent, Vector3 position, Vector3 size)
