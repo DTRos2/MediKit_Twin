@@ -9,9 +9,9 @@ arm_a_commander:
   ros__parameters:
     publish_rate: 20.0     # Hz
     tolerance: 0.01        # rad, 도착 허용오차
-    wait_timeout: 10.0     # s, 도착 대기 제한
+    wait_timeout: 30.0     # s, 도착 대기 제한 (실제 시간, 1배속 동작 시간보다 충분히 길게)
 
 # 공정 모니터
 cell_monitor:
   ros__parameters:
-    csv_path: /home/coc/meditkit_ws/cell_log.csv
+    csv_path: /home/coc/medikit_ws/cell_log.csv
