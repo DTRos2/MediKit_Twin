@@ -1,27 +1,35 @@
+using MediKitTwin.ArmA;
 using MediKitTwin.Common;
 using UnityEngine;
 
-namespace MediKitTwin.ArmA
+namespace MediKitTwin.Demo
 {
     /// <summary>
-    /// 집기 동작을 눈으로 확인하는 테스트 패널. 화면 버튼(IMGUI)이라 Input 설정과 무관하게 동작한다.
-    /// 로봇마다 하나씩 붙이고, 같은 Pick Target을 가리키게 하면 두 로봇을 번갈아 시험할 수 있다.
+    /// 집기 동작을 눈으로 확인하는 시험 패널. 화면 버튼(IMGUI)이라 Input 설정과 무관하게 동작한다.
+    /// 제품 코드(ArmA)와 분리된 어셈블리에 두어서, 빌드에서 이 어셈블리만 빼면 시험 도구가 함께 빠진다.
+    /// 구체 클래스가 아니라 인터페이스(IArmDriver, IToolPoseTarget, IGripper)로 로봇을 다룬다.
     /// </summary>
     public class ArmDemoPanel : MonoBehaviour
     {
         [SerializeField] private string _title = "Arm Demo";
-        [SerializeField] private ArmController _arm;
-        [SerializeField] private IkArmTarget _ikTarget;
+        [Tooltip("IArmDriver를 구현하는 로봇(ArmController).")]
+        [SerializeField] private MonoBehaviour _arm;
+        [Tooltip("IToolPoseTarget을 구현하는 쪽(IkArmTarget).")]
+        [SerializeField] private MonoBehaviour _ikTarget;
         [SerializeField] private MonoBehaviour _gripper;
         [SerializeField] private PickAndLiftTask _task;
         [SerializeField] private Graspable _pickTarget;
         [SerializeField] private Vector2 _screenPosition = new Vector2(10f, 10f);
 
+        private IArmDriver _driver;
+        private IToolPoseTarget _tool;
         private IGripper _grip;
         private string _status = "대기";
 
         private void Awake()
         {
+            _driver = _arm as IArmDriver;
+            _tool = _ikTarget as IToolPoseTarget;
             _grip = _gripper as IGripper;
             if (_task != null)
             {
@@ -43,8 +51,8 @@ namespace MediKitTwin.ArmA
             GUILayout.Space(18f);
 
             GUILayout.Label($"상태: {_status}");
-            GUILayout.Label(_ikTarget != null && _ikTarget.HasToolTarget
-                ? $"IK: {(_ikTarget.LastSolveSucceeded ? "성공" : "실패")} (위치 오차 {_ikTarget.LastResult.PositionError * 1000f:F1}mm)"
+            GUILayout.Label(_tool != null && _tool.HasToolTarget
+                ? $"IK: {(_tool.LastSolveSucceeded ? "성공" : "실패")} (위치 오차 {_tool.LastResult.PositionError * 1000f:F1}mm)"
                 : "IK: 목표 없음");
             GUILayout.Label(_grip != null ? $"그리퍼: 개폐 {_grip.Opening:F2}, 쥠 {(_grip.IsHolding ? "예" : "아니오")}" : "그리퍼 없음");
 
@@ -64,14 +72,14 @@ namespace MediKitTwin.ArmA
                 _grip.Close();
             }
 
-            if (GUILayout.Button("홈 자세") && _arm != null)
+            if (GUILayout.Button("홈 자세") && _driver != null)
             {
                 if (_task != null)
                 {
                     _task.Cancel();
                 }
 
-                _arm.SetJointTargets(_arm.HomePoseRad);
+                _driver.SetJointTargets(_driver.HomePoseRad);
                 _status = "홈으로 이동";
             }
 
