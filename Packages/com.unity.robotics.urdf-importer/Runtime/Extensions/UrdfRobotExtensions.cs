@@ -104,10 +104,11 @@ namespace Unity.Robotics.UrdfImporter
 
             im.robotGameObject.AddComponent<UrdfRobot>();
 
-            im.robotGameObject.AddComponent<Unity.Robotics.UrdfImporter.Control.Controller>();
+            // Controller reads UnityEngine.Input, which throws every frame when the project uses only the
+            // Input System package. Joints are driven by our own code, so don't add it in the editor import.
             if (RuntimeUrdf.IsRuntimeMode())
             {// In runtime mode, we have to disable controller while robot is being constructed.
-                im.robotGameObject.GetComponent<Unity.Robotics.UrdfImporter.Control.Controller>().enabled = false;
+                im.robotGameObject.AddComponent<Unity.Robotics.UrdfImporter.Control.Controller>().enabled = false;
             }
 
             im.robotGameObject.GetComponent<UrdfRobot>().SetAxis(im.settings.chosenAxis);
