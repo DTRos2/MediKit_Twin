@@ -46,7 +46,11 @@ namespace MediKitTwin.EditorTools
         private static readonly Color ColorCardboard = new Color(0.78f, 0.60f, 0.38f);
 
         // 뚜껑: 바깥 크기(0.46 x 0.04 x 0.36m), 벽 두께. 값은 씬에서 직접 고친 PF_LidSupplyTable과 같다.
-        private static readonly Vector3 LidSize = new Vector3(0.46f, LidHeight, 0.36f);
+        // 뚜껑 안쪽은 키트 박스보다 사방 LidClearance(0.5cm)씩 넓다. 로봇암 B의 덮기 허용 오차가 이 틈이다.
+        // 바깥 크기 = 키트 박스 + 2 x (틈 + 벽 두께) = 0.47 x 0.04 x 0.37m
+        private const float LidClearance = 0.005f;
+        private static readonly Vector3 LidSize = new Vector3(
+            KitBoxSize.x + 2f * (LidClearance + LidWall), LidHeight, KitBoxSize.z + 2f * (LidClearance + LidWall));
         private const float LidHeight = 0.04f;
         private const float LidWall = 0.01f;
 
