@@ -1,0 +1,465 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using ConveyorSystem;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+namespace MediKitTwin.EditorTools
+{
+    /// <summary>
+    /// 공정 내부도 기준으로 Scene_Cell 뼈대를 만든다. (Tools > MediKit > Build Cell Scene)
+    /// 컨베이어는 서드파티 프리팹을 입출력 지점에 맞춰 ㄷ자로 잇고, 나머지 설비는
+    /// 프리미티브 자리표시 프리팹(PF_*)으로 만든다. 이미 있는 PF_* 프리팹은 덮어쓰지 않고 재사용한다.
+    /// </summary>
+    public static class CellSceneBuilder
+    {
+        private const string ProjectRoot = "Assets/_Project";
+        private const string ScenePath = ProjectRoot + "/Scenes/Scene_Cell.unity";
+        private const string PrefabDir = ProjectRoot + "/Prefabs";
+        private const string MaterialDir = ProjectRoot + "/Materials";
+        private const string ConveyorPrefabDir = "Assets/Conveyor System/Prefab";
+
+        // 각 구간의 직선 컨베이어 개수 (1개 = 1m)
+        private const int KittingLength = 4;
+        private const int InspectionLength = 6;
+        private const int PackingLength = 4;
+
+        // 공정 내부도 범례 색: 주황 = 최치언 담당, 파랑 = 도희정 담당
+        private static readonly Color ColorOrange = new Color(0.95f, 0.45f, 0.10f);
+        private static readonly Color ColorBlue = new Color(0.25f, 0.50f, 0.95f);
+        private static readonly Color ColorRed = new Color(0.85f, 0.25f, 0.25f);
+        private static readonly Color ColorDark = new Color(0.10f, 0.12f, 0.18f);
+        private static readonly Color ColorGray = new Color(0.70f, 0.72f, 0.76f);
+        private static readonly Color ColorYellow = new Color(0.98f, 0.88f, 0.45f);
+        private static readonly Color ColorFloor = new Color(0.90f, 0.92f, 0.95f);
+
+        // 컨베이어 위 박스가 놓이는 높이. 컨베이어를 깐 뒤에 정해진다.
+        private static float beltY;
+
+        private sealed class ConveyorLine
+        {
+            public readonly List<ConveyorBase> Kitting = new List<ConveyorBase>();
+            public readonly List<ConveyorBase> Inspection = new List<ConveyorBase>();
+            public readonly List<ConveyorBase> Packing = new List<ConveyorBase>();
+        }
+
+        [MenuItem("Tools/MediKit/Build Cell Scene")]
+        public static void Build()
+        {
+            if (File.Exists(ScenePath) &&
+                !EditorUtility.DisplayDialog("Scene_Cell 다시 만들기",
+                    "Scene_Cell.unity가 이미 있습니다. 새로 만들면 씬의 수동 변경이 사라집니다. (PF_* 프리팹은 유지됩니다)",
+                    "다시 만들기", "취소"))
+            {
+                return;
+            }
+
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+
+            EnsureFolders();
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+
+            var cell = new GameObject("Cell").transform;
+            var zone = new Dictionary<string, Transform>();
+            foreach (var name in new[] { "Shelf", "KittingZone", "Conveyor", "Inspection", "Pusher", "Packing", "Unloading", "AGVPath", "Managers" })
+            {
+                var t = new GameObject(name).transform;
+                t.SetParent(cell, false);
+                zone[name] = t;
+            }
+
+            var line = BuildConveyor(zone["Conveyor"]);
+            beltY = line.Kitting[0].CenterPoint.position.y;
+
+            BuildKitting(zone, line);
+            BuildInspection(zone, line);
+            BuildPacking(zone, line);
+            BuildUnloading(zone, line);
+            BuildManagers(zone["Managers"]);
+
+            BuildFloor(cell);
+            SetupCamera(cell);
+
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            Debug.Log("[CellSceneBuilder] Scene_Cell 생성 완료: " + ScenePath);
+        }
+
+        // ───────────────────────── 컨베이어 ─────────────────────────
+
+        private static ConveyorLine BuildConveyor(Transform parent)
+        {
+            var straight = LoadConveyor("StraightConveyor");
+            var corner = PickRightTurnCorner(LoadConveyor("CornerConveyor"), LoadConveyor("CornerConveyorLeft"));
+
+            var line = new ConveyorLine();
+            ConveyorBase tail = null;
+            Vector3 flow = Vector3.right; // 키팅 구간은 +X 방향으로 흐른다
+
+            for (int i = 0; i < KittingLength; i++)
+            {
+                tail = Place(straight, $"Conv_Kitting_{i + 1:00}", parent, tail, flow);
+                line.Kitting.Add(tail);
+            }
+            flow = OutFlow(tail);
+
+            tail = Place(corner, "Conv_Corner_1", parent, tail, flow);
+            flow = OutFlow(tail);
+            for (int i = 0; i < InspectionLength; i++)
+            {
+                tail = Place(straight, $"Conv_Inspection_{i + 1:00}", parent, tail, flow);
+                line.Inspection.Add(tail);
+            }
+            flow = OutFlow(tail);
+
+            tail = Place(corner, "Conv_Corner_2", parent, tail, flow);
+            flow = OutFlow(tail);
+            for (int i = 0; i < PackingLength; i++)
+            {
+                tail = Place(straight, $"Conv_Packing_{i + 1:00}", parent, tail, flow);
+                line.Packing.Add(tail);
+            }
+
+            return line;
+        }
+
+        private static GameObject LoadConveyor(string name)
+        {
+            string path = $"{ConveyorPrefabDir}/{name}.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) throw new FileNotFoundException("컨베이어 프리팹이 없습니다: " + path);
+            return prefab;
+        }
+
+        // 위에서 볼 때 오른쪽으로 꺾이는 모서리(진행 방향 +X → -Z)를 고른다.
+        private static GameObject PickRightTurnCorner(GameObject a, GameObject b)
+        {
+            return TurnAngle(a.GetComponent<ConveyorBase>()) < 0f ? a : b;
+        }
+
+        private static float TurnAngle(ConveyorBase c)
+        {
+            return Vector3.SignedAngle(InFlow(c), OutFlow(c), Vector3.up);
+        }
+
+        private static Vector3 InFlow(ConveyorBase c)
+        {
+            return Flat(c.CenterPoint.position - c.InputPoint.position);
+        }
+
+        private static Vector3 OutFlow(ConveyorBase c)
+        {
+            return Flat(c.OutputPoints[0].position - c.CenterPoint.position);
+        }
+
+        private static Vector3 Flat(Vector3 v)
+        {
+            v.y = 0f;
+            return v.normalized;
+        }
+
+        // 입력 지점이 앞 컨베이어의 출력 지점에 닿고 진행 방향이 이어지도록 놓는다. 처음 조각은 원점에서 시작한다.
+        private static ConveyorBase Place(GameObject prefab, string name, Transform parent, ConveyorBase tail, Vector3 flow)
+        {
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            go.name = name;
+            var conveyor = go.GetComponent<ConveyorBase>();
+
+            float yaw = Vector3.SignedAngle(InFlow(conveyor), flow, Vector3.up);
+            go.transform.Rotate(0f, yaw, 0f, Space.World);
+
+            Vector3 target = tail != null ? tail.OutputPoints[0].position : Vector3.zero;
+            Vector3 offset = target - conveyor.InputPoint.position;
+            if (tail == null) offset.y = 0f;
+            go.transform.position += offset;
+            return conveyor;
+        }
+
+        // ───────────────────────── 구역별 설비 ─────────────────────────
+
+        private static void BuildKitting(Dictionary<string, Transform> zone, ConveyorLine line)
+        {
+            Vector3 jigPos = Floor(line.Kitting[1].CenterPoint.position);
+
+            Station("PF_KittingJig", "KittingJig", zone["KittingZone"], jigPos, 0f, BuildJig);
+            Station("PF_ArmA", "ArmA", zone["KittingZone"], jigPos + new Vector3(0f, 0f, 1.0f), 180f, t => BuildArm(t, ColorOrange, 1f));
+            Station("PF_Shelf", "Shelf", zone["Shelf"], jigPos + new Vector3(0f, 0f, 2.6f), 180f, BuildShelf);
+        }
+
+        private static void BuildInspection(Dictionary<string, Transform> zone, ConveyorLine line)
+        {
+            Vector3 inspectionPos = Floor(line.Inspection[1].CenterPoint.position);
+            Station("PF_InspectionStation", "InspectionStation", zone["Inspection"], inspectionPos, 0f, BuildInspectionStation);
+
+            // 푸셔는 U자 안쪽(-X)에서 바깥(+X)의 불량 박스로 민다.
+            Vector3 pusherPos = Floor(line.Inspection[3].CenterPoint.position);
+            Station("PF_Pusher", "Pusher", zone["Pusher"], pusherPos + new Vector3(-0.9f, 0f, 0f), 0f, BuildPusher);
+            Station("PF_RejectBin", "RejectBin", zone["Pusher"], pusherPos + new Vector3(1.1f, 0f, 0f), 0f, BuildRejectBin);
+        }
+
+        private static void BuildPacking(Dictionary<string, Transform> zone, ConveyorLine line)
+        {
+            Vector3 packingPos = Floor(line.Inspection[5].CenterPoint.position);
+            Station("PF_ArmB", "ArmB", zone["Packing"], packingPos + new Vector3(-1.1f, 0f, 0f), 270f, t => BuildArm(t, ColorBlue, 0.8f));
+            Station("PF_LidSupplyTable", "LidSupplyTable", zone["Packing"], packingPos + new Vector3(-2.0f, 0f, 0.4f), 0f, BuildLidSupplyTable);
+            Sensor("Sensor_Packing", zone["Packing"], line.Inspection[5].CenterPoint.position, new Vector3(0.5f, 0.3f, 0.5f));
+
+            Vector3 labelPos = Floor(line.Packing[1].CenterPoint.position);
+            Station("PF_LabelStation", "LabelStation", zone["Packing"], labelPos, 0f, BuildLabelStation);
+        }
+
+        private static void BuildUnloading(Dictionary<string, Transform> zone, ConveyorLine line)
+        {
+            ConveyorBase last = line.Packing[line.Packing.Count - 1];
+            Vector3 end = last.OutputPoints[0].position;
+            Vector3 flow = OutFlow(last);
+
+            Sensor("Sensor_ConveyorEnd", zone["Unloading"], end, new Vector3(0.4f, 0.3f, 0.5f));
+
+            Vector3 robotPos = Floor(end) + flow * 1.2f;
+            Station("PF_UnloaderRobot", "UnloaderRobot", zone["Unloading"], robotPos, 0f, BuildUnloaderRobot);
+
+            // AGV는 하역 로봇 옆에서 출발해 U자 바깥쪽을 돌아 하역장으로 간다.
+            float agvZ = robotPos.z - 4f;
+            float dockX = Floor(line.Inspection[1].CenterPoint.position).x + 5f;
+            var waypoints = new[]
+            {
+                robotPos + new Vector3(0f, 0f, -1.2f),
+                new Vector3(robotPos.x, 0f, agvZ),
+                new Vector3(dockX, 0f, agvZ),
+                new Vector3(dockX + 2f, 0f, agvZ),
+            };
+            BuildAgvPath(zone["AGVPath"], waypoints);
+            Station("PF_UnloadingDock", "UnloadingDock", zone["Unloading"], waypoints[3] + new Vector3(0f, 0f, 1.6f), 0f, BuildUnloadingDock);
+        }
+
+        private static void BuildAgvPath(Transform parent, Vector3[] points)
+        {
+            Material mat = GetMaterial("M_AgvPath", ColorYellow);
+            for (int i = 0; i < points.Length; i++)
+            {
+                var wp = new GameObject($"AGV_WP_{i}").transform;
+                wp.SetParent(parent, false);
+                wp.position = points[i];
+            }
+
+            for (int i = 0; i < points.Length - 1; i++)
+            {
+                Vector3 a = points[i];
+                Vector3 b = points[i + 1];
+                var strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                strip.name = $"AGV_Strip_{i}";
+                strip.transform.SetParent(parent, false);
+                strip.transform.position = (a + b) * 0.5f + Vector3.up * 0.01f;
+                strip.transform.rotation = Quaternion.LookRotation(b - a);
+                strip.transform.localScale = new Vector3(0.4f, 0.02f, (b - a).magnitude);
+                strip.GetComponent<Renderer>().sharedMaterial = mat;
+                UnityEngine.Object.DestroyImmediate(strip.GetComponent<Collider>());
+            }
+        }
+
+        private static void BuildManagers(Transform parent)
+        {
+            foreach (var name in new[] { "SimClock", "OrderManager", "Inventory", "ProductionLogger", "Dashboard" })
+            {
+                new GameObject(name).transform.SetParent(parent, false);
+            }
+        }
+
+        private static void BuildFloor(Transform cell)
+        {
+            var bounds = new Bounds(Vector3.zero, Vector3.zero);
+            bool first = true;
+            foreach (var r in cell.GetComponentsInChildren<Renderer>())
+            {
+                if (first) { bounds = r.bounds; first = false; }
+                else bounds.Encapsulate(r.bounds);
+            }
+            bounds.Expand(6f);
+
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            floor.name = "Floor";
+            floor.transform.SetParent(cell, false);
+            floor.transform.position = new Vector3(bounds.center.x, -0.01f, bounds.center.z);
+            floor.transform.localScale = new Vector3(bounds.size.x / 10f, 1f, bounds.size.z / 10f);
+            floor.GetComponent<Renderer>().sharedMaterial = GetMaterial("M_Floor", ColorFloor);
+        }
+
+        private static void SetupCamera(Transform cell)
+        {
+            var cam = Camera.main;
+            if (cam == null) return;
+
+            var bounds = new Bounds(Vector3.zero, Vector3.zero);
+            bool first = true;
+            foreach (var r in cell.GetComponentsInChildren<Renderer>())
+            {
+                if (first) { bounds = r.bounds; first = false; }
+                else bounds.Encapsulate(r.bounds);
+            }
+
+            Vector3 center = bounds.center;
+            cam.transform.position = center + new Vector3(-9f, 13f, -12f);
+            cam.transform.LookAt(center);
+        }
+
+        // ───────────────────────── 설비 모양 (자리표시) ─────────────────────────
+
+        private static void BuildJig(Transform root)
+        {
+            Prim("JigPlate", root, new Vector3(0f, beltY + 0.02f, 0f), new Vector3(0.5f, 0.03f, 0.4f), ColorBlue, "M_Blue");
+
+            // 슬롯 센서 위치는 RecipeSO.SlotLocalPosition과 같다. (박스 기준 로컬 좌표, 지그 회전 0)
+            var slots = new[]
+            {
+                new Vector2(-0.08f, 0.05f), new Vector2(0.08f, 0.05f),
+                new Vector2(-0.08f, -0.05f), new Vector2(0.08f, -0.05f),
+            };
+            for (int i = 0; i < slots.Length; i++)
+            {
+                Sensor($"Sensor_Slot{i + 1}", root, new Vector3(slots[i].x, beltY + 0.06f, slots[i].y), new Vector3(0.06f, 0.06f, 0.06f));
+            }
+        }
+
+        private static void BuildArm(Transform root, Color color, float scale)
+        {
+            Prim("Base", root, new Vector3(0f, 0.15f * scale, 0f), new Vector3(0.4f, 0.3f, 0.4f) * scale, color, color == ColorOrange ? "M_Orange" : "M_Blue");
+            Prim("UpperArm", root, new Vector3(0f, 0.75f * scale, 0f), new Vector3(0.12f, 0.9f, 0.12f) * scale, color, color == ColorOrange ? "M_Orange" : "M_Blue");
+            Prim("Forearm", root, new Vector3(0f, 1.2f * scale, -0.35f * scale), new Vector3(0.1f, 0.1f, 0.8f) * scale, color, color == ColorOrange ? "M_Orange" : "M_Blue");
+        }
+
+        private static void BuildShelf(Transform root)
+        {
+            const float cellWidth = 0.6f;
+            const float cellHeight = 0.5f;
+
+            // 3행(A=EM, B=BL, C=DX) x 4열. 칸 이름은 선반 칸 ID(`A-1` ~ `C-4`)와 같다.
+            for (int row = 0; row < 3; row++)
+            {
+                for (int col = 1; col <= 4; col++)
+                {
+                    string id = $"{(char)('A' + row)}-{col}";
+                    Vector3 pos = new Vector3((col - 2.5f) * cellWidth, 0.3f + row * cellHeight, 0f);
+                    Prim($"Shelf_{id}", root, pos, new Vector3(0.5f, 0.35f, 0.5f), ColorOrange, "M_Orange");
+                }
+            }
+
+            Prim("Frame", root, new Vector3(0f, 0.05f, 0.28f), new Vector3(2.5f, 0.1f, 0.05f), ColorDark, "M_Dark");
+        }
+
+        private static void BuildInspectionStation(Transform root)
+        {
+            Prim("PostL", root, new Vector3(-0.6f, 0.6f, 0f), new Vector3(0.08f, 1.2f, 0.08f), ColorDark, "M_Dark");
+            Prim("PostR", root, new Vector3(0.6f, 0.6f, 0f), new Vector3(0.08f, 1.2f, 0.08f), ColorDark, "M_Dark");
+            Prim("Beam", root, new Vector3(0f, 1.2f, 0f), new Vector3(1.28f, 0.08f, 0.08f), ColorDark, "M_Dark");
+            Prim("Camera", root, new Vector3(0f, 1.05f, 0f), new Vector3(0.2f, 0.15f, 0.2f), ColorBlue, "M_Blue");
+            Sensor("Sensor_Inspection", root, new Vector3(0f, beltY + 0.15f, 0f), new Vector3(0.5f, 0.3f, 0.5f));
+        }
+
+        private static void BuildPusher(Transform root)
+        {
+            Prim("Body", root, new Vector3(0f, 0.35f, 0f), new Vector3(0.4f, 0.7f, 0.4f), ColorBlue, "M_Blue");
+            Prim("PushHead", root, new Vector3(0.35f, beltY + 0.1f, 0f), new Vector3(0.1f, 0.2f, 0.4f), ColorRed, "M_Red");
+        }
+
+        private static void BuildRejectBin(Transform root)
+        {
+            Prim("Bin", root, new Vector3(0f, 0.2f, 0f), new Vector3(0.7f, 0.4f, 0.7f), ColorRed, "M_Red");
+        }
+
+        private static void BuildLidSupplyTable(Transform root)
+        {
+            Prim("Table", root, new Vector3(0f, 0.3f, 0f), new Vector3(0.6f, 0.6f, 0.6f), ColorGray, "M_Gray");
+            Prim("Lids", root, new Vector3(0f, 0.65f, 0f), new Vector3(0.45f, 0.08f, 0.45f), ColorYellow, "M_AgvPath");
+        }
+
+        private static void BuildLabelStation(Transform root)
+        {
+            Prim("Post", root, new Vector3(-0.55f, 0.5f, 0f), new Vector3(0.06f, 1.0f, 0.06f), ColorDark, "M_Dark");
+            Prim("LabelDisplay", root, new Vector3(-0.55f, 1.05f, 0f), new Vector3(0.3f, 0.2f, 0.03f), ColorYellow, "M_AgvPath");
+        }
+
+        private static void BuildUnloaderRobot(Transform root)
+        {
+            Prim("Body", root, new Vector3(0f, 0.3f, 0f), new Vector3(0.7f, 0.4f, 0.7f), ColorOrange, "M_Orange");
+            Prim("Light", root, new Vector3(0.3f, 0.35f, 0.3f), new Vector3(0.1f, 0.1f, 0.1f), ColorRed, "M_Red");
+        }
+
+        private static void BuildUnloadingDock(Transform root)
+        {
+            Prim("Dock", root, new Vector3(0f, 0.01f, 0f), new Vector3(3f, 0.02f, 3f), ColorGray, "M_Gray");
+        }
+
+        // ───────────────────────── 헬퍼 ─────────────────────────
+
+        // PF_* 프리팹이 없으면 build로 만들어 저장하고, 있으면 그대로 쓴다. 씬에는 인스턴스만 놓는다.
+        private static void Station(string prefabName, string instanceName, Transform parent, Vector3 position, float yaw, Action<Transform> build)
+        {
+            string path = $"{PrefabDir}/{prefabName}.prefab";
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (asset == null)
+            {
+                var temp = new GameObject(prefabName);
+                build(temp.transform);
+                asset = PrefabUtility.SaveAsPrefabAsset(temp, path);
+                UnityEngine.Object.DestroyImmediate(temp);
+            }
+
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(asset, parent);
+            instance.name = instanceName;
+            instance.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
+        }
+
+        private static GameObject Prim(string name, Transform parent, Vector3 localPos, Vector3 scale, Color color, string materialName)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = name;
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            go.transform.localScale = scale;
+            go.GetComponent<Renderer>().sharedMaterial = GetMaterial(materialName, color);
+            return go;
+        }
+
+        private static void Sensor(string name, Transform parent, Vector3 position, Vector3 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            // 구역 오브젝트는 원점·회전 0이라 로컬 좌표가 월드 좌표와 같다.
+            go.transform.localPosition = position;
+
+            var box = go.AddComponent<BoxCollider>();
+            box.size = size;
+            box.isTrigger = true;
+        }
+
+        private static Vector3 Floor(Vector3 p)
+        {
+            return new Vector3(p.x, 0f, p.z);
+        }
+
+        private static Material GetMaterial(string name, Color color)
+        {
+            string path = $"{MaterialDir}/{name}.mat";
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat != null) return mat;
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            mat = new Material(shader) { color = color };
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+            AssetDatabase.CreateAsset(mat, path);
+            return mat;
+        }
+
+        private static void EnsureFolders()
+        {
+            foreach (var dir in new[] { "Scenes", "Prefabs", "Materials", "Models" })
+            {
+                Directory.CreateDirectory(Path.Combine(ProjectRoot, dir));
+            }
+            AssetDatabase.Refresh();
+        }
+    }
+}

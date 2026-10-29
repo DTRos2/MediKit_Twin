@@ -72,3 +72,6 @@ venv/
 /[Aa]ssets/Conveyor System/*.unity.meta
 /[Aa]ssets/Conveyor System/Documentation.pdf
 /[Aa]ssets/Conveyor System/Documentation.pdf.meta
+
+# 강사 피드백 (개인 참고용)
+/docs/강사님 피드백.txt
