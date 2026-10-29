@@ -169,7 +169,7 @@ Unity 데이터 생성기(FR-08) → PNG + labels.csv → PyTorch 학습 → ONN
 ```
 Assets/
 ├─ _Project/
-│  ├─ Scripts/{Orders, Recipes, ArmA, ArmB, Conveyor, Inspection, Pusher, Label, Inventory, Unloader, Logging, Dashboard, ML, Ros, Common}
+│  ├─ Scripts/{Orders, Recipes, ArmA, ArmB, Conveyor, Inspection, Pusher, Label, Inventory, Unloader, Logging, Dashboard, CameraRig, ML, Ros, Common}
 │  ├─ Recipes/          # RecipeSO 파일
 │  ├─ Config/           # ScenarioConfigSO 파일 (시드, 누락 확률 등)
 │  ├─ Prefabs/
@@ -200,10 +200,11 @@ docs/                  # SRS, 기획표, WBS, 공정 흐름도
 | `Inventory` | 선반 재고, 보충 (`IStock`) | FR-13 |
 | `Logging` | `IProductionLog` 구현, 생산 로그 CSV | FR-14 |
 | `Dashboard` | 지표 표시, 배속 UI | FR-14, FR-15 |
+| `CameraRig` | 마우스 오른쪽 버튼 카메라 조작 (Input System 사용) | - |
 | `Ros` | 관절 명령 구독, 상태 발행 | FR-17, FR-18 |
 | `Common` | `CellEvents`, `SimClock`, 공통 인터페이스 | - |
 
-- 각 Scripts 폴더에는 같은 이름의 asmdef(`MediKitTwin.<폴더명>`)가 있다. `Recipes`와 `Common`을 뺀 나머지는 `Common`만 참조한다. (6-1)
+- 각 Scripts 폴더에는 같은 이름의 asmdef(`MediKitTwin.<폴더명>`)가 있다. `Recipes`, `Common`, `CameraRig`를 뺀 나머지는 `Common`만 참조한다. `CameraRig`는 `Unity.InputSystem`만 참조한다. (6-1)
 - ROS 2 노드는 `medikit_ws/`, Unity 쪽 ROS 코드는 `Assets/_Project/Scripts/Ros/`에 둔다.
 
 | 에셋 | 접두사 | 예시 |

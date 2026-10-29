@@ -389,6 +389,10 @@ namespace MediKitTwin.EditorTools
             Vector3 center = bounds.center;
             cam.transform.position = center + new Vector3(-9f, 13f, -12f);
             cam.transform.LookAt(center);
+
+            // 마우스 오른쪽 버튼으로 카메라를 조작한다.
+            if (cam.GetComponent<MediKitTwin.CameraRig.CellCameraController>() == null)
+                cam.gameObject.AddComponent<MediKitTwin.CameraRig.CellCameraController>();
         }
 
         // ───────────────────────── 설비 모양 (자리표시) ─────────────────────────
