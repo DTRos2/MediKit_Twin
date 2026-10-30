@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9ecde70d98482f449962b4b1418ef3d, type: 3}
+  m_Name: ArmProfile_UR3_Robotiq
+  m_EditorClassIdentifier: MediKitTwin.ArmA::MediKitTwin.ArmA.ArmProfileSO
+  _baseLinkName: base_link
+  _joints:
+  - _jointName: shoulder_pan_joint
+    _linkName: shoulder_link
+  - _jointName: shoulder_lift_joint
+    _linkName: upper_arm_link
+  - _jointName: elbow_joint
+    _linkName: forearm_link
+  - _jointName: wrist_1_joint
+    _linkName: wrist_1_link
+  - _jointName: wrist_2_joint
+    _linkName: wrist_2_link
+  - _jointName: wrist_3_joint
+    _linkName: wrist_3_link
+  _maxJointSpeedDegPerSec: 90
+  _homePoseDeg: []
+  _toolLinkName: robotiq_arg2f_base_link
+  _toolPositionOffset: {x: 0, y: 0.17, z: 0}
+  _toolEulerOffset: {x: -90, y: 0, z: 0}
+  _gripperJoints:
+  - _linkName: left_outer_knuckle
+    _openValue: 0
+    _closedValue: 0.7
+  - _linkName: left_inner_knuckle
+    _openValue: 0
+    _closedValue: -0.7
+  - _linkName: left_inner_finger
+    _openValue: 0
+    _closedValue: 0.7
+  - _linkName: right_outer_knuckle
+    _openValue: 0
+    _closedValue: -0.7
+  - _linkName: right_inner_knuckle
+    _openValue: 0
+    _closedValue: -0.7
+  - _linkName: right_inner_finger
+    _openValue: 0
+    _closedValue: 0.7
+  _ik:
+    _maxIterations: 60
+    _positionToleranceM: 0.002
+    _rotationToleranceDeg: 2
+    _damping: 0.05
+    _rotationWeight: 0.5
+    _maxStepDeg: 10
+    _restarts: 10
+    _restartSeed: 2024

@@ -16,6 +16,12 @@ public static class ArmRobotSetup
         Setup(ArmProfileFactory.GetOrCreateFr5(), "fr5_robot", new Vector2(10f, 10f), "FR5 Demo", new Vector3(0f, 0.03f, -0.4f));
     }
 
+    [MenuItem("Tools/Arm/Setup selected robot as UR3 (Robotiq)")]
+    private static void SetupUr3()
+    {
+        Setup(ArmProfileFactory.GetOrCreateUr3(), "ur3_with_gripper", new Vector2(240f, 10f), "UR3 Demo", new Vector3(0f, 0.03f, -0.3f));
+    }
+
     private static void Setup(ArmProfileSO profile, string defaultRobotName, Vector2 panelPosition, string title, Vector3 cubeOffset)
     {
         GameObject robot = FindRobot(profile, defaultRobotName);
