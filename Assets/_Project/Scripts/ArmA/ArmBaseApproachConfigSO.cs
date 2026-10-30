@@ -11,7 +11,7 @@ namespace MediKitTwin.ArmA
     {
         [Header("서는 자리")]
         [Tooltip("선반 물건에서 칸 밖 방향으로 떨어져 서는 거리(m). 팔이 물건에 닿고 베이스가 선반에 부딪히지 않는 사이로 정한다.")]
-        [SerializeField, Min(0f)] private float _pickStandoffM = 0.42f;
+        [SerializeField, Min(0f)] private float _pickStandoffM = 0.65f;
         [Tooltip("선반 앞 첫 자리에서 팔이 닿지 못하면, 기본 거리에 이 값들을 차례로 더한 거리에 다시 서서 시도한다(m). 첫 값은 보통 0(기본 거리). 비우면 한 번만 시도한다.")]
         [SerializeField] private float[] _pickStandoffOffsetsM = { 0f, 0.1f, 0.2f };
         [Tooltip("박스 슬롯 곁 첫 자리에서 팔이 닿지 못하면, 기본 거리에 이 값들을 차례로 더한 거리에 다시 서서 시도한다(m). 비우면 한 번만 시도한다.")]
