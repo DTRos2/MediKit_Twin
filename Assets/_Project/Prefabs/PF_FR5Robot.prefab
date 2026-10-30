@@ -804,7 +804,6 @@ GameObject:
   - component: {fileID: 6061469640029670098}
   - component: {fileID: 4163472686940024699}
   - component: {fileID: 2950480490398660489}
-  - component: {fileID: 3363924924644941692}
   m_Layer: 0
   m_Name: PF_FR5Robot
   m_TagString: robot
@@ -947,25 +946,6 @@ MonoBehaviour:
   _rotationToleranceDeg: 5
   _stepTimeoutSeconds: 10
   _graspTimeoutSeconds: 3
---- !u!114 &3363924924644941692
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3448363996093132821}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 40e92e4363530664b84be06eaa95c165, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: MediKitTwin.ArmA::MediKitTwin.ArmA.ArmDemoPanel
-  _title: FR5 Demo
-  _arm: {fileID: 8746203854327764652}
-  _ikTarget: {fileID: 6061469640029670098}
-  _gripper: {fileID: 4163472686940024699}
-  _task: {fileID: 2950480490398660489}
-  _pickTarget: {fileID: 0}
-  _screenPosition: {x: 10, y: 10}
 --- !u!1 &3533275129058646244
 GameObject:
   m_ObjectHideFlags: 0

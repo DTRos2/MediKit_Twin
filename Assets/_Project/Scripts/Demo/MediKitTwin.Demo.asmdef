@@ -4,7 +4,9 @@
     "references": [
         "MediKitTwin.Common",
         "MediKitTwin.ArmA",
-        "MediKitTwin.Inventory"
+        "MediKitTwin.Inventory",
+        "MediKitTwin.Orders",
+        "MediKitTwin.Recipes"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

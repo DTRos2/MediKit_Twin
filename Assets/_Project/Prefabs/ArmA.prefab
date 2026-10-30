@@ -122,7 +122,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1411922538863518550}
   - component: {fileID: 1976022595958761292}
-  - component: {fileID: 3845599564016082768}
   m_Layer: 0
   m_Name: ArmA
   m_TagString: Untagged
@@ -163,22 +162,6 @@ MonoBehaviour:
   _turnSpeedDegPerSec: 180
   _arriveToleranceM: 0.02
   _alignToleranceDeg: 3
---- !u!114 &3845599564016082768
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3708085275647042535}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fb84b6d06e5530e4486ce6759c84fc34, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: MediKitTwin.ArmA::MediKitTwin.ArmA.MobileBaseDemoPanel
-  _mobileBase: {fileID: 1976022595958761292}
-  _title: Mobile Base
-  _screenPosition: {x: 10, y: 290}
-  _stepMeters: 1
 --- !u!1001 &2771335823172094272
 PrefabInstance:
   m_ObjectHideFlags: 0
