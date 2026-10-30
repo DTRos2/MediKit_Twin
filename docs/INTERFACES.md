@@ -162,7 +162,7 @@
 | `GetRefillRemainingSeconds(shelfSlotId)` | 보충까지 남은 시간(초). 기다리는 중이 아니면 `null` |
 
 - 피킹은 레시피 순서대로 한 개씩 `TryTake`를 호출한다. 누락 규칙으로 건너뛰는 구성품은 `TryTake`를 호출하지 않으므로 재고가 줄지 않는다.
-- 보충은 칸 단위로 하며 칸의 수량을 보충 수량(기본 20)으로 설정한다(더하지 않는다). 대기 시간과 수량은 `ScenarioConfigSO`가 정한다.
+- 보충은 칸 단위로 하며 칸의 수량을 보충 수량(기본 5)으로 설정한다(더하지 않는다). 대기 시간과 수량은 `ScenarioConfigSO`가 정한다.
 - 보충을 기다리는 30초 동안 다른 주문이 같은 칸을 집으려 해도 `TryTake`가 실패하며 `StockEmpty`가 나가므로, 그 주문도 보류되어 로봇암 A가 멈추지 않는다. 한 키트가 한 칸에서 두 번 꺼내지 않으므로, 반쯤 담긴 박스를 되돌릴 때 `Return`이 보충 대기 중인 칸에 닿는 일은 보통 없다.
 
 ### 7-2. 주문 현황 (`IOrderStatus`)
@@ -203,11 +203,11 @@
 | 누락 확률(%), 고정 누락 키트 순번, 고정 누락 슬롯 번호 | FR-04. 슬롯 번호가 0이면 무작위로 고른다. 시연에서 빠지는 슬롯을 미리 알릴 때 쓴다 |
 | 난수 시드 | 같은 시드와 같은 주문 파일은 같은 결과를 낸다 (NFR-06) |
 | 기본 재고, 칸별 재고 | FR-13. 목록에 없는 칸은 기본 재고를 쓴다 |
-| 보충 대기(초), 보충 수량 | 기본 30초, 20개 |
+| 보충 대기(초), 보충 수량 | 기본 30초, 5개 |
 
 | 시나리오 | 누락 | 재고 |
 |---|---|---|
-| S2 누락 키트 불량 배출 | 10%, 고정 3번 | 기본 20 |
+| S2 누락 키트 불량 배출 | 10%, 고정 3번 | 기본 5 |
 | S4 재고 소진·복구 | 0%, 고정 없음 | C-3 = 2 |
 | S8 통합 시연(누락 + 재고 소진) | 0%, 고정 3번, 슬롯 2 | C-3 = 4 |
 
@@ -234,7 +234,7 @@
 | 구현 예정 | 구현·사용하는 인터페이스 | 발행하는 신호 | 구독하는 신호 |
 |---|---|---|---|
 | 재고 | `IStock` 구현 | `StockEmpty`, `StockRefilled` | - |
-| 주문 관리 | `IKitSource`, `IOrderStatus` 구현 | `OrderHeld`, `OrderResumed`, `WarningRaised` | `StockEmpty`, `StockRefilled`, `StationStateChanged` |
+| 주문 관리 | `IKitSource`, `IOrderStatus` 구현 | `OrderHeld`, `OrderResumed`, `WarningRaised` | `KitReady`, `StockEmpty`, `StockRefilled`, `StationStateChanged` |
 | 박스 공급 | `IBoxSupply` 구현 | - | - |
 | 로봇암 A | `IKitSource`, `IStock`, `IBoxSupply`, `IArmTarget` 사용 | `KitReady`, `StationStateChanged`, `StationAlive` | - |
 | 검사 | `IInspector` 사용 | `InspectionResult` | `AtInspection` |

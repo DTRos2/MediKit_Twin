@@ -2,7 +2,8 @@
     "name": "MediKitTwin.Orders",
     "rootNamespace": "MediKitTwin.Orders",
     "references": [
-        "MediKitTwin.Common"
+        "MediKitTwin.Common",
+        "MediKitTwin.Recipes"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

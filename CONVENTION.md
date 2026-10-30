@@ -202,7 +202,7 @@ docs/                  # SRS, 기획표, WBS, 공정 흐름도
 | `Dashboard` | 지표 표시, 배속 UI | FR-14, FR-15 |
 | `CameraRig` | 마우스 오른쪽 버튼 카메라 조작 (Input System 사용) | - |
 | `Mobile` | 바퀴·궤도 위에서 굴러가는 베이스의 이동(`MobileBaseDriver`)과 로봇암 얹기(`MountedBaseFollower`). `Common`만 참조 | - |
-| `Demo` | 화면 버튼 시험 패널(`ArmDemoPanel`, `MobileBaseDemoPanel`). 제품 코드와 분리해 빌드에서 뺄 수 있다. `Common`, `ArmA` 참조 | - |
+| `Demo` | 화면 버튼 시험 패널(`ArmDemoPanel`, `MobileBaseDemoPanel`). 제품 코드와 분리해 빌드에서 뺄 수 있다. `Common`, `ArmA`, `Inventory` 참조 | - |
 | `Rl` | 강화학습 환경(관측, 행동 해석, 보상, 목표 뽑기). `Common` 인터페이스만 본다 | - |
 | `Ros` | 관절 명령 구독, 상태 발행, 정책 노드 연동(`RosPolicy`) | FR-17, FR-18 |
 | `Common` | `CellEvents`, `SimClock`, 공통 인터페이스 | - |

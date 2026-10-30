@@ -445,9 +445,15 @@ namespace MediKitTwin.EditorTools
             Vector3 cellSize = new Vector3(0.56f, 0.46f, 0.5f);
 
             var componentByShelfSlot = LoadComponentsByShelfSlot();
+            var scenario = LoadScenarioConfig(out bool isTemporaryScenario);
+            var scenarioAsset = isTemporaryScenario ? null : scenario;
+
+            // 칸에는 시작 재고와 보충 수량 중 큰 쪽만큼 놓아 둔다. 실제로 몇 개가 보이는지는 실행 중 재고가 정한다.
+            // (시작 재고가 2개인 칸도 보충되면 다시 채워져야 하므로, 시작 재고만큼만 놓으면 모자란다.)
+            int shelfCapacity = Mathf.Max(scenario.DefaultStock, scenario.RefillQuantity);
 
             // 3행(A=EM, B=BL, C=DX) x 4열. 칸 이름은 선반 칸 ID(`A-1` ~ `C-4`)와 같다.
-            // 칸은 속이 빈 상자이고, 로봇암이 있는 쪽(로컬 +Z) 면이 뚫려 있다. 칸마다 레시피의 구성품 1개를 놓는다.
+            // 칸은 속이 빈 상자이고, 로봇암이 있는 쪽(로컬 +Z) 면이 뚫려 있다. 칸마다 레시피의 구성품을 놓는다.
             for (int row = 0; row < 3; row++)
             {
                 for (int col = 1; col <= 4; col++)
@@ -457,13 +463,49 @@ namespace MediKitTwin.EditorTools
                     Transform cell = OpenBox($"Shelf_{id}", root, pos, cellSize, WallThickness, ColorOrange, "M_Orange", openTop: false, openFront: true);
 
                     if (componentByShelfSlot.TryGetValue(id, out string componentId))
-                        AddShelfItem(cell, componentId, -cellSize.y * 0.5f + WallThickness);
+                        AddShelfItems(cell, componentId, shelfCapacity, cellSize);
                     else
                         Debug.LogWarning($"[CellSceneBuilder] 레시피에 선반 칸 {id}의 구성품이 없어 비워 둡니다.");
+
+                    // 실행 중 재고에 따라 물건이 사라지고 밀려 나오도록 칸마다 화면 컴포넌트를 붙인다.
+                    cell.gameObject.AddComponent<MediKitTwin.Inventory.ShelfCellView>().Configure(id, ShelfItemsPerRow);
                 }
             }
 
+            AddShelfStockPresenter(root, scenarioAsset);
+            if (isTemporaryScenario) UnityEngine.Object.DestroyImmediate(scenario);
+
             Prim("Base", root, new Vector3(0f, 0.03f, 0f), new Vector3(2.5f, 0.06f, 0.55f), ColorDark, "M_Dark");
+        }
+
+        // 선반 루트에 재고 컴포넌트를 붙이고, 프로젝트에 시나리오 설정이 있으면 연결해 둔다. 없으면 실행 때 기본값을 쓴다.
+        private static void AddShelfStockPresenter(Transform root, MediKitTwin.Common.ScenarioConfigSO scenarioAsset)
+        {
+            // 프리팹 재생성은 루트의 컴포넌트를 지우지 않으므로 이미 붙어 있으면 다시 붙이지 않는다.
+            var presenter = root.GetComponent<MediKitTwin.Inventory.ShelfStockPresenter>();
+            if (presenter == null) presenter = root.gameObject.AddComponent<MediKitTwin.Inventory.ShelfStockPresenter>();
+            if (scenarioAsset == null) return;
+
+            var serialized = new SerializedObject(presenter);
+            serialized.FindProperty("_config").objectReferenceValue = scenarioAsset;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // 프로젝트의 ScenarioConfigSO를 쓰고, 아직 없으면 기본값을 가진 임시 인스턴스로 대신한다(호출한 쪽이 지운다).
+        private static MediKitTwin.Common.ScenarioConfigSO LoadScenarioConfig(out bool isTemporary)
+        {
+            foreach (string guid in AssetDatabase.FindAssets("t:ScenarioConfigSO"))
+            {
+                var config = AssetDatabase.LoadAssetAtPath<MediKitTwin.Common.ScenarioConfigSO>(AssetDatabase.GUIDToAssetPath(guid));
+                if (config != null)
+                {
+                    isTemporary = false;
+                    return config;
+                }
+            }
+
+            isTemporary = true;
+            return ScriptableObject.CreateInstance<MediKitTwin.Common.ScenarioConfigSO>();
         }
 
         // 레시피(RecipeSO)에서 선반 칸 ID → 구성품 ID를 읽는다. 구성품 이름은 레시피가 정하므로 여기서 따로 적지 않는다.
@@ -513,27 +555,62 @@ namespace MediKitTwin.EditorTools
             { "sample_bag", new ItemLook(PrimitiveType.Cube, new Vector3(0.20f, 0.03f, 0.14f), new Color(0.80f, 0.82f, 0.86f)) },
         };
 
-        // 칸 바닥(floorY, 칸 기준 로컬) 위에 구성품 1개를 칸 중앙에 놓는다. 이름은 Item_<구성품 ID>.
-        private static void AddShelfItem(Transform cell, string componentId, float floorY)
+        // 한 줄에 놓는 최대 개수. 칸이 좁아 5개를 한 줄에 놓으면 구성품이 겹치므로 줄바꿈한다.
+        private const int ShelfItemsPerRow = 3;
+
+        // 구성품 크기의 상한은 그리퍼가 열린 폭에서 정한다. FR5 그리퍼는 손가락 원점이 x=+0.0345, x=-0.0425
+        // (fr5_withgripper.urdf의 fj1, fj2)라 열린 간격이 0.077m이다. 집는 방향을 알 수 없어 가장 긴 변을 기준으로 하고,
+        // 그 폭의 80%까지만 물건이 차지하게 해 손가락이 들어갈 여유를 남긴다.
+        private const float GripperOpeningMeters = 0.077f;
+        private const float GraspClearanceRatio = 0.8f;
+        private static readonly MediKitTwin.Inventory.GraspSizeLimit GraspLimit =
+            new MediKitTwin.Inventory.GraspSizeLimit(GripperOpeningMeters, GraspClearanceRatio);
+
+        // 칸 바닥 위에 구성품을 count개 격자(왼쪽부터, 앞줄부터)로 놓는다. 번호가 곧 슬롯 번호(집는 순서)이다. 이름은 Item_<구성품 ID>_<번호>.
+        // 구성품이 한 격자 칸보다 크면 겹치지 않도록 같은 비율로 줄인다.
+        private static void AddShelfItems(Transform cell, string componentId, int count, Vector3 cellSize)
         {
+            if (count <= 0) return;
+
             if (!ItemLooks.TryGetValue(componentId, out ItemLook look))
             {
                 Debug.LogWarning($"[CellSceneBuilder] 구성품 {componentId}의 모양이 없어 회색 큐브로 대체합니다.");
                 look = new ItemLook(PrimitiveType.Cube, new Vector3(0.10f, 0.10f, 0.10f), ColorGray);
             }
 
-            var item = GameObject.CreatePrimitive(look.Shape);
-            item.name = $"Item_{componentId}";
-            item.transform.SetParent(cell, false);
-            item.transform.localPosition = new Vector3(0f, floorY + look.Size.y * 0.5f, 0f);
+            float floorY = -cellSize.y * 0.5f + WallThickness;
 
-            // 원기둥 프리미티브는 높이가 scale.y의 2배이다.
-            item.transform.localScale = look.Shape == PrimitiveType.Cylinder
-                ? new Vector3(look.Size.x, look.Size.y * 0.5f, look.Size.z)
-                : look.Size;
+            // 뒤쪽(-Z)만 벽이고 앞쪽(+Z)은 열려 있으므로 안쪽 깊이는 벽 하나만 뺀다.
+            var layout = new MediKitTwin.Inventory.ShelfCellLayout(
+                innerWidth: cellSize.x - 2f * WallThickness,
+                innerDepth: cellSize.z - WallThickness,
+                depthCenter: WallThickness * 0.5f,
+                itemsPerRow: ShelfItemsPerRow);
+            // 먼저 그리퍼가 집을 수 있는 크기로 줄이고, 그 크기로 칸 안 배치를 계산한다.
+            float graspScale = GraspLimit.ScaleFor(look.Size.x, look.Size.y, look.Size.z);
+            Vector3 graspableSize = look.Size * graspScale;
+            var placements = layout.Compute(count, graspableSize.x, graspableSize.z);
+            Material material = GetMaterial($"M_Item_{componentId}", look.Color);
 
-            item.GetComponent<Renderer>().sharedMaterial = GetMaterial($"M_Item_{componentId}", look.Color);
-            UnityEngine.Object.DestroyImmediate(item.GetComponent<Collider>());
+            for (int i = 0; i < placements.Count; i++)
+            {
+                float x = placements[i].X;
+                float z = placements[i].Z;
+                Vector3 size = graspableSize * placements[i].Scale;
+
+                var item = GameObject.CreatePrimitive(look.Shape);
+                item.name = $"Item_{componentId}_{i + 1}";
+                item.transform.SetParent(cell, false);
+                item.transform.localPosition = new Vector3(x, floorY + size.y * 0.5f, z);
+
+                // 원기둥 프리미티브는 높이가 scale.y의 2배이다.
+                item.transform.localScale = look.Shape == PrimitiveType.Cylinder
+                    ? new Vector3(size.x, size.y * 0.5f, size.z)
+                    : size;
+
+                item.GetComponent<Renderer>().sharedMaterial = material;
+                UnityEngine.Object.DestroyImmediate(item.GetComponent<Collider>());
+            }
         }
 
         private static void BuildInspectionStation(Transform root)

@@ -38,7 +38,7 @@ namespace MediKitTwin.Common
 
         [Header("재고 (FR-13)")]
         [Tooltip("목록에 없는 선반 칸의 시작 재고.")]
-        [SerializeField, Min(0)] private int _defaultStock = 20;
+        [SerializeField, Min(0)] private int _defaultStock = 5;
 
         [Tooltip("시작 재고를 따로 정할 선반 칸. 예: C-3을 2개로 두면 DX 세 번째 키트에서 소진된다.")]
         [SerializeField] private List<ShelfStockSetting> _stockOverrides = new List<ShelfStockSetting>();
@@ -47,7 +47,7 @@ namespace MediKitTwin.Common
         [SerializeField, Min(0f)] private float _refillDelaySeconds = 30f;
 
         [Tooltip("보충할 때 채우는 수량.")]
-        [SerializeField, Min(1)] private int _refillQuantity = 20;
+        [SerializeField, Min(1)] private int _refillQuantity = 5;
 
         public float MissingProbabilityPercent => _missingProbabilityPercent;
 
