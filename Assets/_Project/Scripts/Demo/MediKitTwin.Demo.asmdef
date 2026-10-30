@@ -3,7 +3,8 @@
     "rootNamespace": "MediKitTwin.Demo",
     "references": [
         "MediKitTwin.Common",
-        "MediKitTwin.ArmA"
+        "MediKitTwin.ArmA",
+        "MediKitTwin.Inventory"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
