@@ -236,7 +236,7 @@
 | 재고 | `IStock` 구현 | `StockEmpty`, `StockRefilled` | - |
 | 주문 관리 | `IKitSource`, `IOrderStatus` 구현 | `OrderHeld`, `OrderResumed`, `WarningRaised` | `KitReady`, `StockEmpty`, `StockRefilled`, `StationStateChanged` |
 | 박스 공급 | `IBoxSupply` 구현 | - | - |
-| 로봇암 A | `IKitSource`, `IStock`, `IBoxSupply`, `IArmTarget` 사용 | `KitReady`, `StationStateChanged`, `StationAlive` | - |
+| 로봇암 A | `IKitSource`, `IStock`, `IBoxSupply`, `IArmTarget`, `IShelfItemLocator`, `IKitBoxLocator` 사용 | `KitReady`, `StationStateChanged`, `StationAlive` | - |
 | 검사 | `IInspector` 사용 | `InspectionResult` | `AtInspection` |
 | 컨베이어 | - | `AtInspection`, `AtPacking`, `AtConveyorEnd`, `WarningRaised` | `KitReady`, `InspectionResult`, `KitRejected`, `LidClosed` |
 | 푸셔 | - | `KitRejected`, `RejectBinCleared` | `InspectionResult` |
@@ -248,6 +248,34 @@
 | 합성 데이터 생성기 | `RecipeSO` 사용 (`CellEvents` 미사용) | - | - |
 
 - 합성 데이터 생성기(FR-08)는 공정과 같은 조건으로 박스를 채워 이미지와 정답 라벨(키트 코드, 정상·누락)을 저장하는 별도 도구이다. 공정 설비와 신호를 주고받지 않는다.
+
+### 7-10. 키팅 흐름 (FR-03, FR-04)
+
+로봇암 A가 키트 1개를 만드는 순서와, 그 순서를 이루는 접점이다. 순서(`KittingProcess`)는 아래 인터페이스로만 협력자를 다루므로 로봇이나 선반 구현을 바꿔도 순서는 그대로다.
+
+1. `IKitSource.TryGetNext`로 키트와 레시피를 받는다(`OrderSession`이 주문 파일을 읽어 만든다).
+2. `IMissingRule`이 빠뜨릴 슬롯을 정하고, 그 답을 `KitData.SetMissingAnswer`로 기록한다. 레시피 순서대로 계획(`KittingPlan`)을 세운다.
+3. `IBoxSupply.PlaceBox`로 박스를 놓고, `IKitBoxLocator`로 슬롯 위치를 얻는다.
+4. 항목마다 `IStock.GetQuantity`가 0이면 `TryTake`로 `StockEmpty`를 내보내고 멈춘다. 아니면 `IShelfItemLocator`로 물건 위치를 얻어 `IItemTransfer`가 집고 놓는다. 재고는 로봇이 쥐는 순간에 줄인다.
+5. 모두 놓으면 `KitReady`를 알린다. 중간에 멈추면 꺼낸 구성품을 `IStock.Return`으로 되돌리고 `IBoxSupply.RemoveBox`로 박스를 치운다.
+
+| 접점 | 하는 일 | 구현 |
+|---|---|---|
+| `IShelfItemLocator` | 선반 칸에서 집을 물건의 자리와 원본을 알려 준다 | `ShelfStockPresenter` (실제 일은 `ShelfItemLocator`) |
+| `IKitBoxLocator` | 박스 로컬 슬롯 좌표를 월드 자리로 바꿔 준다 | `KitBoxSupply` |
+| `IItemTransfer` | 구성품 1개를 집고 놓는 로봇 동작 | `ArmItemTransfer` (이동 순서) |
+| `IItemHolder` | 그리퍼로 물건을 쥐고 놓는 방식 | `ScriptAttachHolder`(복제본 부착), `PhysicsGraspHolder`(물리 파지) |
+| `IMissingRule` | 빠뜨릴 슬롯을 정한다 | `RandomMissingRule` |
+
+- 쥐고 가는 물건은 선반 원본이 아니라 그 복제본이다. 재고가 줄면 원본이 사라지기 때문이다.
+- 쥐는 방식은 `ArmItemTransfer`의 Holder에 연결한 컴포넌트로 정한다. `ScriptAttachHolder`는 복제본을 도구 끝점에 붙이는 스크립트 부착 방식(SRS 2.5)이고, `PhysicsGraspHolder`는 복제본에 콜라이더와 `Graspable`을 붙여 `JointGripper`가 고정 조인트로 쥐게 한다. 물리 파지는 닫은 뒤 시간 안에 쥐지 못하면 실패(`GraspFailed`)로 알린다.
+- 로봇암 A는 바퀴 달린 베이스(`MobileBaseDriver`) 위에 있고, 키팅할 때 베이스가 물건 앞까지 이동한 뒤 팔이 집고, 쥔 채 박스 곁으로 이동해 놓는다. 서는 자리는 `ArmBaseStandPlanner`가 정하고(선반 물건은 칸 밖 방향으로 `Pick Standoff`, 박스는 `Place Standoff`; `ArmBaseApproachConfig`), 이동은 `IArmBasePositioner`(`MobileArmBasePositioner`)가 맡는다. 베이스가 돌면 팔 베이스가 루트에서 어긋나므로 `IArmBaseLocator`로 팔 베이스 오차를 재서 보정 이동을 되풀이한다. 이동 모듈을 연결하지 않으면 제자리에서 닿는 곳만 집는 고정 팔로 동작한다.
+- 선반 칸은 위가 막히고 앞(+Z)만 열려 있으므로 선반 물건은 `ShelfPickItem.ApproachDirection`(칸 밖으로 나가는 방향)에서 수평으로 들어가 쥐고 뒤로 뺀다. 박스 슬롯은 위에서 내려가 놓는다.
+- 키팅 진행은 `IKittingObserver`로만 알리고, `KittingStatusTracker`가 모아 `IKittingStatus`(만드는 중인 키트, 항목별 단계, 결과 횟수)로 읽힌다. 화면은 이 현황만 읽는다.
+- 주문은 SRS FR-01에 따라 `StreamingAssets/Orders`의 CSV 파일로 읽는 것이 시나리오이다. 패널에서 CSV를 직접 넣는 기능은 시험용 편의이며 SRS의 화면(UI-01, UI-02)에는 없다.
+- 설비 상태 통지는 `StationStateReporter`가 맡는다. 상태가 바뀔 때만 `StationStateChanged`를, 1초마다 `StationAlive`를 보낸다.
+- 주문은 `OrderSession`이 받는다. 주문 파일을 실행 중에 바꿔도 `IKitSource`, `IOrderStatus` 참조를 다시 잡지 않아도 된다. 로트번호는 이어서 붙이고 `KitSequence`는 파일마다 1부터 센다.
+- 박스 크기(L, M)별 모델은 아직 반영하지 않는다(템플릿이 하나). 컨베이어를 구현하기 전까지는 `ConveyorHandoffStub`이 `KitReady` 뒤에 박스를 치운다.
 
 ## 8. 확정이 필요한 항목
 
