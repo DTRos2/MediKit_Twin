@@ -31,6 +31,8 @@ namespace MediKitTwin.Mobile
 
         public bool IsMoving => _hasTarget;
 
+        public Vector3 Position => transform.position;
+
         public void DriveTo(Vector3 worldPosition)
         {
             _target = worldPosition;

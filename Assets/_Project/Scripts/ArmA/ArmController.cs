@@ -15,7 +15,7 @@ namespace MediKitTwin.ArmA
     // 다른 컴포넌트(IK, 그리퍼, 강화학습 환경)가 Start에서 JointNames를 읽으므로 먼저 초기화한다.
     [DefaultExecutionOrder(-50)]
     [RequireComponent(typeof(ArmDriveSetup))]
-    public class ArmController : MonoBehaviour, IArmModel, IArmDriver, IForwardKinematics, IGripperHost
+    public class ArmController : MonoBehaviour, IArmModel, IArmDriver, IForwardKinematics, IGripperHost, IArmBaseLocator
     {
         // 물리 엔진이 관절 상태를 안정적으로 돌려주기까지 기다리는 FixedUpdate 횟수.
         private const int WarmupFixedSteps = 2;
@@ -48,6 +48,9 @@ namespace MediKitTwin.ArmA
         public ArmProfileSO Profile => _profile;
         public KinematicChain Chain => _chain;
         public Transform BaseLink => _rig.Base;
+        /// <summary>팔 베이스(로봇 기준 링크)의 월드 위치. 링크를 찾기 전(Start 전)에는 오브젝트 위치를 돌려준다.</summary>
+        public Vector3 BaseWorldPosition => _rig != null ? _rig.Base.position : transform.position;
+
         public DlsIkSettings IkSettings => _profile.Ik;
         public Transform RobotRoot => transform;
         public IReadOnlyList<ArmProfileSO.GripperJointEntry> GripperJoints => _profile.GripperJoints;
@@ -191,10 +194,25 @@ namespace MediKitTwin.ArmA
 
         public void GetJointLimits(float[] lowerRad, float[] upperRad) => _bank.GetLimits(lowerRad, upperRad);
 
+        // 관절 수는 Start에서 만드는 관절 이름 배열보다 프로필이 먼저 알고 있다. 이름 배열만 보면 Start 전의 호출은 기대 길이가 0이 되어
+        // 빈 배열이 검증을 통과해 저장되었다가 Initialize에서야 실패하고, 그러면 스택에 진짜 호출한 곳이 나오지 않는다.
+        private int ExpectedJointCount
+        {
+            get
+            {
+                if (_profile != null)
+                {
+                    return _profile.Joints.Length;
+                }
+
+                return _jointNames != null ? _jointNames.Length : 0;
+            }
+        }
+
         // 호출한 쪽이 관절 수와 다른 길이의 배열을 주면 예외로 죽지 않고, 어디서 호출했는지 스택과 함께 알린다.
         private bool HasValidLength(float[] anglesRad, string caller)
         {
-            int expected = _jointNames != null ? _jointNames.Length : 0;
+            int expected = ExpectedJointCount;
             if (anglesRad != null && anglesRad.Length == expected)
             {
                 return true;
