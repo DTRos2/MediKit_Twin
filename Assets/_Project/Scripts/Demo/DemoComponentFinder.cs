@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MediKitTwin.Demo
@@ -20,6 +21,21 @@ namespace MediKitTwin.Demo
             }
 
             return null;
+        }
+
+        /// <summary>구현체를 모두 모아 돌려준다. 로봇이 여러 대일 때 고르는 데 쓴다. 켜진 오브젝트만 본다.</summary>
+        public static List<MonoBehaviour> FindAll<T>() where T : class
+        {
+            var found = new List<MonoBehaviour>();
+            foreach (MonoBehaviour behaviour in Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Exclude))
+            {
+                if (behaviour is T)
+                {
+                    found.Add(behaviour);
+                }
+            }
+
+            return found;
         }
     }
 }

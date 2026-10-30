@@ -54,6 +54,7 @@ public static class KittingStationSetup
         GetOrAdd<OrderCsvDemoPanel>(station);
         GetOrAdd<ShelfStockDemoPanel>(station);
         GetOrAdd<KittingStatusDemoPanel>(station);
+        GetOrAdd<ArmJointDemoPanel>(station);
 
         var holder = GetOrAdd<ScriptAttachHolder>(arm.gameObject);
         var transfer = GetOrAdd<ArmItemTransfer>(arm.gameObject);
