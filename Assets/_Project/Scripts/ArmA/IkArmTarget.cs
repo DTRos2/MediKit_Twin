@@ -153,7 +153,8 @@ namespace MediKitTwin.ArmA
                 new DlsInverseKinematics(_model.Chain, settings),
                 _model.Chain,
                 settings.Restarts,
-                settings.RestartSeed);
+                settings.RestartSeed,
+                settings.MaxJointTravelRad);
 
             int count = _model.JointNames.Count;
             _seed = new float[count];

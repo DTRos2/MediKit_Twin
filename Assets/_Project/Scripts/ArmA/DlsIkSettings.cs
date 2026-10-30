@@ -30,8 +30,11 @@ namespace MediKitTwin.ArmA
                  "손목 비용을 키우면 어깨와 팔꿈치까지 함께 움직인다. 비우거나 관절 수와 다르면 모두 같은 비용(1)으로 푼다.")]
         [SerializeField] private float[] _jointCosts = Array.Empty<float>();
 
+        [Tooltip("현재 자세에서 어느 관절이든 이 각도(도)보다 더 돌아야 하는 해는 쓰지 않는다. 팔이 뒤집힌 먼 자세로 가서 선반에 걸리거나 시간 안에 닿지 못하는 것을 막는다. 0이면 제한하지 않는다.")]
+        [SerializeField, Min(0f)] private float _maxJointTravelDeg;
 
         public int Restarts => _restarts;
+        public float MaxJointTravelRad => _maxJointTravelDeg * Mathf.Deg2Rad;
         public int RestartSeed => _restartSeed;
         public int MaxIterations => _maxIterations;
         public float PositionToleranceM => _positionToleranceM;
