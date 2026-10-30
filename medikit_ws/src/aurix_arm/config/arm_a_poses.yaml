@@ -1,5 +1,5 @@
 # 관절 각도 단위: rad
-joint_names: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6]
+joint_names: [j1, j2, j3, j4, j5, j6]
 
 poses:
   home:   [0.0,  0.0,  0.0,  0.0,  0.0, 0.0]

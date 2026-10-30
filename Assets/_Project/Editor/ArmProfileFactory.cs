@@ -8,27 +8,30 @@ using UnityEngine;
 public static class ArmProfileFactory
 {
     private const string Folder = "Assets/_Project/Config";
+    public const string Fr5FileName = "ArmProfile_FR5";
+    public const string Ur3FileName = "ArmProfile_UR3_Robotiq";
 
     [MenuItem("Tools/Arm/Create FR5 Profile")]
-    private static void CreateFr5()
+    private static void CreateFr5Menu()
     {
         GetOrCreateFr5();
+    }
+
+    [MenuItem("Tools/Arm/Create UR3 Robotiq Profile")]
+    private static void CreateUr3Menu()
+    {
+        GetOrCreateUr3();
     }
 
     /// <summary>프로필이 있으면 불러오고 없으면 기본값으로 만든다.</summary>
     public static ArmProfileSO GetOrCreateFr5()
     {
-        const string fileName = "ArmProfile_FR5";
-        string path = $"{Folder}/{fileName}.asset";
+        return LoadOrCreate(Fr5FileName, BuildFr5);
+    }
 
-        var existing = AssetDatabase.LoadAssetAtPath<ArmProfileSO>(path);
-        if (existing != null)
-        {
-            return existing;
-        }
-
-        Save(BuildFr5(), fileName);
-        return AssetDatabase.LoadAssetAtPath<ArmProfileSO>(path);
+    public static ArmProfileSO GetOrCreateUr3()
+    {
+        return LoadOrCreate(Ur3FileName, BuildUr3);
     }
 
     private static ArmProfileSO BuildFr5()
@@ -58,12 +61,10 @@ public static class ArmProfileFactory
             // 윗팔 수직(j2 -90), 앞팔 수평(j3 +90), 그리퍼가 아래를 향하는(j4 -90, j5 -90) 세운 자세.
             // URDF 기구학으로 계산한 값이다. 모든 관절 0도는 팔을 수평으로 뻗어 로봇이 누운 것처럼 보인다.
             new[] { 0f, -90f, 90f, -90f, -90f, 0f });
-
         return profile;
     }
 
-    [MenuItem("Tools/Arm/Create UR3 Robotiq Profile")]
-    private static void CreateUr3()
+    private static ArmProfileSO BuildUr3()
     {
         var profile = ScriptableObject.CreateInstance<ArmProfileSO>();
         profile.Configure(
@@ -91,28 +92,33 @@ public static class ArmProfileFactory
                 new ArmProfileSO.GripperJointEntry("right_inner_knuckle", 0f, -0.7f),
                 new ArmProfileSO.GripperJointEntry("right_inner_finger", 0f, 0.7f),
             });
-
-        Save(profile, "ArmProfile_UR3_Robotiq");
+        return profile;
     }
 
-    private static void Save(ArmProfileSO profile, string fileName)
+    private static ArmProfileSO LoadOrCreate(string fileName, System.Func<ArmProfileSO> build)
     {
+        string path = $"{Folder}/{fileName}.asset";
+        var existing = AssetDatabase.LoadAssetAtPath<ArmProfileSO>(path);
+        if (existing != null)
+        {
+            return existing;
+        }
+
         if (!AssetDatabase.IsValidFolder(Folder))
         {
             AssetDatabase.CreateFolder("Assets/_Project", "Config");
         }
 
-        string path = $"{Folder}/{fileName}.asset";
         if (File.Exists(path))
         {
-            Debug.LogWarning($"{path}가 이미 있다. 덮어쓰지 않았다. 지우고 다시 만들거나 Inspector에서 수정한다.");
-            Object.DestroyImmediate(profile);
-            return;
+            Debug.LogError($"{path}가 있지만 ArmProfileSO로 읽히지 않는다. 지우고 다시 만든다.");
+            return null;
         }
 
+        ArmProfileSO profile = build();
         AssetDatabase.CreateAsset(profile, path);
         AssetDatabase.SaveAssets();
-        EditorGUIUtility.PingObject(profile);
         Debug.Log($"{path}를 만들었다.");
+        return profile;
     }
 }

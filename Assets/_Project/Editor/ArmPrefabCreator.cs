@@ -4,16 +4,17 @@ using MediKitTwin.Demo;
 using UnityEditor;
 using UnityEngine;
 
-// 씬의 fr5_robot을 프리팹으로 저장하고 씬 오브젝트를 그 프리팹의 인스턴스로 연결한다.
+// 씬의 fr5_robot, ur3_with_gripper를 프리팹으로 저장하고 씬 오브젝트를 그 프리팹의 인스턴스로 연결한다.
 // 컨벤션: 프리팹 접두사 PF_, 한글과 공백 없음, 기능은 프리팹으로 만들고 씬에는 인스턴스만 둔다.
 public static class ArmPrefabCreator
 {
     private const string Folder = "Assets/_Project/Prefabs";
 
-    [MenuItem("Tools/Arm/Create robot prefab (FR5)")]
-    private static void CreateFr5()
+    [MenuItem("Tools/Arm/Create robot prefabs (FR5, UR3)")]
+    private static void CreateBoth()
     {
         CreatePrefab("fr5_robot", "PF_FR5Robot");
+        CreatePrefab("ur3_with_gripper", "PF_UR3Robot");
     }
 
     private static void CreatePrefab(string sceneObjectName, string prefabName)
