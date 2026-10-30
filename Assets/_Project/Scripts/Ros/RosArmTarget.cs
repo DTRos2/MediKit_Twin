@@ -14,7 +14,7 @@ namespace MediKitTwin.Ros
     {
         [SerializeField] private string _topic = "/arm_a/joint_command";
         [Tooltip("URDF 관절 이름. 순서가 TryGetTargets 배열 순서가 된다.")]
-        [SerializeField] private string[] _jointNames = { "joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6" };
+        [SerializeField] private string[] _jointNames = { "j1", "j2", "j3", "j4", "j5", "j6" };
 
         private float[] _latest;
         private bool _hasTarget;

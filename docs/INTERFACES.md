@@ -251,6 +251,6 @@
 
 ## 8. 확정이 필요한 항목
 
-- [ ] 로봇암 A의 URDF 관절 이름 목록. 팀원의 포즈 설정(`arm_a_poses.yaml`)은 `joint_1` ~ `joint_6`(6개)을 쓰고 있으나 URDF와 같은지 확인이 필요하다. ROS-TCP-Connector는 통신 패키지일 뿐 관절 이름을 정하지 않는다
+- [x] 로봇암 A의 URDF 관절 이름은 FR5 URDF(`fr5_gripper.urdf`)의 `j1` ~ `j6`(6개)이다. `arm_a_poses.yaml`, `RosArmTarget`, ROS 쪽 URDF를 이 이름에 맞췄다
 - [ ] 보류 주문의 부족한 칸과 보충 남은 시간을 대시보드에 전달하는 방식(7-2의 임시안을 구현하면서 조정)
 - [ ] 로봇암 B의 `IArmTarget` 사용 여부(MVP는 자동 처리라 보류)

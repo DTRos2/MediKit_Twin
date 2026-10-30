@@ -36,7 +36,7 @@ medikit_ws/src/
 
 | 패키지 | 빌드 | 내용 |
 |---|---|---|
-| `aurix_description` | ament_cmake | `urdf/arm_a.urdf` (joint_1~6), `meshes/` |
+| `aurix_description` | ament_cmake | `urdf/arm_a.urdf` (j1~6), `meshes/` |
 | `aurix_arm` | ament_python | `arm_a_commander.py` 자세 순서대로 최종 목표 각도 발행·도착 판정, `pose_table.py` yaml 로드, `config/arm_a_poses.yaml` |
 | `aurix_monitor` | ament_python | `cell_monitor.py` — `/cell/events·station_state·kpi` 구독 → 로그, CSV 저장 |
 | `aurix_bringup` | ament_python | `aurix.launch.py`, `endpoint_only.launch.py`, `config/params.yaml` |
@@ -147,7 +147,7 @@ ss -ltn | grep 7777                             # LISTEN 0.0.0.0:7777 이 보이
 ```bash
 # ROS → Unity: Unity가 /arm_a/joint_command 를 구독하고 있어야 받는다
 ros2 topic pub -r 5 /arm_a/joint_command sensor_msgs/msg/JointState \
-  "{name: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6], position: [0.5, 0.3, 0, 0, 0, 0]}"
+  "{name: [j1, j2, j3, j4, j5, j6], position: [0.5, 0.3, 0, 0, 0, 0]}"
 
 # Unity → ROS: Unity가 /arm_a/joint_states 를 발행하면 여기서 보인다
 ros2 topic echo /arm_a/joint_states
