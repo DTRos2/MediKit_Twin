@@ -2,12 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using MediKitTwin.Common;
-using UnityEngine;
 
 namespace MediKitTwin.ArmA
 {
     /// <summary>
     /// 키트 1개를 만드는 순서: 박스를 놓고, 계획의 항목마다 선반에서 집어 박스 슬롯에 놓는다. (FR-03)
+    /// 항목 하나를 집어 놓는 일은 ItemFiller, 박스를 기다리는 일은 BoxAwaiter가 맡고, 이 클래스는 항목 순서와 중단 처리를 맡는다.
     /// 재고, 박스, 위치 조회, 이송은 모두 인터페이스로만 다루므로 Unity 씬 없이도 시험할 수 있다.
     /// 중간에 멈추면 이미 꺼낸 구성품을 재고로 되돌리고 박스를 치운다(주문 보류와 재개의 전제, FR-13).
     /// 시간은 호출하는 쪽이 주는 시각 함수로만 알아 시뮬레이션 시간(배속)을 따른다.
@@ -17,11 +17,9 @@ namespace MediKitTwin.ArmA
     {
         private readonly IStock _stock;
         private readonly IBoxSupply _boxSupply;
-        private readonly IKitBoxLocator _boxLocator;
-        private readonly IShelfItemLocator _shelf;
         private readonly IItemTransfer _transfer;
-        private readonly Func<float> _now;
-        private readonly float _boxWaitTimeoutSeconds;
+        private readonly BoxAwaiter _boxAwaiter;
+        private readonly ItemFiller _filler;
         private readonly IKittingObserver _observer;
 
         /// <param name="observer">진행을 알릴 쪽. 필요 없으면 null.</param>
@@ -37,11 +35,9 @@ namespace MediKitTwin.ArmA
         {
             _stock = stock ?? throw new ArgumentNullException(nameof(stock));
             _boxSupply = boxSupply ?? throw new ArgumentNullException(nameof(boxSupply));
-            _boxLocator = boxLocator ?? throw new ArgumentNullException(nameof(boxLocator));
-            _shelf = shelf ?? throw new ArgumentNullException(nameof(shelf));
             _transfer = transfer ?? throw new ArgumentNullException(nameof(transfer));
-            _now = now ?? throw new ArgumentNullException(nameof(now));
-            _boxWaitTimeoutSeconds = boxWaitTimeoutSeconds;
+            _boxAwaiter = new BoxAwaiter(boxSupply, boxLocator, now, boxWaitTimeoutSeconds);
+            _filler = new ItemFiller(stock, boxLocator, shelf, transfer);
             _observer = observer;
         }
 
@@ -51,18 +47,13 @@ namespace MediKitTwin.ArmA
             var taken = new List<string>();
 
             _observer?.PlanStarted(plan);
-            _boxSupply.PlaceBox(plan.Kit, plan.Recipe.BoxSize);
 
-            float deadline = _now() + _boxWaitTimeoutSeconds;
-            while (!_boxLocator.TryGetSlotTarget(Vector3.zero, out _))
+            bool isBoxReady = false;
+            yield return _boxAwaiter.Ensure(plan.Kit, plan.Recipe.BoxSize, ready => isBoxReady = ready);
+            if (!isBoxReady)
             {
-                if (_now() > deadline)
-                {
-                    Abort(plan, taken, outcome, KittingResult.Fault, null, "박스가 지그에 놓이지 않았다.");
-                    yield break;
-                }
-
-                yield return null;
+                Abort(plan, taken, outcome, KittingResult.Fault, null, "박스가 지그에 놓이지 않았다.");
+                yield break;
             }
 
             int orderSequence = plan.Kit.OrderSequence;
@@ -76,57 +67,24 @@ namespace MediKitTwin.ArmA
                     continue;
                 }
 
-                // 재고가 0이면 꺼내기를 시도해 StockEmpty 신호를 내보낸다. 빈 선반까지 로봇이 가는 헛걸음을 막는다.
-                if (_stock.GetQuantity(item.ShelfSlotId) <= 0)
+                int itemIndex = index;
+                var fill = new FillResult();
+                yield return _filler.Fill(
+                    new FillRequest(item.ShelfSlotId, item.SlotLocalPosition, item.SlotNumber, orderSequence),
+                    () => _observer?.ItemStateChanged(itemIndex, KittingItemState.Picking),
+                    () => _observer?.ItemStateChanged(itemIndex, KittingItemState.Placing),
+                    fill);
+
+                // 쥔 뒤에 실패해도 이미 꺼낸 재고이므로 되돌릴 목록에 넣는다.
+                if (fill.IsTaken)
                 {
-                    _stock.TryTake(item.ShelfSlotId, orderSequence);
-                    Abort(plan, taken, outcome, KittingResult.StockShortage, item.ShelfSlotId, $"선반 칸 {item.ShelfSlotId}의 재고가 없다.");
-                    yield break;
+                    taken.Add(item.ShelfSlotId);
                 }
 
-                if (!_shelf.TryGetPickItem(item.ShelfSlotId, out ShelfPickItem pickItem))
+                if (!fill.Succeeded)
                 {
-                    Abort(plan, taken, outcome, KittingResult.Fault, item.ShelfSlotId, $"선반 칸 {item.ShelfSlotId}에 집을 물건이 보이지 않는다.");
-                    yield break;
-                }
-
-                string shelfSlotId = item.ShelfSlotId;
-                bool isTaken = false;
-                var pick = new TransferResult();
-                _observer?.ItemStateChanged(index, KittingItemState.Picking);
-                yield return _transfer.Pick(new ItemPickRequest(pickItem, () =>
-                {
-                    isTaken = _stock.TryTake(shelfSlotId, orderSequence);
-                    return isTaken;
-                }), pick);
-
-                if (isTaken)
-                {
-                    taken.Add(shelfSlotId);
-                }
-
-                if (!pick.Succeeded)
-                {
-                    bool isStockProblem = pick.Failure == TransferFailure.CommitRejected;
-                    Abort(plan, taken, outcome,
-                        isStockProblem ? KittingResult.StockShortage : KittingResult.Fault,
-                        shelfSlotId,
-                        isStockProblem ? $"선반 칸 {shelfSlotId}의 재고가 없다." : $"선반 칸 {shelfSlotId}에서 집지 못했다. 로봇이 닿지 못하는 위치이거나 동작 시간이 초과되었다.");
-                    yield break;
-                }
-
-                if (!_boxLocator.TryGetSlotTarget(item.SlotLocalPosition, out BoxSlotTarget target))
-                {
-                    Abort(plan, taken, outcome, KittingResult.Fault, shelfSlotId, "박스가 사라져 구성품을 놓을 수 없다.");
-                    yield break;
-                }
-
-                _observer?.ItemStateChanged(index, KittingItemState.Placing);
-                var place = new TransferResult();
-                yield return _transfer.Place(new ItemPlaceRequest(target.WorldPose, target.Parent), place);
-                if (!place.Succeeded)
-                {
-                    Abort(plan, taken, outcome, KittingResult.Fault, shelfSlotId, $"슬롯 {item.SlotNumber}에 놓지 못했다.");
+                    KittingResult result = fill.Failure == FillFailure.StockEmpty ? KittingResult.StockShortage : KittingResult.Fault;
+                    Abort(plan, taken, outcome, result, item.ShelfSlotId, fill.Message);
                     yield break;
                 }
 
