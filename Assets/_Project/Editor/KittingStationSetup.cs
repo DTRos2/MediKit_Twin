@@ -50,13 +50,14 @@ public static class KittingStationSetup
         var orders = GetOrAdd<OrderSessionBehaviour>(station);
         var controller = GetOrAdd<KittingController>(station);
         var handoff = GetOrAdd<ConveyorHandoffStub>(station);
+        var manual = GetOrAdd<ManualKittingStation>(station);
         GetOrAdd<OrderCsvDemoPanel>(station);
         GetOrAdd<ShelfStockDemoPanel>(station);
         GetOrAdd<KittingStatusDemoPanel>(station);
 
         var holder = GetOrAdd<ScriptAttachHolder>(arm.gameObject);
         var transfer = GetOrAdd<ArmItemTransfer>(arm.gameObject);
-        bool isBaseWired = WireBaseMovement(arm, transfer);
+        bool isBaseWired = WireBaseMovement(arm, tool, shelf, transfer);
 
         bool isWired =
             SerializedFieldAssigner.SetReferenceList(orders, "_recipes", recipes.Cast<Object>().ToList())
@@ -71,6 +72,7 @@ public static class KittingStationSetup
             & SerializedFieldAssigner.SetReference(controller, "_itemTransfer", transfer)
             & SerializedFieldAssigner.SetReference(controller, "_scenario", scenario)
             & SerializedFieldAssigner.SetReference(handoff, "_boxSupply", boxSupply)
+            & WireManualKitting(manual, shelf, boxSupply, transfer, controller, recipes)
             & isBaseWired;
 
         EditorSceneManager.MarkSceneDirty(station.scene);
@@ -83,7 +85,7 @@ public static class KittingStationSetup
 
     // 씬에 굴러가는 베이스(MobileBaseDriver)가 하나 있으면 이동 모듈을 붙여 이송에 연결한다. 팔(fr5_robot)과 베이스(ArmA)는
     // 형제 오브젝트일 수 있으므로 부모가 아니라 씬 전체에서 찾는다. 없으면 이동 없이 닿는 곳만 집는 고정 팔로 두고 알린다.
-    private static bool WireBaseMovement(ArmController arm, ArmItemTransfer transfer)
+    private static bool WireBaseMovement(ArmController arm, IkArmTarget tool, ShelfStockPresenter shelf, ArmItemTransfer transfer)
     {
         ArmBaseApproachConfigSO approach = SceneObjectFinder.FindAsset<ArmBaseApproachConfigSO>();
         MobileBaseDriver[] bases = Object.FindObjectsByType<MobileBaseDriver>(FindObjectsInactive.Include);
@@ -99,8 +101,24 @@ public static class KittingStationSetup
         return SerializedFieldAssigner.SetReference(positioner, "_mobileBase", bases[0])
             & SerializedFieldAssigner.SetReference(positioner, "_armBase", arm)
             & SerializedFieldAssigner.SetReference(positioner, "_config", approach)
+            & SerializedFieldAssigner.SetReference(positioner, "_toolTarget", tool)
+            & SerializedFieldAssigner.SetReference(positioner, "_armDriver", arm)
             & SerializedFieldAssigner.SetReference(transfer, "_positioner", positioner)
-            & SerializedFieldAssigner.SetReference(transfer, "_approach", approach);
+            & SerializedFieldAssigner.SetReference(transfer, "_approach", approach)
+            & KittingCollisionLayerSetup.Apply(arm, shelf, approach);
+    }
+
+    // 수동 키팅: 자동 키팅과 같은 재고, 선반, 박스, 이송을 쓰고, 수동 모드 동안 자동 키팅(controller)을 멈춘다.
+    private static bool WireManualKitting(
+        ManualKittingStation manual, ShelfStockPresenter shelf, KitBoxSupply boxSupply, ArmItemTransfer transfer,
+        KittingController controller, List<RecipeSO> recipes)
+    {
+        return SerializedFieldAssigner.SetReference(manual, "_stock", shelf)
+            & SerializedFieldAssigner.SetReference(manual, "_itemLocator", shelf)
+            & SerializedFieldAssigner.SetReference(manual, "_boxSupply", boxSupply)
+            & SerializedFieldAssigner.SetReference(manual, "_itemTransfer", transfer)
+            & SerializedFieldAssigner.SetReference(manual, "_autoKitting", controller)
+            & SerializedFieldAssigner.SetReferenceList(manual, "_recipes", recipes.Cast<Object>().ToList());
     }
 
     private static GameObject FindOrCreateStation()
