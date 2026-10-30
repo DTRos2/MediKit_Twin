@@ -9,16 +9,21 @@ namespace MediKitTwin.ArmA
 
         public TransferFailure Failure { get; private set; }
 
+        /// <summary>어느 단계에서 왜 실패했는지 사람이 읽는 설명. 성공했거나 설명이 없으면 빈 문자열이다.</summary>
+        public string Detail { get; private set; } = string.Empty;
+
         public void Succeed()
         {
             Succeeded = true;
             Failure = TransferFailure.None;
+            Detail = string.Empty;
         }
 
-        public void Fail(TransferFailure failure)
+        public void Fail(TransferFailure failure, string detail = "")
         {
             Succeeded = false;
             Failure = failure;
+            Detail = detail ?? string.Empty;
         }
     }
 }

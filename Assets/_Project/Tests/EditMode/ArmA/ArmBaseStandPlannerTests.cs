@@ -8,10 +8,51 @@ namespace MediKitTwin.ArmA.Tests
     {
         private const float PickStandoff = 0.4f;
         private const float PlaceStandoff = 0.5f;
+        private const float ApproachExtra = 0.3f;
 
         private static ArmBaseStandPlanner Create(Vector3? boxDirection = null)
         {
-            return new ArmBaseStandPlanner(PickStandoff, PlaceStandoff, boxDirection ?? new Vector3(0f, 0f, 1f));
+            return new ArmBaseStandPlanner(PickStandoff, PlaceStandoff, ApproachExtra, boxDirection ?? new Vector3(0f, 0f, 1f));
+        }
+
+        [Test]
+        public void ForShelfItem_ExtraStandoff_StandsFurtherOutOnTheSameLine()
+        {
+            var item = new Vector3(1f, 1.2f, 2.6f);
+            var outward = new Vector3(0f, 0f, -1f);
+
+            Vector3 basic = Create().ForShelfItem(item, outward);
+            Vector3 retried = Create().ForShelfItem(item, outward, 0.1f);
+
+            Assert.That(retried.x, Is.EqualTo(basic.x).Within(1e-5f));
+            Assert.That(Vector3.Distance(retried, basic), Is.EqualTo(0.1f).Within(1e-5f));
+            Assert.That(retried.z, Is.LessThan(basic.z), "칸에서 더 멀어진다");
+        }
+
+        [Test]
+        public void ForShelfItemApproach_ExtraStandoff_KeepsTheWaypointBehindTheStandPoint()
+        {
+            var item = new Vector3(1f, 1.2f, 2.6f);
+            var outward = new Vector3(0f, 0f, -1f);
+
+            Vector3 stand = Create().ForShelfItem(item, outward, 0.2f);
+            Vector3 approach = Create().ForShelfItemApproach(item, outward, 0.2f);
+
+            Assert.That(Vector3.Distance(approach, stand), Is.EqualTo(ApproachExtra).Within(1e-5f));
+        }
+
+        [Test]
+        public void ForShelfItemApproach_IsOnTheSameLineAsTheStandPoint_FurtherOutByTheApproachExtra()
+        {
+            var item = new Vector3(1f, 1.2f, 2.6f);
+            var outward = new Vector3(0f, 0f, -1f);
+
+            Vector3 stand = Create().ForShelfItem(item, outward);
+            Vector3 approach = Create().ForShelfItemApproach(item, outward);
+
+            Assert.That(approach.x, Is.EqualTo(stand.x).Within(1e-5f));
+            Assert.That(approach.y, Is.EqualTo(0f));
+            Assert.That(Vector3.Distance(approach, stand), Is.EqualTo(ApproachExtra).Within(1e-5f));
         }
 
         [Test]
@@ -61,8 +102,9 @@ namespace MediKitTwin.ArmA.Tests
         [Test]
         public void Constructor_NegativeStandoff_Throws()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ArmBaseStandPlanner(-0.1f, 0.5f, Vector3.forward));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ArmBaseStandPlanner(0.4f, -0.1f, Vector3.forward));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ArmBaseStandPlanner(-0.1f, 0.5f, ApproachExtra, Vector3.forward));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ArmBaseStandPlanner(0.4f, -0.1f, ApproachExtra, Vector3.forward));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ArmBaseStandPlanner(0.4f, 0.5f, -0.1f, Vector3.forward));
         }
     }
 }
