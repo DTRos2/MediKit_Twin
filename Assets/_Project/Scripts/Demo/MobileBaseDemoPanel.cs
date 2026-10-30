@@ -12,6 +12,8 @@ namespace MediKitTwin.Demo
         [SerializeField] private MonoBehaviour _mobileBase;
         [SerializeField] private string _title = "Mobile Base";
         [SerializeField] private Vector2 _screenPosition = new Vector2(10f, 290f);
+        [Tooltip("패널 크기. 버튼을 늘리면 마지막 버튼이 잘리지 않도록 높이도 같이 늘린다.")]
+        [SerializeField] private Vector2 _panelSize = new Vector2(220f, 240f);
         [SerializeField, Min(0.1f)] private float _stepMeters = 1f;
 
         private IMobileBase _base;
@@ -32,7 +34,7 @@ namespace MediKitTwin.Demo
 
         private void OnGUI()
         {
-            GUILayout.BeginArea(new Rect(_screenPosition.x, _screenPosition.y, 220f, 190f), _title, GUI.skin.window);
+            GUILayout.BeginArea(new Rect(_screenPosition.x, _screenPosition.y, _panelSize.x, _panelSize.y), _title, GUI.skin.window);
             GUILayout.Space(18f);
             GUILayout.Label(_base.IsMoving ? "상태: 이동 중" : "상태: 정지");
 
