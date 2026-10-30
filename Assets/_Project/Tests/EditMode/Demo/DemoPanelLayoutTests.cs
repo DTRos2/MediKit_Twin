@@ -66,6 +66,33 @@ namespace MediKitTwin.Demo.Tests
         }
 
         [Test]
+        public void WhenTheScreenIsShorterThanThePanel_ShrinksTheHeightToStayOnScreen()
+        {
+            // 위쪽 여백 420에서 시작하는 높이 230 패널을 높이 600 화면에 놓으면 180만 쓸 수 있다.
+            Rect rect = DemoPanelLayout.Place(DemoPanelAnchor.TopLeft, new Vector2(10f, 420f), new Vector2(340f, 230f), ScreenWidth, 600f);
+
+            Assert.That(rect.yMax, Is.LessThanOrEqualTo(600f));
+            Assert.That(rect.height, Is.EqualTo(180f));
+        }
+
+        [Test]
+        public void WhenTheScreenIsNarrowerThanThePanel_ShrinksTheWidthAndKeepsTheRightMargin()
+        {
+            Rect rect = DemoPanelLayout.Place(DemoPanelAnchor.TopRight, new Vector2(10f, 10f), new Vector2(360f, 380f), 300f, ScreenHeight);
+
+            Assert.That(rect.xMin, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(rect.xMax, Is.EqualTo(290f), "오른쪽 여백 10을 지킨다");
+        }
+
+        [Test]
+        public void WhenTheMarginAlreadyPassesTheScreenEdge_ReturnsAnEmptyPanelInsteadOfNegativeSize()
+        {
+            Rect rect = DemoPanelLayout.Place(DemoPanelAnchor.TopLeft, new Vector2(10f, 700f), new Vector2(340f, 230f), ScreenWidth, 600f);
+
+            Assert.That(rect.height, Is.EqualTo(0f));
+        }
+
+        [Test]
         public void DefaultPanels_AreSplitLeftAndRightWithoutOverlapping()
         {
             // 각 패널 클래스가 기본으로 쓰는 값이다. 왼쪽에 주문과 선반을 쌓고, 오른쪽에 키팅 현황을 둔다.
