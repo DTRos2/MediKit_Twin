@@ -194,7 +194,8 @@ namespace MediKitTwin.ArmA
         // 호출한 쪽이 관절 수와 다른 길이의 배열을 주면 예외로 죽지 않고, 어디서 호출했는지 스택과 함께 알린다.
         private bool HasValidLength(float[] anglesRad, string caller)
         {
-            int expected = _jointNames != null ? _jointNames.Length : 0;
+            // Start 전에는 _jointNames가 비어 있으므로 프로필의 관절 수로 비교한다.
+            int expected = _profile != null ? _profile.Joints.Length : 0;
             if (anglesRad != null && anglesRad.Length == expected)
             {
                 return true;
