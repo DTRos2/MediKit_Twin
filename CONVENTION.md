@@ -171,7 +171,7 @@ Assets/
 ├─ _Project/
 │  ├─ Scripts/{Orders, Recipes, ArmA, ArmB, Conveyor, Inspection, Pusher, Label, Inventory, Unloader, Logging, Dashboard, CameraRig, ML, Rl, Mobile, Demo, Ros, Common}
 │  ├─ Recipes/          # RecipeSO 파일
-│  ├─ Config/           # ScenarioConfigSO 파일 (시드, 누락 확률 등)
+│  ├─ Config/           # 설정 에셋: ScenarioConfigSO(시드, 누락 확률, 재고), ShelfLayoutConfigSO(선반 치수, 배치, 위치, 그리퍼 열림 폭, 로봇암 도달 반경), ArmBaseApproachConfigSO(베이스가 서는 거리와 이동 정밀도), ShelfItemLooksSO(구성품 모양), ArmProfileSO
 │  ├─ Prefabs/
 │  ├─ Scenes/
 │  ├─ Materials/
@@ -187,7 +187,7 @@ docs/                  # SRS, 기획표, WBS, 공정 흐름도
 
 | Scripts 폴더 | 내용 | 요구사항 |
 |---|---|---|
-| `Orders` | 주문 대기열, 보류·재개 | FR-01, FR-13, FR-16 |
+| `Orders` | 주문 파일 읽기와 교체(`OrderSession`), 주문 대기열, 보류·재개 | FR-01, FR-13, FR-16 |
 | `Recipes` | `RecipeSO`와 레시피 데이터 타입 | FR-02 |
 | `ArmA` | 피킹·키팅, 누락 발생 규칙, 관절 구동·IK·그리퍼(`ArmController`, `IkArmTarget`, `JointGripper`) | FR-03, FR-04 |
 | `Conveyor` | 구역 이송, 구역 점유 | FR-05 |
@@ -202,7 +202,7 @@ docs/                  # SRS, 기획표, WBS, 공정 흐름도
 | `Dashboard` | 지표 표시, 배속 UI | FR-14, FR-15 |
 | `CameraRig` | 마우스 오른쪽 버튼 카메라 조작 (Input System 사용) | - |
 | `Mobile` | 바퀴·궤도 위에서 굴러가는 베이스의 이동(`MobileBaseDriver`)과 로봇암 얹기(`MountedBaseFollower`). `Common`만 참조 | - |
-| `Demo` | 화면 버튼 시험 패널(`ArmDemoPanel`, `MobileBaseDemoPanel`). 제품 코드와 분리해 빌드에서 뺄 수 있다. `Common`, `ArmA`, `Inventory` 참조 | - |
+| `Demo` | 화면 시험 패널(`ShelfStockDemoPanel`, `OrderCsvDemoPanel`, `KittingStatusDemoPanel`)과 임시 장치(`ConveyorHandoffStub`). 패널은 공통 뼈대 `DemoPanel`을 상속하고, Inspector의 `Anchor`와 `Margin`으로 화면 왼쪽과 오른쪽에 나눠 붙이며 `Is Visible`로 끈다. 제품 코드와 분리해 빌드에서 뺄 수 있다. `Common`, `ArmA`, `Inventory`, `Orders` 참조 | - |
 | `Rl` | 강화학습 환경(관측, 행동 해석, 보상, 목표 뽑기). `Common` 인터페이스만 본다 | - |
 | `Ros` | 관절 명령 구독, 상태 발행, 정책 노드 연동(`RosPolicy`) | FR-17, FR-18 |
 | `Common` | `CellEvents`, `SimClock`, 공통 인터페이스 | - |

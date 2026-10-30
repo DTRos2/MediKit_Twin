@@ -31,6 +31,7 @@ namespace MediKitTwin.ArmA
 
         private IToolPoseTarget _tool;
         private IGripper _grip;
+        private ToolPoseMover _mover;
         private Coroutine _running;
         private bool _stepReached;
 
@@ -47,7 +48,10 @@ namespace MediKitTwin.ArmA
             {
                 Debug.LogError($"{name}: Tool Target(IToolPoseTarget)과 Gripper(IGripper)를 지정해야 한다.", this);
                 enabled = false;
+                return;
             }
+
+            _mover = new ToolPoseMover(_tool, _positionToleranceM, _rotationToleranceDeg, _stepTimeoutSeconds);
         }
 
         public void Begin(Graspable target)
@@ -112,30 +116,11 @@ namespace MediKitTwin.ArmA
             Finish(_stepReached && _grip.IsHolding);
         }
 
-        // 결과는 _stepReached에 담는다. 코루틴은 값을 돌려줄 수 없어서 필드를 쓴다.
+        // 이동은 ToolPoseMover가 맡는다(선반 이송과 같은 이동 규칙). 결과는 _stepReached에 담는다. 코루틴은 값을 돌려줄 수 없어서 필드를 쓴다.
         private IEnumerator MoveTool(Vector3 position, Quaternion rotation)
         {
             _stepReached = false;
-            _tool.SetToolTarget(new Pose(position, rotation));
-
-            float elapsed = 0f;
-            while (elapsed < _stepTimeoutSeconds)
-            {
-                if (_tool.HasReachedTarget(_positionToleranceM, _rotationToleranceDeg))
-                {
-                    _stepReached = true;
-                    yield break;
-                }
-
-                yield return new WaitForFixedUpdate();
-                elapsed += Time.fixedDeltaTime;
-
-                // 닿을 수 없는 목표면 기다려도 소용없으니 바로 실패로 본다.
-                if (!_tool.LastSolveSucceeded)
-                {
-                    yield break;
-                }
-            }
+            return _mover.MoveTo(new Pose(position, rotation), reached => _stepReached = reached);
         }
 
         private IEnumerator WaitForGrasp()

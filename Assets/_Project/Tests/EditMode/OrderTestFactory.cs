@@ -11,12 +11,13 @@ namespace MediKitTwin.Orders.Tests
         internal static readonly string[] KitCodes = { "EM", "BL", "DX" };
         internal const int MinQuantity = 1;
         internal const int MaxQuantity = 10;
+        internal const char CommentMarker = '#';
 
         internal static CsvLineSplitter Splitter() => new CsvLineSplitter(',', '"');
 
         internal static CsvOrderParser Parser(params IOrderRowValidator[] validators)
         {
-            return new CsvOrderParser(Splitter(), CsvOrderColumns.Default, validators);
+            return new CsvOrderParser(Splitter(), CsvOrderColumns.Default, CommentMarker, validators);
         }
 
         internal static CsvOrderParser ParserWithDefaultRules()

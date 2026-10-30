@@ -3,7 +3,6 @@ using System.IO;
 using System.Text;
 using MediKitTwin.ArmA;
 using MediKitTwin.Mobile;
-using MediKitTwin.Demo;
 using UnityEditor;
 using UnityEngine;
 using Warcool.WarehouseRobot;
@@ -108,10 +107,6 @@ public static class ArmAMobileBaseBuilder
             }
 
             AddIfMissing<MobileBaseDriver>(armA);
-            var panel = AddIfMissing<MobileBaseDemoPanel>(armA);
-            var serialized = new SerializedObject(panel);
-            serialized.FindProperty("_mobileBase").objectReferenceValue = armA.GetComponent<MobileBaseDriver>();
-            serialized.ApplyModifiedProperties();
 
             PrefabUtility.SaveAsPrefabAsset(armA, ArmAPrefabPath);
             AssetDatabase.DeleteAsset(OldWheelMeshFolder);

@@ -1,22 +1,19 @@
 using System.Collections.Generic;
 using MediKitTwin.Common;
-using MediKitTwin.Inventory;
 using UnityEngine;
 
 namespace MediKitTwin.Demo
 {
     /// <summary>
-    /// 선반 재고를 눈으로 시험하는 화면 버튼(IMGUI). 로봇암 A의 키팅이 만들어지기 전에,
-    /// 칸마다 버튼을 눌러 물건을 집고(앞줄부터 사라지고 뒤쪽이 앞으로 밀려 나옴) 되돌리며,
-    /// 재고가 0인 칸을 집어 보충 대기(30초)와 보충을 확인한다. 재고는 IStock으로만 다루므로 실제 설비와 같은 경로를 쓴다.
+    /// 선반 재고를 눈으로 시험하는 패널. 로봇암 A의 키팅과 별개로, 칸마다 버튼을 눌러 물건을 집고(앞줄부터 사라지고 뒤쪽이 앞으로 밀려 나옴)
+    /// 되돌리며, 재고가 0인 칸을 집어 보충 대기(30초)와 보충을 확인한다. 재고는 IStock으로만 다루므로 실제 설비와 같은 경로를 쓴다.
     /// </summary>
-    public class ShelfStockDemoPanel : MonoBehaviour
+    public sealed class ShelfStockDemoPanel : DemoPanel
     {
-        [Tooltip("재고를 가진 선반. 비워 두면 씬에서 찾는다.")]
-        [SerializeField] private ShelfStockPresenter _presenter;
-        [SerializeField] private string _title = "Shelf Stock";
-        [SerializeField] private Vector2 _screenPosition = new Vector2(240f, 10f);
-        [SerializeField] private Vector2 _panelSize = new Vector2(340f, 230f);
+        private const float ButtonHeight = 34f;
+
+        [Tooltip("자재 재고(IStock을 구현한 컴포넌트, 보통 ShelfStockPresenter). 비워 두면 씬에서 찾는다.")]
+        [SerializeField] private MonoBehaviour _stockSource;
 
         [Tooltip("집을 때 알릴 주문 순번. 재고가 0이면 이 순번으로 StockEmpty가 나간다. 0은 어떤 주문도 아니다.")]
         [SerializeField, Min(0)] private int _orderSequence;
@@ -26,30 +23,28 @@ namespace MediKitTwin.Demo
         private bool _isReturnMode;
         private string _lastMessage = string.Empty;
 
+        public ShelfStockDemoPanel()
+            : base("Shelf Stock", DemoPanelAnchor.TopLeft, new Vector2(10f, 420f), new Vector2(340f, 230f))
+        {
+        }
+
         private void Awake()
         {
-            if (_presenter == null)
+            _stock = _stockSource as IStock ?? DemoComponentFinder.FindFirst<IStock>();
+            if (_stock == null)
             {
-                _presenter = FindAnyObjectByType<ShelfStockPresenter>();
-            }
-
-            if (_presenter == null)
-            {
-                Debug.LogError($"{name}: ShelfStockPresenter를 찾을 수 없다.", this);
+                Debug.LogError($"{name}: 자재 재고(IStock)를 구현한 컴포넌트를 찾을 수 없다.", this);
                 enabled = false;
             }
         }
 
-        private void OnGUI()
+        protected override void DrawContents()
         {
-            // 재고는 선반의 Awake에서 만들어지므로 첫 그리기에서 가져온다.
-            if (_stock == null && !TryBindStock())
+            // 칸 목록은 재고가 만들어진 뒤에야 알 수 있으므로 첫 그리기에서 정한다.
+            if (_rows.Count == 0 && !TryBuildRows())
             {
                 return;
             }
-
-            GUILayout.BeginArea(new Rect(_screenPosition.x, _screenPosition.y, _panelSize.x, _panelSize.y), _title, GUI.skin.window);
-            GUILayout.Space(18f);
 
             _isReturnMode = GUILayout.Toggle(_isReturnMode, "되돌리기 모드 (끄면 집기)");
 
@@ -58,7 +53,7 @@ namespace MediKitTwin.Demo
                 GUILayout.BeginHorizontal();
                 foreach (string shelfSlotId in row)
                 {
-                    if (GUILayout.Button(ButtonLabel(shelfSlotId), GUILayout.Height(34f)))
+                    if (GUILayout.Button(ButtonLabel(shelfSlotId), GUILayout.Height(ButtonHeight)))
                     {
                         Press(shelfSlotId);
                     }
@@ -68,13 +63,11 @@ namespace MediKitTwin.Demo
             }
 
             GUILayout.Label(_lastMessage);
-            GUILayout.EndArea();
         }
 
-        private bool TryBindStock()
+        private bool TryBuildRows()
         {
-            _stock = _presenter.Stock;
-            if (_stock == null)
+            if (_stock.ShelfSlotIds == null || _stock.ShelfSlotIds.Count == 0)
             {
                 return false;
             }

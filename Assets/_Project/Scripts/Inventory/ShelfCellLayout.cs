@@ -10,19 +10,18 @@ namespace MediKitTwin.Inventory
     /// </summary>
     public sealed class ShelfCellLayout
     {
-        // 격자 칸을 꽉 채우면 서로 닿아 보이므로 조금 여유를 둔다.
-        private const float FillRatio = 0.9f;
-
         private readonly float _innerWidth;
         private readonly float _innerDepth;
         private readonly float _depthCenter;
         private readonly int _itemsPerRow;
+        private readonly float _fillRatio;
 
         /// <param name="innerWidth">구성품을 놓을 수 있는 칸 안쪽 가로(m).</param>
         /// <param name="innerDepth">안쪽 깊이(m).</param>
         /// <param name="depthCenter">안쪽 영역의 깊이 중심이 칸 중심에서 벗어난 정도(m). 한쪽이 열린 칸처럼 벽이 한쪽에만 있을 때 쓴다.</param>
         /// <param name="itemsPerRow">한 줄에 놓는 최대 개수.</param>
-        public ShelfCellLayout(float innerWidth, float innerDepth, float depthCenter, int itemsPerRow)
+        /// <param name="fillRatio">물건이 차지할 수 있는 격자 칸의 비율(0 초과 1 이하). 꽉 채우면 서로 닿아 보이므로 1보다 작게 쓴다.</param>
+        public ShelfCellLayout(float innerWidth, float innerDepth, float depthCenter, int itemsPerRow, float fillRatio)
         {
             if (innerWidth <= 0f || innerDepth <= 0f)
             {
@@ -34,6 +33,12 @@ namespace MediKitTwin.Inventory
                 throw new ArgumentOutOfRangeException(nameof(itemsPerRow), "한 줄에 놓는 개수는 1 이상이어야 한다.");
             }
 
+            if (fillRatio <= 0f || fillRatio > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(fillRatio), "채움 비율은 0 초과 1 이하여야 한다.");
+            }
+
+            _fillRatio = fillRatio;
             _innerWidth = innerWidth;
             _innerDepth = innerDepth;
             _depthCenter = depthCenter;
@@ -60,8 +65,8 @@ namespace MediKitTwin.Inventory
             float slotDepth = _innerDepth / rows;
 
             float scale = Math.Min(1f, Math.Min(
-                itemWidth > 0f ? slotWidth * FillRatio / itemWidth : 1f,
-                itemDepth > 0f ? slotDepth * FillRatio / itemDepth : 1f));
+                itemWidth > 0f ? slotWidth * _fillRatio / itemWidth : 1f,
+                itemDepth > 0f ? slotDepth * _fillRatio / itemDepth : 1f));
 
             for (int i = 0; i < count; i++)
             {

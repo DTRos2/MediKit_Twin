@@ -20,19 +20,43 @@ namespace MediKitTwin.Inventory
         private Transform[] _itemAtSlot;
         private Vector3[] _slotPositions;
         private readonly Stack<Transform> _spareItems = new Stack<Transform>();
-        private readonly List<Transform> _sliding = new List<Transform>();
-        private readonly Dictionary<Transform, Vector3> _slideTargets = new Dictionary<Transform, Vector3>();
+        private SlideAnimator _slider;
 
         public string ShelfSlotId => _shelfSlotId;
 
         private void Awake()
         {
+            _slider = new SlideAnimator(_slideSpeed);
             CollectItems();
         }
 
         private void Update()
         {
-            SlideItems();
+            _slider.Step(Time.deltaTime);
+        }
+
+        /// <summary>
+        /// 지금 집을 수 있는 물건(앞쪽 슬롯에서부터 처음 만나는 것)을 돌려준다. 물건이 없으면 false이다.
+        /// 아직 미끄러져 오는 중인 물건이면 그 순간의 위치를 돌려준다.
+        /// </summary>
+        public bool TryGetFrontItem(out Transform item)
+        {
+            item = null;
+            if (_slots == null)
+            {
+                return false;
+            }
+
+            for (int slot = 0; slot < _itemAtSlot.Length; slot++)
+            {
+                if (_slots.IsOccupied(slot) && _itemAtSlot[slot] != null)
+                {
+                    item = _itemAtSlot[slot];
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>에디터가 칸을 만들 때 부른다. 칸 ID와 한 줄의 물건 수를 저장해 프리팹에 남긴다.</summary>
@@ -116,7 +140,7 @@ namespace MediKitTwin.Inventory
                 return;
             }
 
-            StopSliding(item);
+            _slider.Stop(item);
             item.gameObject.SetActive(false);
             _spareItems.Push(item);
             _itemAtSlot[slot] = null;
@@ -132,11 +156,7 @@ namespace MediKitTwin.Inventory
 
             _itemAtSlot[toSlot] = item;
             _itemAtSlot[fromSlot] = null;
-            _slideTargets[item] = _slotPositions[toSlot];
-            if (!_sliding.Contains(item))
-            {
-                _sliding.Add(item);
-            }
+            _slider.SlideTo(item, _slotPositions[toSlot]);
         }
 
         private void Fill(int slot)
@@ -150,26 +170,6 @@ namespace MediKitTwin.Inventory
             item.localPosition = _slotPositions[slot];
             item.gameObject.SetActive(true);
             _itemAtSlot[slot] = item;
-        }
-
-        private void StopSliding(Transform item)
-        {
-            _sliding.Remove(item);
-            _slideTargets.Remove(item);
-        }
-
-        private void SlideItems()
-        {
-            for (int i = _sliding.Count - 1; i >= 0; i--)
-            {
-                Transform item = _sliding[i];
-                Vector3 target = _slideTargets[item];
-                item.localPosition = Vector3.MoveTowards(item.localPosition, target, _slideSpeed * Time.deltaTime);
-                if (item.localPosition == target)
-                {
-                    StopSliding(item);
-                }
-            }
         }
     }
 }

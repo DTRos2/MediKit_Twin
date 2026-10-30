@@ -1,6 +1,5 @@
 using System.IO;
 using MediKitTwin.ArmA;
-using MediKitTwin.Demo;
 using UnityEditor;
 using UnityEngine;
 
@@ -50,41 +49,8 @@ public static class ArmPrefabCreator
             AssetDatabase.CreateFolder("Assets/_Project", "Prefabs");
         }
 
-        // 프리팹은 씬 오브젝트를 참조할 수 없다. 시험 패널이 가리키는 큐브 참조를 잠시 떼었다가 저장한 뒤 인스턴스에 다시 건다.
-        ArmDemoPanel panel = robot.GetComponent<ArmDemoPanel>();
-        Object pickTarget = ReadPickTarget(panel);
-        WritePickTarget(panel, null);
-
         GameObject prefab = PrefabUtility.SaveAsPrefabAssetAndConnect(robot, path, InteractionMode.UserAction);
 
-        WritePickTarget(panel, pickTarget);
-        if (panel != null)
-        {
-            PrefabUtility.RecordPrefabInstancePropertyModifications(panel);
-        }
-
         Debug.Log($"{path}를 만들고 씬의 '{sceneObjectName}'를 인스턴스로 연결했다.", prefab);
-    }
-
-    private static Object ReadPickTarget(ArmDemoPanel panel)
-    {
-        if (panel == null)
-        {
-            return null;
-        }
-
-        return new SerializedObject(panel).FindProperty("_pickTarget").objectReferenceValue;
-    }
-
-    private static void WritePickTarget(ArmDemoPanel panel, Object value)
-    {
-        if (panel == null)
-        {
-            return;
-        }
-
-        var serialized = new SerializedObject(panel);
-        serialized.FindProperty("_pickTarget").objectReferenceValue = value;
-        serialized.ApplyModifiedProperties();
     }
 }

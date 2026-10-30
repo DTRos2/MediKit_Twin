@@ -111,6 +111,7 @@ namespace MediKitTwin.Orders.Tests
             var parser = new CsvOrderParser(
                 OrderTestFactory.Splitter(),
                 new CsvOrderColumns(sequenceIndex: 3, hospitalNameIndex: 0, kitCodeIndex: 1, quantityIndex: 2),
+                OrderTestFactory.CommentMarker,
                 new IOrderRowValidator[0]);
 
             var result = parser.Parse("A병원,EM,4,1");

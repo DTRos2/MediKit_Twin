@@ -6,19 +6,33 @@ namespace MediKitTwin.Inventory
 {
     /// <summary>
     /// 재고(ShelfStock)를 만들어 시뮬레이션 시간으로 돌리고, 수량 변화를 칸 화면(ShelfCellView)에 전한다.
-    /// 로봇암 A 등은 Stock(IStock)으로만 재고를 다루고 화면은 모른다. 화면과 재고를 이어 주는 일만 한다.
+    /// 로봇암 A 등은 IStock과 IShelfItemLocator로만 선반을 다루고 화면은 모른다. 두 인터페이스를 이 컴포넌트가 구현하지만
+    /// 실제 일은 ShelfStock과 ShelfItemLocator에 맡기고 넘겨주기만 하므로, Inspector에서 이 컴포넌트 하나만 연결하면 된다.
     /// </summary>
-    public sealed class ShelfStockPresenter : MonoBehaviour
+    public sealed class ShelfStockPresenter : MonoBehaviour, IStock, IShelfItemLocator
     {
         [Tooltip("시작 재고, 보충 대기 시간, 보충 수량을 담은 시나리오 설정. 비워 두면 기본값을 쓴다.")]
         [SerializeField] private ScenarioConfigSO _config;
 
         private ShelfStock _stock;
+        private ShelfItemLocator _itemLocator;
         private readonly Dictionary<string, ShelfCellView> _viewsBySlotId = new Dictionary<string, ShelfCellView>();
         private ScenarioConfigSO _fallbackConfig;
 
         /// <summary>다른 설비가 재고를 다루는 접점. Awake 이후에 쓸 수 있다.</summary>
         public IStock Stock => _stock;
+
+        public IReadOnlyList<string> ShelfSlotIds => _stock != null ? _stock.ShelfSlotIds : System.Array.Empty<string>();
+
+        public bool TryTake(string shelfSlotId, int orderSequence) => _stock.TryTake(shelfSlotId, orderSequence);
+
+        public void Return(string shelfSlotId) => _stock.Return(shelfSlotId);
+
+        public int GetQuantity(string shelfSlotId) => _stock.GetQuantity(shelfSlotId);
+
+        public float? GetRefillRemainingSeconds(string shelfSlotId) => _stock.GetRefillRemainingSeconds(shelfSlotId);
+
+        public bool TryGetPickItem(string shelfSlotId, out ShelfPickItem item) => _itemLocator.TryGetPickItem(shelfSlotId, out item);
 
         private void Awake()
         {
@@ -44,6 +58,8 @@ namespace MediKitTwin.Inventory
                 () => SimClock.Now,
                 new CellEventsStockSink());
             _stock.QuantityChanged += OnQuantityChanged;
+
+            _itemLocator = new ShelfItemLocator(shelfSlotId => _viewsBySlotId.TryGetValue(shelfSlotId, out ShelfCellView view) ? view : null);
         }
 
         private void Start()

@@ -12,16 +12,17 @@ namespace MediKitTwin.Orders
     /// </summary>
     public sealed class CsvOrderParser : IOrderParser
     {
-        private const char CommentMarker = '#';
-
         private readonly CsvLineSplitter _splitter;
         private readonly CsvOrderColumns _columns;
+        private readonly char _commentMarker;
         private readonly IReadOnlyList<IOrderRowValidator> _validators;
 
-        public CsvOrderParser(CsvLineSplitter splitter, CsvOrderColumns columns, IReadOnlyList<IOrderRowValidator> validators)
+        /// <param name="commentMarker">이 문자로 시작하는 줄은 주석으로 보고 건너뛴다.</param>
+        public CsvOrderParser(CsvLineSplitter splitter, CsvOrderColumns columns, char commentMarker, IReadOnlyList<IOrderRowValidator> validators)
         {
             _splitter = splitter ?? throw new ArgumentNullException(nameof(splitter));
             _columns = columns ?? throw new ArgumentNullException(nameof(columns));
+            _commentMarker = commentMarker;
             _validators = validators ?? throw new ArgumentNullException(nameof(validators));
         }
 
@@ -37,7 +38,7 @@ namespace MediKitTwin.Orders
             for (int i = 0; i < lines.Length; i++)
             {
                 string line = lines[i].Trim();
-                if (line.Length == 0 || line[0] == CommentMarker)
+                if (line.Length == 0 || line[0] == _commentMarker)
                 {
                     continue;
                 }

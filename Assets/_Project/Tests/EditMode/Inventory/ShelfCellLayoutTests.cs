@@ -7,7 +7,7 @@ namespace MediKitTwin.Inventory.Tests
     public sealed class ShelfCellLayoutTests
     {
         // 선반 칸 안쪽 0.48 x 0.46 m, 뒤쪽 벽 때문에 깊이 중심이 0.02 앞쪽으로 치우친 칸.
-        private static ShelfCellLayout Layout() => new ShelfCellLayout(0.48f, 0.46f, 0.02f, 3);
+        private static ShelfCellLayout Layout(float fillRatio = 0.9f) => new ShelfCellLayout(0.48f, 0.46f, 0.02f, 3, fillRatio);
 
         [Test]
         public void Compute_ZeroOrNegativeCount_ReturnsEmpty()
@@ -84,6 +84,16 @@ namespace MediKitTwin.Inventory.Tests
         }
 
         [Test]
+        public void Compute_LowerFillRatio_ShrinksItemsMoreToLeaveRoomBetweenThem()
+        {
+            float full = Layout(1f).Compute(5, 0.22f, 0.14f)[0].Scale;
+            float roomy = Layout(0.5f).Compute(5, 0.22f, 0.14f)[0].Scale;
+
+            Assert.That(roomy, Is.LessThan(full));
+            Assert.That(roomy, Is.EqualTo(full * 0.5f).Within(1e-5f));
+        }
+
+        [Test]
         public void Compute_SameScaleForEveryItemOfOneCell()
         {
             var scales = Layout().Compute(5, 0.22f, 0.14f).Select(p => p.Scale).Distinct();
@@ -94,9 +104,11 @@ namespace MediKitTwin.Inventory.Tests
         [Test]
         public void Constructor_InvalidArguments_Throw()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ShelfCellLayout(0f, 0.4f, 0f, 3));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ShelfCellLayout(0.4f, 0f, 0f, 3));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ShelfCellLayout(0.4f, 0.4f, 0f, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ShelfCellLayout(0f, 0.4f, 0f, 3, 0.9f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ShelfCellLayout(0.4f, 0f, 0f, 3, 0.9f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ShelfCellLayout(0.4f, 0.4f, 0f, 0, 0.9f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ShelfCellLayout(0.4f, 0.4f, 0f, 3, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ShelfCellLayout(0.4f, 0.4f, 0f, 3, 1.1f));
         }
     }
 }

@@ -1,4 +1,6 @@
 using System.Collections;
+using MediKitTwin.Common;
+using MediKitTwin.Recipes;
 using UnityEngine;
 
 namespace MediKitTwin.ArmA
@@ -10,7 +12,7 @@ namespace MediKitTwin.ArmA
     /// 자식 KitBox가 처음 놓인 자리이자 새 박스의 원본이다. 시간은 시뮬레이션 시간(Time.deltaTime)이다.
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class KitBoxSupply : MonoBehaviour
+    public sealed class KitBoxSupply : MonoBehaviour, IBoxSupply, IKitBoxLocator
     {
         private const string BoxName = "KitBox";
 
@@ -39,6 +41,9 @@ namespace MediKitTwin.ArmA
         private Transform current;
         private float emptySeconds;
         private bool dropping;
+
+        // 치우는 중인 박스 수. 위로 올라가는 박스와 새로 내려오는 박스가 겹쳐 보이지 않도록 새 박스는 치운 뒤에 내려놓는다.
+        private int discarding;
 
         /// <summary>지그 위에 박스가 있으면 true. 내려오는 중인 박스도 있는 것으로 본다.</summary>
         public bool HasBox => dropping || IsOnJig(current);
@@ -85,6 +90,49 @@ namespace MediKitTwin.ArmA
             }
         }
 
+        /// <summary>
+        /// 박스가 없으면 새 박스를 바로 내려놓는다. 박스 크기(L, M)별 모델은 템플릿이 하나뿐이라 아직 반영하지 않는다.
+        /// 박스가 이미 있거나 내려오는 중이면 아무것도 하지 않는다.
+        /// </summary>
+        public void PlaceBox(KitData kit, BoxSize size)
+        {
+            if (HasBox)
+            {
+                return;
+            }
+
+            emptySeconds = 0f;
+            StartCoroutine(DropNewBox());
+        }
+
+        /// <summary>지그의 박스를 위로 들어 올려 치운다. 잠시 뒤 새 박스가 자동으로 내려온다.</summary>
+        public void RemoveBox()
+        {
+            if (!HasBox || dropping)
+            {
+                return;
+            }
+
+            Transform box = current;
+            current = null;
+            StartCoroutine(LiftAndDiscard(box));
+        }
+
+        public bool TryGetSlotTarget(Vector3 slotLocalPosition, out BoxSlotTarget target)
+        {
+            Transform box = CurrentBox;
+
+            // 내려오는 중인 박스는 자리가 계속 바뀌므로 놓을 자리로 알려 주지 않는다.
+            if (dropping || box == null)
+            {
+                target = default;
+                return false;
+            }
+
+            target = new BoxSlotTarget(new Pose(box.TransformPoint(slotLocalPosition), box.rotation), box);
+            return true;
+        }
+
         private bool IsOnJig(Transform box)
         {
             if (box == null) return false;
@@ -96,6 +144,11 @@ namespace MediKitTwin.ArmA
         private IEnumerator DropNewBox()
         {
             dropping = true;
+
+            while (discarding > 0)
+            {
+                yield return null;
+            }
 
             Transform box = Instantiate(template, transform);
             box.name = BoxName;
@@ -119,15 +172,13 @@ namespace MediKitTwin.ArmA
         [ContextMenu("Remove Box (Test)")]
         private void RemoveBoxForTest()
         {
-            if (!HasBox || dropping) return;
-
-            Transform box = current;
-            current = null;
-            StartCoroutine(LiftAndDiscard(box));
+            RemoveBox();
         }
 
         private IEnumerator LiftAndDiscard(Transform box)
         {
+            discarding++;
+
             // 부모를 떼어 월드 기준으로 올린다. (지그 자리를 벗어나므로 "없다"로 판단된다)
             box.SetParent(null, true);
             Vector3 start = box.position;
@@ -139,6 +190,7 @@ namespace MediKitTwin.ArmA
             }
 
             Destroy(box.gameObject);
+            discarding--;
         }
     }
 }

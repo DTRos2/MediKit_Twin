@@ -11,6 +11,9 @@ namespace MediKitTwin.Common
     {
         bool IsMoving { get; }
 
+        /// <summary>베이스 루트의 현재 월드 위치.</summary>
+        Vector3 Position { get; }
+
         /// <summary>월드 기준 목표 위치(바닥 평면)로 이동한다. 높이(y)는 무시한다.</summary>
         void DriveTo(Vector3 worldPosition);
 
