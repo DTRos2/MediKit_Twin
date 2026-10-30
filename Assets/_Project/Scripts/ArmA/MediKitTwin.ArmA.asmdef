@@ -2,7 +2,8 @@
     "name": "MediKitTwin.ArmA",
     "rootNamespace": "MediKitTwin.ArmA",
     "references": [
-        "MediKitTwin.Common"
+        "MediKitTwin.Common",
+        "MediKitTwin.Recipes"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
