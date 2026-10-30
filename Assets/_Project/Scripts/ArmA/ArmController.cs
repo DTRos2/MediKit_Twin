@@ -37,6 +37,7 @@ namespace MediKitTwin.ArmA
         private JointBank _bank;
         private string[] _jointNames;
         private float[] _pendingPose;
+        private string _pendingPoseCaller;
         private IArmTarget _target;
         private KinematicChain _chain;
         private int _fixedSteps;
@@ -144,13 +145,30 @@ namespace MediKitTwin.ArmA
 
             if (_pendingPose != null)
             {
-                ResetToPose(_pendingPose);
-                _pendingPose = null;
+                ApplyPendingPose();
             }
             else if (_applyHomePoseOnStart)
             {
                 ResetToPose(HomePoseRad);
             }
+        }
+
+        // 준비 전에 예약된 자세를 적용한다. 예약할 때는 관절 수를 알 수 없었을 수 있으므로 길이가 맞지 않으면
+        // 예약한 곳을 알리고 시작 자세로 대신한다(팔이 초기화되지 않은 채 남지 않게 한다).
+        private void ApplyPendingPose()
+        {
+            float[] pose = _pendingPose;
+            _pendingPose = null;
+
+            if (pose.Length != ExpectedJointCount)
+            {
+                Debug.LogError(
+                    $"{name}: 시작 전에 예약된 자세의 길이({pose.Length})가 관절 수({ExpectedJointCount})와 다르다. 시작 자세로 대신한다. 예약한 곳:\n{_pendingPoseCaller}",
+                    this);
+                pose = HomePoseRad;
+            }
+
+            ResetToPose(pose);
         }
 
         public void SetJointTargets(float[] anglesRad)
@@ -172,6 +190,7 @@ namespace MediKitTwin.ArmA
             if (!IsReady)
             {
                 _pendingPose = (float[])anglesRad.Clone();
+                _pendingPoseCaller = StackTraceUtility.ExtractStackTrace();
                 return;
             }
 

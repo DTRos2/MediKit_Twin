@@ -903,7 +903,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4799894571927456816, guid: 7fc41a6a3eb7e2644ab1e9ad5b12532b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.00000013114186
+      value: 0.084
       objectReference: {fileID: 0}
     - target: {fileID: 4799894571927456816, guid: 7fc41a6a3eb7e2644ab1e9ad5b12532b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1823,9 +1823,25 @@ MonoBehaviour:
   _approach: {fileID: 11400000, guid: dc8c4ac82a534b7faa10eb9be2e3a2c5, type: 2}
   _shelfApproachDistance: 0.15
   _shelfRetreatDistance: 0.15
+  _shelfSearch:
+    _maxPitchDownDeg: 45
+    _maxPitchUpDeg: 15
+    _pitchStepDeg: 15
+    _maxYawDeg: 30
+    _yawStepDeg: 15
+    _maxRollDeg: 90
+    _rollStepDeg: 90
   _boxApproachHeight: 0.15
   _boxLiftHeight: 0.15
   _boxGripYawForward: {x: 0, y: 0, z: 1}
+  _boxSearch:
+    _maxPitchDownDeg: 30
+    _maxPitchUpDeg: 30
+    _pitchStepDeg: 15
+    _maxYawDeg: 30
+    _yawStepDeg: 15
+    _maxRollDeg: 180
+    _rollStepDeg: 90
   _positionToleranceM: 0.01
   _rotationToleranceDeg: 5
   _stepTimeoutSeconds: 10
@@ -1859,6 +1875,8 @@ MonoBehaviour:
   _mobileBase: {fileID: 1649814396}
   _armBase: {fileID: 670708481}
   _config: {fileID: 11400000, guid: dc8c4ac82a534b7faa10eb9be2e3a2c5, type: 2}
+  _toolTarget: {fileID: 670708480}
+  _armDriver: {fileID: 670708481}
 --- !u!1 &711375623
 GameObject:
   m_ObjectHideFlags: 0
@@ -2340,8 +2358,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 904046267}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.14023608, y: -0.065599084, z: 0.009283914, w: -0.987899}
-  m_LocalPosition: {x: 1.1777967, y: 2.4925673, z: -4.869673}
+  m_LocalRotation: {x: -0.3250558, y: 0.062083475, z: -0.021338338, w: -0.94341356}
+  m_LocalPosition: {x: 1.4216251, y: 1.7127738, z: -0.57414305}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4237,6 +4255,7 @@ GameObject:
   - component: {fileID: 2017511387}
   - component: {fileID: 2017511386}
   - component: {fileID: 2017511385}
+  - component: {fileID: 2017511392}
   m_Layer: 0
   m_Name: KittingStation
   m_TagString: Untagged
@@ -4354,6 +4373,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 90ff16254cbe49cbad5f23765c3eb204, type: 2}
   _ordersFolderName: Orders
   _ordersFileName: orders.csv
+  _loadOnStart: 0
   _minQuantity: 1
   _maxQuantity: 10
   _defaultHospitalName: DEFAULT
@@ -4380,6 +4400,29 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2017511392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2017511384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdd560dfa3bb83648b233c10b16fd624, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.ArmA::MediKitTwin.ArmA.ManualKittingStation
+  _stock: {fileID: 301074004}
+  _itemLocator: {fileID: 301074004}
+  _boxSupply: {fileID: 1184813018}
+  _itemTransfer: {fileID: 670708484}
+  _autoKitting: {fileID: 2017511389}
+  _recipes:
+  - {fileID: 11400000, guid: 596d116be8e846199cfd63828fe686f8, type: 2}
+  - {fileID: 11400000, guid: 6dc8614a7b9b429fb4f059ff10e3e689, type: 2}
+  - {fileID: 11400000, guid: 90ff16254cbe49cbad5f23765c3eb204, type: 2}
+  _boxWaitTimeoutSeconds: 10
+  _orderSequence: 0
 --- !u!1001 &2022638565
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5146,13 +5189,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 40e92e4363530664b84be06eaa95c165, type: 3}
   m_Name: 
   m_EditorClassIdentifier: MediKitTwin.ArmA::MediKitTwin.ArmA.ArmDemoPanel
-  _title: UR3 Demo
-  _arm: {fileID: 3771495649133811534}
-  _ikTarget: {fileID: 3771495649133811533}
-  _gripper: {fileID: 3771495649133811532}
-  _task: {fileID: 3771495649133811531}
-  _pickTarget: {fileID: 1905039221}
-  _screenPosition: {x: 10, y: 230}
 --- !u!114 &3771495649133811531
 MonoBehaviour:
   m_ObjectHideFlags: 0
