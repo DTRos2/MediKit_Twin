@@ -23,6 +23,14 @@ namespace MediKitTwin.ArmA
         [Tooltip("박스 슬롯에서 베이스가 서는 쪽의 수평 방향(월드). 선반에서 지그로 돌아올 때 지그의 어느 쪽에 설지 정한다.")]
         [SerializeField] private Vector3 _boxStandDirection = new Vector3(0f, 0f, 1f);
 
+        [Header("서는 방향")]
+        [Tooltip("켜면 물건 앞과 박스 곁에서 그 구역을 정면으로 보고 선다. 끄면 도착 방향은 마지막 이동 방향이다.")]
+        [SerializeField] private bool _faceTargetAtStand = true;
+        [Tooltip("베이스 정면과 팔이 뻗는 정면이 어긋난 만큼의 보정(도). 팔의 첫 관절(shoulder_Link)이 구역 앞에서 0도 근처가 되도록 맞춘다.")]
+        [SerializeField, Range(-180f, 180f)] private float _facingOffsetDeg;
+        [Tooltip("서는 방향이 이 각도(도) 안으로 맞으면 도착으로 본다.")]
+        [SerializeField, Min(0.5f)] private float _facingToleranceDeg = 3f;
+
         [Header("이동 정밀도")]
         [Tooltip("팔 베이스가 목표에서 이 거리 안이면 도착으로 본다(m).")]
         [SerializeField, Min(0.001f)] private float _arriveToleranceM = 0.03f;
@@ -70,6 +78,12 @@ namespace MediKitTwin.ArmA
         }
 
         public Vector3 BoxStandDirection => _boxStandDirection;
+
+        public bool FaceTargetAtStand => _faceTargetAtStand;
+
+        public float FacingOffsetDeg => _facingOffsetDeg;
+
+        public float FacingToleranceDeg => _facingToleranceDeg;
 
         public float ArriveToleranceM => _arriveToleranceM;
 
