@@ -36,10 +36,10 @@ namespace MediKitTwin.ArmA
         [SerializeField, Min(1f)] private float _timeoutSeconds = 30f;
 
         [Header("이동 중 팔 접기")]
-        [Tooltip("모든 관절이 접힌 자세에서 이 각도(rad) 안이면 접힌 것으로 본다.")]
-        [SerializeField, Min(0.001f)] private float _stowToleranceRad = 0.05f;
+        [Tooltip("모든 관절이 접힌 자세에서 이 각도(rad) 안이면 접힌 것으로 본다. 중력이나 접촉으로 끝까지 못 접혀 \"팔을 접지 못했다\"로 실패하면 키운다.")]
+        [SerializeField, Min(0.001f)] private float _stowToleranceRad = 0.1f;
         [Tooltip("팔을 접기를 기다리는 최대 시간(초). 넘으면 이송 실패로 본다.")]
-        [SerializeField, Min(1f)] private float _stowTimeoutSeconds = 10f;
+        [SerializeField, Min(1f)] private float _stowTimeoutSeconds = 15f;
 
         [Header("이동 중 충돌")]
         [Tooltip("로봇암 링크가 속한 레이어 이름. 이동하는 동안 선반 레이어와의 충돌을 끈다. 둘 중 하나라도 비우면 끄지 않는다. " +

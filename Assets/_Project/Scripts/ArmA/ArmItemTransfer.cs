@@ -106,14 +106,25 @@ namespace MediKitTwin.ArmA
         [Tooltip("박스 슬롯에 닿는 도구 방향을 찾을 때 기본 방향(똑바로 아래)에서 벗어날 수 있는 범위. 비틀기는 위에서 보아 손을 돌리는 것이다.")]
         [SerializeField] private OrientationSearchSettings _boxSearch = new OrientationSearchSettings(30f, 30f, 15f, 30f, 15f, 180f, 90f);
 
-        [Header("판정")]
+        [Header("판정 — 쥐고 놓는 동작 (엄격)")]
+        [Tooltip("물건을 쥐는 자리와 박스 슬롯에 놓는 자리에서 허용하는 위치 오차(m).")]
         [SerializeField, Min(0.001f)] private float _positionToleranceM = 0.01f;
         [SerializeField, Min(0.5f)] private float _rotationToleranceDeg = 5f;
         [SerializeField, Min(1f)] private float _stepTimeoutSeconds = 10f;
 
         private IToolPoseTarget _tool;
         private IItemHolder _itemHolder;
+        [Tooltip("물건을 쥐는 자리와 박스 슬롯에 놓는 자리에서 허용하는 회전 오차(도).")]
         private IArmBasePositioner _basePositioner;
+
+        [Header("판정 — 접근·후퇴·들어올리기 (느슨)")]
+        [Tooltip("물건 앞, 박스 위처럼 지나가는 자리에서 허용하는 위치 오차(m). 시간 초과로 실패하면 키운다.")]
+        [SerializeField, Min(0.001f)] private float _travelPositionToleranceM = 0.03f;
+        [Tooltip("지나가는 자리에서 허용하는 회전 오차(도). 시간 초과로 실패하면 키운다.")]
+        [SerializeField, Min(0.5f)] private float _travelRotationToleranceDeg = 10f;
+
+        [Header("판정 — 시간")]
+        [Tooltip("한 동작이 목표에 닿기를 기다리는 최대 시간(초).")]
         private ArmBaseStandPlanner _standPlanner;
         private ToolPoseMover _mover;
         private GraspOrientationSearcher _searcher;
@@ -143,7 +154,7 @@ namespace MediKitTwin.ArmA
                     _approach.PickStandoffM, _approach.PlaceStandoffM, _approach.ApproachExtraM, _approach.BoxStandDirection);
             }
 
-            _mover = new ToolPoseMover(_tool, _positionToleranceM, _rotationToleranceDeg, _stepTimeoutSeconds);
+            _mover = new ToolPoseMover(_tool, _travelPositionToleranceM, _travelRotationToleranceDeg, _stepTimeoutSeconds);
             _searcher = new GraspOrientationSearcher(pose => _tool.Probe(pose).Converged);
         }
 
@@ -186,7 +197,7 @@ namespace MediKitTwin.ArmA
                 yield break;
             }
 
-            yield return MoveTool(new Pose(itemPosition, rotation), StepShelfReach, result, ok => isOk = ok);
+            yield return MoveToolPrecisely(new Pose(itemPosition, rotation), StepShelfReach, result, ok => isOk = ok);
             if (!isOk)
             {
                 yield break;
@@ -250,7 +261,7 @@ namespace MediKitTwin.ArmA
                 yield break;
             }
 
-            yield return MoveTool(new Pose(slotPosition, rotation), StepBoxSlot, result, ok => isOk = ok);
+            yield return MoveToolPrecisely(new Pose(slotPosition, rotation), StepBoxSlot, result, ok => isOk = ok);
             if (!isOk)
             {
                 yield break;
@@ -341,11 +352,11 @@ namespace MediKitTwin.ArmA
             done(isArrived);
         }
 
-        // 도구 끝점을 목표로 보낸다. 방향은 미리 닿는 것을 확인했으므로, 여기서 실패하면 무언가에 걸렸거나 시간이 모자란 것이다.
+        // 지나가는 자리(접근, 후퇴, 들어올리기)는 느슨한 오차로 판정한다.
         private IEnumerator MoveTool(Pose target, string step, TransferResult result, Action<bool> done)
         {
             bool isReached = false;
-            yield return _mover.MoveTo(target, reached => isReached = reached);
+            yield return _mover.MoveTo(target, positionToleranceM, rotationToleranceDeg, reached => isReached = reached);
             if (!isReached)
             {
                 result.Fail(TransferFailure.MotionFailed, $"{step}: {DescribeToolFailure()}");
@@ -354,6 +365,19 @@ namespace MediKitTwin.ArmA
             done(isReached);
         }
 
+        {
+            return MoveToolWithin(target, _travelPositionToleranceM, _travelRotationToleranceDeg, step, result, done);
+        }
+
+        // 쥐고 놓는 자리는 엄격한 오차로 판정한다.
+        private IEnumerator MoveToolPrecisely(Pose target, string step, TransferResult result, Action<bool> done)
+        {
+            return MoveToolWithin(target, _positionToleranceM, _rotationToleranceDeg, step, result, done);
+        }
+
+        // 도구 끝점을 목표로 보낸다. 방향은 미리 닿는 것을 확인했으므로, 여기서 실패하면 무언가에 걸렸거나 시간이 모자란 것이다.
+        private IEnumerator MoveToolWithin(
+            Pose target, float positionToleranceM, float rotationToleranceDeg, string step, TransferResult result, Action<bool> done)
         private string DescribeToolFailure()
         {
             if (_tool.LastSolveSucceeded)
