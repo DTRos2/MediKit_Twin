@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e7374f0284afa34fba296aa779e30c2, type: 3}
+  m_Name: ShelfItemLooks
+  m_EditorClassIdentifier: MediKitTwin.Inventory::MediKitTwin.Inventory.ShelfItemLooksSO
+  _looks:
+  - _componentId: gauze
+    _shape: 0
+    _size: {x: 0.2, y: 0.06, z: 0.2}
+    _color: {r: 0.96, g: 0.96, b: 0.94, a: 1}
+  - _componentId: bandage
+    _shape: 1
+    _size: {x: 0.12, y: 0.06, z: 0.12}
+    _color: {r: 0.95, g: 0.88, b: 0.75, a: 1}
+  - _componentId: antiseptic
+    _shape: 1
+    _size: {x: 0.08, y: 0.2, z: 0.08}
+    _color: {r: 0.55, g: 0.3, b: 0.15, a: 1}
+  - _componentId: gloves
+    _shape: 0
+    _size: {x: 0.22, y: 0.1, z: 0.14}
+    _color: {r: 0.25, g: 0.55, b: 0.95, a: 1}
+  - _componentId: blood_tube
+    _shape: 1
+    _size: {x: 0.04, y: 0.18, z: 0.04}
+    _color: {r: 0.75, g: 0.1, b: 0.15, a: 1}
+  - _componentId: needle
+    _shape: 0
+    _size: {x: 0.04, y: 0.04, z: 0.2}
+    _color: {r: 0.65, g: 0.67, b: 0.7, a: 1}
+  - _componentId: alcohol_pad
+    _shape: 0
+    _size: {x: 0.12, y: 0.02, z: 0.12}
+    _color: {r: 0.95, g: 0.65, b: 0.75, a: 1}
+  - _componentId: tourniquet
+    _shape: 1
+    _size: {x: 0.14, y: 0.04, z: 0.14}
+    _color: {r: 0.15, g: 0.65, b: 0.6, a: 1}
+  - _componentId: swab
+    _shape: 0
+    _size: {x: 0.02, y: 0.02, z: 0.22}
+    _color: {r: 0.85, g: 0.72, b: 0.5, a: 1}
+  - _componentId: buffer_vial
+    _shape: 1
+    _size: {x: 0.06, y: 0.14, z: 0.06}
+    _color: {r: 0.2, g: 0.7, b: 0.85, a: 1}
+  - _componentId: test_cassette
+    _shape: 0
+    _size: {x: 0.16, y: 0.02, z: 0.1}
+    _color: {r: 0.97, g: 0.97, b: 0.97, a: 1}
+  - _componentId: sample_bag
+    _shape: 0
+    _size: {x: 0.2, y: 0.03, z: 0.14}
+    _color: {r: 0.8, g: 0.82, b: 0.86, a: 1}
+  _fallbackShape: 0
+  _fallbackSize: {x: 0.1, y: 0.1, z: 0.1}
+  _fallbackColor: {r: 0.7, g: 0.72, b: 0.76, a: 1}
