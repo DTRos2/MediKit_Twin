@@ -9,7 +9,7 @@ namespace MediKitTwin.ArmA
     /// 목표는 SetToolTarget으로 주거나 Follow Target Transform을 지정해 따라가게 한다.
     /// ArmController의 Target Source로 지정한다.
     /// </summary>
-    public class IkArmTarget : MonoBehaviour, IArmTarget, IToolPoseTarget
+    public class IkArmTarget : MonoBehaviour, IArmTarget, IToolPoseTarget, IToolReachFrame
     {
         [Tooltip("로봇의 운동학 정보를 주는 쪽(IArmModel 구현체, 보통 ArmController).")]
         [SerializeField] private MonoBehaviour _arm;
@@ -19,6 +19,9 @@ namespace MediKitTwin.ArmA
 
         [Tooltip("IK가 수렴하지 못해도 가장 가까운 해로 움직인다. 끄면 닿지 않는 목표에서는 제자리에 둔다.")]
         [SerializeField] private bool _moveWhenUnreachable;
+
+        [Tooltip("목표를 풀 때마다 관절이 몇 도씩 움직이라고 나왔는지 Console에 남긴다. 어느 관절이 쓰이는지 확인할 때만 켠다.")]
+        [SerializeField] private bool _logJointDeltas;
 
         private IArmModel _model;
         private IInverseKinematics _solver;
@@ -57,6 +60,11 @@ namespace MediKitTwin.ArmA
             _hasTarget = false;
             _hasSolution = false;
             LastSolveSucceeded = false;
+        }
+
+        public Vector3 OffsetFromArmBase(Vector3 worldPoint)
+        {
+            return worldPoint - _model.BaseLink.position;
         }
 
         public IkResult Probe(Pose worldPose)
@@ -131,6 +139,12 @@ namespace MediKitTwin.ArmA
             LastSolveSucceeded = result.Converged;
             _hasSolution = result.Converged || _moveWhenUnreachable;
             _dirty = false;
+
+            if (_logJointDeltas)
+            {
+                string verdict = result.Converged ? "수렴" : $"수렴 못함(위치 오차 {result.PositionError:F3}m)";
+                Debug.Log($"{name}: IK {verdict}. {JointDeltaReport.Format(_model.JointNames, _seed, _solution)}", this);
+            }
         }
 
         private Pose ToBaseFrame(Pose worldPose)

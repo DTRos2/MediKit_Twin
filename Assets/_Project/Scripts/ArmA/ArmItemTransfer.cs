@@ -329,7 +329,9 @@ namespace MediKitTwin.ArmA
                     yield break;
                 }
 
-                result.Fail(TransferFailure.MotionFailed, $"{plan.ReachStep}: 서는 자리에서 팔이 닿는 방향을 {search.TriedCount}가지 찾아봤지만 없었다");
+                result.Fail(
+                    TransferFailure.MotionFailed,
+                    $"{plan.ReachStep}: 서는 자리에서 팔이 닿는 방향을 {search.TriedCount}가지 찾아봤지만 없었다 ({DescribeReach(plan)})");
             }
 
             if (plan.StandoffOffsets.Count > 1)
@@ -364,8 +366,6 @@ namespace MediKitTwin.ArmA
         // 지나가는 자리(접근, 후퇴, 들어올리기)는 느슨한 오차로 판정한다.
         private IEnumerator MoveTool(Pose target, string step, TransferResult result, Action<bool> done)
         {
-            bool isReached = false;
-        {
             return MoveToolWithin(target, _travelPositionToleranceM, _travelRotationToleranceDeg, step, result, done);
         }
 
@@ -378,6 +378,8 @@ namespace MediKitTwin.ArmA
         // 도구 끝점을 목표로 보낸다. 방향은 미리 닿는 것을 확인했으므로, 여기서 실패하면 무언가에 걸렸거나 시간이 모자란 것이다.
         private IEnumerator MoveToolWithin(
             Pose target, float positionToleranceM, float rotationToleranceDeg, string step, TransferResult result, Action<bool> done)
+        {
+            bool isReached = false;
             yield return _mover.MoveTo(target, positionToleranceM, rotationToleranceDeg, reached => isReached = reached);
             if (!isReached)
             {
@@ -385,6 +387,38 @@ namespace MediKitTwin.ArmA
             }
 
             done(isReached);
+        }
+
+        // 기본 방향으로 각 지점에 닿는 정도를 적는다. 오차가 크면 팔이 닿는 범위 밖이고,
+        // 오차가 거의 없는데 못 닿았다면 현재 자세에서 너무 멀리 돌아야만 닿는 것이다(IK의 관절 이동 제한).
+        private string DescribeReach(ReachPlan plan)
+        {
+            var parts = new string[plan.Positions.Count];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                IkResult ik = _tool.Probe(new Pose(plan.Positions[i], plan.Nominal));
+                bool isFarOnly = !ik.Converged && ik.PositionError <= _positionToleranceM;
+                string reach = isFarOnly
+                    ? "현재 자세에서 너무 멀리 돌아야 닿음"
+                    : $"오차 {ik.PositionError:F2}m/{ik.RotationErrorDeg:F0}도";
+                parts[i] = $"지점{i + 1}: {reach}{DescribePlacement(plan.Positions[i])}";
+            }
+
+            return string.Join(", ", parts);
+        }
+
+        // 팔 베이스에서 본 지점의 수평 거리와 높이 차. 팔의 닿는 반경과 견주어 거리 문제인지 높이 문제인지 가려내는 데 쓴다.
+        private string DescribePlacement(Vector3 worldPoint)
+        {
+            if (!(_toolTarget is IToolReachFrame frame))
+            {
+                return string.Empty;
+            }
+
+            Vector3 offset = frame.OffsetFromArmBase(worldPoint);
+            float height = offset.y;
+            float horizontal = new Vector2(offset.x, offset.z).magnitude;
+            return $" [팔 베이스에서 수평 {horizontal:F2}m, 높이 {height:+0.00;-0.00}m]";
         }
 
         private string DescribeToolFailure()
@@ -396,6 +430,17 @@ namespace MediKitTwin.ArmA
 
             IkResult ik = _tool.LastResult;
             return $"팔이 닿는 자세를 찾지 못했다(IK 위치 오차 {ik.PositionError:F3}m, 회전 오차 {ik.RotationErrorDeg:F1}도)";
+        }
+
+        // 구역을 정면으로 보고 서는 설정이 꺼져 있으면 방향을 정하지 않는다.
+        private float? FacingYawFor(float? facingYawDeg)
+        {
+            return _approach != null && _approach.FaceTargetAtStand ? facingYawDeg : null;
+        }
+
+        private float FacingOffsetDeg()
+        {
+            return _approach != null ? _approach.FacingOffsetDeg : 0f;
         }
 
         // 칸 방향을 알 수 없으면(영벡터) 월드 앞쪽에서 들어간다. 수평 성분만 쓴다.
@@ -417,14 +462,3 @@ namespace MediKitTwin.ArmA
         }
     }
 }
-        // 구역을 정면으로 보고 서는 설정이 꺼져 있으면 방향을 정하지 않는다.
-        private float? FacingYawFor(float? facingYawDeg)
-        {
-            return _approach != null && _approach.FaceTargetAtStand ? facingYawDeg : null;
-        }
-
-        private float FacingOffsetDeg()
-        {
-            return _approach != null ? _approach.FacingOffsetDeg : 0f;
-        }
-
