@@ -294,6 +294,215 @@ namespace MediKitTwin.EditorTools
             }
         }
 
+        // 팔이 멈춰 있을 때, 팔 링크의 충돌체와 겹쳐 있는 주변 충돌체를 이름과 겹친 깊이로 알려 준다. 무엇에 걸렸는지 찾는 용도다.
+        // 받침대와 베이스는 원래 붙어 있으므로 겹침으로 나와도 정상이다.
+        [MenuItem("Tools/MediKit/Report ArmB Contacts")]
+        public static void ReportContacts()
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogError("[ArmReachMap] 플레이 모드에서 실행하세요.");
+                return;
+            }
+
+            ArmController arm = FindArmB();
+            if (arm == null)
+            {
+                Debug.LogError("[ArmReachMap] UR3 프로필을 쓰는 ArmController를 찾지 못했습니다.");
+                return;
+            }
+
+            Transform root = arm.RobotRoot;
+            var seen = new HashSet<(Collider, Collider)>();
+            var log = new System.Text.StringBuilder();
+            int count = 0;
+
+            foreach (Collider own in root.GetComponentsInChildren<Collider>())
+            {
+                if (!own.enabled || own.isTrigger) continue;
+
+                Bounds bounds = own.bounds;
+                foreach (Collider other in Physics.OverlapBox(bounds.center, bounds.extents, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore))
+                {
+                    if (other == own || other.transform.IsChildOf(root)) continue;
+                    if (Physics.GetIgnoreLayerCollision(own.gameObject.layer, other.gameObject.layer)) continue;
+
+                    if (!seen.Add((own, other))) continue;
+
+                    string detail;
+                    if (IsNonConvexMesh(own) || IsNonConvexMesh(other))
+                    {
+                        detail = "경계 상자만 겹침(정밀 판정 불가)";
+                    }
+                    else if (Physics.ComputePenetration(own, own.transform.position, own.transform.rotation,
+                                 other, other.transform.position, other.transform.rotation, out Vector3 direction, out float depth))
+                    {
+                        detail = $"겹침 깊이 {depth * 100f:0.0}cm";
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    count++;
+                    log.AppendLine($"  {PathOf(own.transform, root)}  <->  {PathOf(other.transform, null)}  : {detail}");
+                }
+            }
+
+            Debug.Log(count == 0
+                ? "[ArmReachMap] 팔 링크와 겹친 주변 충돌체가 없습니다."
+                : $"[ArmReachMap] 팔 링크와 겹친 충돌체 {count}개 (받침대, 베이스는 정상):\n{log}");
+        }
+
+        // 팔이 지금 있는 자세를 UR3 프로필의 시작 자세(_homePoseDeg)로 저장한다. 프로필은 팀원과 공유하는 에셋이라 확인 창을 띄운다.
+        // 팔을 원하는 자세로 두고(Follow Target으로 옮기거나 Follow Target을 비워 멈춘 상태) 다 움직인 뒤에 누른다.
+        [MenuItem("Tools/MediKit/Save ArmB Current Pose As Home Pose")]
+        public static void SaveCurrentPoseAsHome()
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogError("[ArmReachMap] 플레이 모드에서 실행하세요. (현재 관절 각도를 읽어야 합니다)");
+                return;
+            }
+
+            ArmController arm = FindArmB();
+            if (arm == null || !arm.IsReady)
+            {
+                Debug.LogError("[ArmReachMap] UR3 프로필을 쓰는 ArmController가 없거나 아직 준비되지 않았습니다.");
+                return;
+            }
+
+            int count = arm.JointNames.Count;
+            var angles = new float[count];
+            arm.GetJointPositions(angles);
+
+            var degrees = new float[count];
+            var text = new System.Text.StringBuilder();
+            for (int i = 0; i < count; i++)
+            {
+                degrees[i] = Mathf.Round(angles[i] * Mathf.Rad2Deg * 10f) / 10f;
+                text.Append($"{degrees[i]:0.#}  ");
+            }
+
+            string settled = arm.IsAtTarget(0.03f) ? "" : "\n\n주의: 팔이 아직 목표 각도에 도달하지 않았습니다(움직이는 중이거나 막혀 있음).";
+            bool ok = EditorUtility.DisplayDialog(
+                "ArmB 시작 자세 저장",
+                $"'{arm.Profile.name}'의 시작 자세(_homePoseDeg)를 현재 자세로 바꿉니다.\n\n관절 각도(도): {text}\n\n이 프로필은 팀원과 공유하는 에셋입니다.{settled}",
+                "저장", "취소");
+            if (!ok) return;
+
+            var serialized = new SerializedObject(arm.Profile);
+            SerializedProperty home = serialized.FindProperty("_homePoseDeg");
+            home.arraySize = count;
+            for (int i = 0; i < count; i++) home.GetArrayElementAtIndex(i).floatValue = degrees[i];
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(arm.Profile);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log($"[ArmReachMap] '{arm.Profile.name}'의 시작 자세를 저장했습니다(도): {text}");
+        }
+
+        private static bool IsNonConvexMesh(Collider collider)
+        {
+            return collider is MeshCollider mesh && !mesh.convex;
+        }
+
+        private static string PathOf(Transform t, Transform stopAt)
+        {
+            string path = t.name;
+            while (t.parent != null && t.parent != stopAt)
+            {
+                t = t.parent;
+                path = t.name + "/" + path;
+            }
+
+            return path;
+        }
+
+        // IkArmTarget의 Follow Target이 지금 있는 자세에 팔이 닿는지 알려 준다. 팔이 안 따라올 때 위치 문제인지 방향 문제인지 가른다.
+        [MenuItem("Tools/MediKit/Check ArmB Follow Target Reach")]
+        public static void CheckFollowTarget()
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogError("[ArmReachMap] 플레이 모드에서 실행하세요.");
+                return;
+            }
+
+            ArmController arm = FindArmB();
+            if (arm == null || !arm.IsReady)
+            {
+                Debug.LogError("[ArmReachMap] UR3 프로필을 쓰는 ArmController가 없거나 아직 준비되지 않았습니다.");
+                return;
+            }
+
+            IkArmTarget ik = arm.GetComponent<IkArmTarget>();
+            var follow = ik != null ? new SerializedObject(ik).FindProperty("_followTarget").objectReferenceValue as Transform : null;
+            if (follow == null)
+            {
+                Debug.LogError("[ArmReachMap] ArmB의 IkArmTarget에 Follow Target이 연결돼 있지 않습니다.");
+                return;
+            }
+
+            DlsIkSettings settings = arm.Profile.Ik;
+            IInverseKinematics solver = new MultiStartInverseKinematics(
+                new DlsInverseKinematics(arm.Chain, settings), arm.Chain, settings.Restarts, settings.RestartSeed);
+
+            Vector3 position = follow.position;
+            Vector3 fromBase = position - arm.BaseLink.position;
+            float horizontal = new Vector2(fromBase.x, fromBase.z).magnitude;
+            float tilt = Vector3.Angle(follow.forward, Vector3.down);
+
+            float[] seed = (float[])arm.HomePoseRad.Clone();
+            float[] result = new float[seed.Length];
+            var targetInBase = new Pose(
+                arm.BaseLink.InverseTransformPoint(position),
+                Quaternion.Inverse(arm.BaseLink.rotation) * follow.rotation);
+            bool asPlaced = solver.Solve(targetInBase, seed, result).Converged;
+            bool pointingDown = TrySolve(arm, solver, position);
+
+            // IkArmTarget은 홈 자세가 아니라 지금 관절 각도에서 출발해 푼다. 같은 조건으로도 풀어 본다.
+            var current = new float[seed.Length];
+            arm.GetJointPositions(current);
+            bool fromCurrent = solver.Solve(targetInBase, current, result).Converged;
+
+            Pose tool = arm.ToolPose;
+            float gap = Vector3.Distance(tool.position, position);
+            var degrees = new System.Text.StringBuilder();
+            for (int i = 0; i < current.Length; i++) degrees.Append($"{current[i] * Mathf.Rad2Deg:0} ");
+
+            Debug.Log($"[ArmReachMap] IkArmTarget 상태: 목표 있음={ik.HasToolTarget}, 마지막 풀이 성공={ik.LastSolveSucceeded}, Move When Unreachable={new SerializedObject(ik).FindProperty("_moveWhenUnreachable").boolValue}");
+            Debug.Log($"[ArmReachMap] 현재 그리퍼 끝점 {tool.position}, 목표까지 {gap:0.00}m, 관절 각도(도) {degrees}");
+            Debug.Log($"[ArmReachMap] 지금 관절 각도에서 출발해 풀면: {(fromCurrent ? "풀림" : "안 풀림")}");
+
+            // 팔이 목표 관절 각도까지 못 가고 있는지(막힘) 아직 가는 중인지 본다. 몇 초 간격으로 두 번 눌러 비교한다.
+            var goal = new float[seed.Length];
+            var velocity = new float[seed.Length];
+            arm.GetJointVelocities(velocity);
+            var goalText = new System.Text.StringBuilder();
+            var errorText = new System.Text.StringBuilder();
+            float maxVelocity = 0f;
+            if (ik.TryGetTargets(goal))
+            {
+                for (int i = 0; i < goal.Length; i++)
+                {
+                    goalText.Append($"{goal[i] * Mathf.Rad2Deg:0} ");
+                    errorText.Append($"{(goal[i] - current[i]) * Mathf.Rad2Deg:+0;-0;0} ");
+                }
+            }
+            else goalText.Append("(IkArmTarget이 목표 각도를 주지 않음)");
+
+            for (int i = 0; i < velocity.Length; i++) maxVelocity = Mathf.Max(maxVelocity, Mathf.Abs(velocity[i]));
+            Debug.Log($"[ArmReachMap] 목표 관절 각도(도) {goalText}");
+            Debug.Log($"[ArmReachMap] 관절별 남은 각도(도) {errorText} / 가장 빠른 관절 속도 {maxVelocity * Mathf.Rad2Deg:0.0}도/초 / 목표 도달={arm.IsAtTarget(0.03f)}");
+
+            Debug.Log($"[ArmReachMap] {follow.name}: 위치 {position}, 베이스에서 수평 {horizontal:0.00}m, 베이스 기준 높이 {fromBase.y:+0.00;-0.00}m, 파란 축이 아래에서 {tilt:0}° 기울어짐");
+            Debug.Log($"[ArmReachMap] 지금 방향 그대로: {(asPlaced ? "닿음" : "닿지 않음")} / 그리퍼를 아래로 향하면(방향 4가지 시도): {(pointingDown ? "닿음" : "닿지 않음")}");
+
+            if (!asPlaced && pointingDown) Debug.LogWarning("[ArmReachMap] 위치는 닿지만 지금 방향으로는 안 닿습니다. 회전을 X=90, Y=0, Z=0 근처로 맞추세요.");
+            else if (!asPlaced && !pointingDown) Debug.LogWarning("[ArmReachMap] 이 위치에는 어떤 방향으로도 닿지 않습니다. 팔 쪽으로 더 가깝게 또는 높이를 바꾸세요.");
+        }
+
         // 씬에는 FR5 등 다른 팔도 있으므로 UR3 프로필을 쓰는 팔(로봇암 B)을 고른다.
         private static ArmController FindArmB()
         {
