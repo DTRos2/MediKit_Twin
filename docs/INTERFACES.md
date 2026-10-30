@@ -234,7 +234,7 @@
 | 구현 예정 | 구현·사용하는 인터페이스 | 발행하는 신호 | 구독하는 신호 |
 |---|---|---|---|
 | 재고 | `IStock` 구현 | `StockEmpty`, `StockRefilled` | - |
-| 주문 관리 | `IKitSource`, `IOrderStatus` 구현 | `OrderHeld`, `OrderResumed`, `WarningRaised` | `StockEmpty`, `StockRefilled`, `StationStateChanged` |
+| 주문 관리 | `IKitSource`, `IOrderStatus` 구현 | `OrderHeld`, `OrderResumed`, `WarningRaised` | `KitReady`, `StockEmpty`, `StockRefilled`, `StationStateChanged` |
 | 박스 공급 | `IBoxSupply` 구현 | - | - |
 | 로봇암 A | `IKitSource`, `IStock`, `IBoxSupply`, `IArmTarget` 사용 | `KitReady`, `StationStateChanged`, `StationAlive` | - |
 | 검사 | `IInspector` 사용 | `InspectionResult` | `AtInspection` |
