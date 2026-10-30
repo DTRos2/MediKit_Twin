@@ -30,6 +30,7 @@ medikit_ws/src/
 ├── ros_tcp_endpoint_cpp/    ★ C++ 엔드포인트 (아래 4장)
 ├── aurix_description/       로봇암 A URDF (6축, 자리표시용 형상)
 ├── aurix_arm/               로봇암 A 데모 노드 (필수)
+├── aurix_rl/                강화학습 정책 노드, MoveIt 목표 노드 (C++, 선택)
 ├── aurix_monitor/           공정 모니터링 노드 (선택)
 └── aurix_bringup/           launch 파일과 파라미터 묶음
 ```
@@ -38,6 +39,7 @@ medikit_ws/src/
 |---|---|---|
 | `aurix_description` | ament_cmake | `urdf/arm_a.urdf` (j1~6), `meshes/` |
 | `aurix_arm` | ament_python | `arm_a_commander.py` 자세 순서대로 최종 목표 각도 발행·도착 판정, `pose_table.py` yaml 로드, `config/arm_a_poses.yaml` |
+| `aurix_rl` | ament_cmake (C++) | `rl_policy_node` Unity 관측 수신 → 정책 백엔드 → 행동 발행, 보상·성공률 로그 / `moveit_goal_node` 목표 자세 → MoveIt 계획 → 최종 관절 각도만 `/arm_a/joint_command`로 발행 |
 | `aurix_monitor` | ament_python | `cell_monitor.py` — `/cell/events·station_state·kpi` 구독 → 로그, CSV 저장 |
 | `aurix_bringup` | ament_python | `aurix.launch.py`, `endpoint_only.launch.py`, `config/params.yaml` |
 | `ros_tcp_endpoint_cpp` | ament_cmake | Unity용 C++ TCP 엔드포인트 |
