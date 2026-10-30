@@ -18,16 +18,16 @@ MonoBehaviour:
   - _componentId: gauze
     _shelfSlotId: A-1
     _slotNumber: 1
-    _slotLocalPosition: {x: -0.08, y: 0, z: 0.05}
+    _slotLocalPosition: {x: 0, y: 0, z: 0.082}
   - _componentId: bandage
     _shelfSlotId: A-2
     _slotNumber: 2
-    _slotLocalPosition: {x: 0.08, y: 0, z: 0.05}
+    _slotLocalPosition: {x: 0, y: 0, z: 0.0273}
   - _componentId: antiseptic
     _shelfSlotId: A-3
     _slotNumber: 3
-    _slotLocalPosition: {x: -0.08, y: 0, z: -0.05}
+    _slotLocalPosition: {x: 0, y: 0, z: -0.0273}
   - _componentId: gloves
     _shelfSlotId: A-4
     _slotNumber: 4
-    _slotLocalPosition: {x: 0.08, y: 0, z: -0.05}
+    _slotLocalPosition: {x: 0, y: 0, z: -0.082}
