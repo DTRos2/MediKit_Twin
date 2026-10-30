@@ -21,8 +21,10 @@ namespace MediKitTwin.Orders
         [Header("주문 파일 (FR-01)")]
         [Tooltip("주문 파일이 있는 StreamingAssets 아래 폴더 이름. 빌드에서도 읽으려면 StreamingAssets에 둔다.")]
         [SerializeField] private string _ordersFolderName = "Orders";
-        [Tooltip("시작할 때 이 폴더에서 이 파일을 읽는다. 비워 두면 시작할 때 읽지 않고 패널로 넣을 때까지 기다린다.")]
+        [Tooltip("패널의 \"파일 읽기\"가 읽는 파일 이름(위 폴더 아래).")]
         [SerializeField] private string _ordersFileName = "orders.csv";
+        [Tooltip("켜면 Play 시작과 동시에 위 파일을 읽어 바로 키팅을 시작한다. 끄면 패널에서 \"적용\"이나 \"파일 읽기\"를 누를 때까지 아무것도 하지 않는다.")]
+        [SerializeField] private bool _loadOnStart;
         [SerializeField, Min(1)] private int _minQuantity = 1;
         [SerializeField, Min(1)] private int _maxQuantity = 10;
         [Tooltip("파일이 없거나 유효한 주문이 없을 때 쓰는 기본 주문의 병원명.")]
@@ -89,7 +91,7 @@ namespace MediKitTwin.Orders
 
         private void Start()
         {
-            if (!string.IsNullOrEmpty(_ordersFileName))
+            if (_loadOnStart && !string.IsNullOrEmpty(_ordersFileName))
             {
                 LoadFromFile();
             }
