@@ -11,7 +11,7 @@ namespace MediKitTwin.ArmA
     /// 누락은 IMissingRule이 맡고 이 클래스는 협력자를 조립하고 반복 순서만 다룬다.
     /// 협력자는 모두 인터페이스로 받으므로 Inspector에서 같은 인터페이스를 구현한 컴포넌트를 연결한다.
     /// </summary>
-    public sealed class KittingController : MonoBehaviour, IKittingStation
+    public sealed class KittingController : MonoBehaviour, IKittingStation, IStationPause
     {
         [Header("협력자 (인터페이스를 구현한 컴포넌트)")]
         [Tooltip("다음에 만들 키트를 주는 쪽(IKitSource, 보통 OrderSessionBehaviour).")]
@@ -41,6 +41,20 @@ namespace MediKitTwin.ArmA
         private KittingProcess _process;
         private KittingOutcomeHandler _outcomeHandler;
         private IStationStateReporter _station;
+        private bool _isPauseRequested;
+
+        /// <summary>멈춤을 요청받아 키트 사이에서 실제로 쉬고 있으면 true. 사람이 로봇을 직접 쓰는 동안(수동 키팅)이다.</summary>
+        public bool IsPaused { get; private set; }
+
+        public void RequestPause()
+        {
+            _isPauseRequested = true;
+        }
+
+        public void Resume()
+        {
+            _isPauseRequested = false;
+        }
 
         /// <summary>지금 만들고 있는 키트. 쉬는 중이면 null이다.</summary>
         public KitData CurrentKit { get; private set; }
@@ -87,6 +101,16 @@ namespace MediKitTwin.ArmA
         {
             while (true)
             {
+                // 멈춤 요청은 키트 사이에서만 받는다. 하던 키트는 끝까지 만든다.
+                if (_isPauseRequested)
+                {
+                    IsPaused = true;
+                    yield return null;
+                    continue;
+                }
+
+                IsPaused = false;
+
                 if (_source.TryGetNext(out KitData kit, out RecipeSO recipe))
                 {
                     yield return MakeKit(kit, recipe);
@@ -111,6 +135,12 @@ namespace MediKitTwin.ArmA
             yield return _process.Run(plan, outcome);
 
             CurrentKit = null;
+            if (outcome.Result != KittingResult.Completed)
+            {
+                // 이벤트 버스로만 알리면 Console에 남지 않아 원인을 찾기 어렵다.
+                Debug.LogWarning($"{name}: 키팅이 {outcome.Result}로 끝났다. {outcome.Message}", this);
+            }
+
             float waitSeconds = _outcomeHandler.Handle(kit, outcome);
             if (waitSeconds > 0f)
             {

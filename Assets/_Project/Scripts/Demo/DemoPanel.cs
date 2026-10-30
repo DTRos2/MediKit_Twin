@@ -21,6 +21,9 @@ namespace MediKitTwin.Demo
         [Tooltip("끄면 패널을 화면에 그리지 않는다.")]
         [SerializeField] private bool _isVisible = true;
 
+        // 내용이 창보다 길면 잘리는 대신 스크롤한다.
+        private Vector2 _contentScroll;
+
         protected DemoPanel(string defaultTitle, DemoPanelAnchor defaultAnchor, Vector2 defaultMargin, Vector2 defaultSize)
         {
             _title = defaultTitle;
@@ -39,7 +42,12 @@ namespace MediKitTwin.Demo
             Rect rect = DemoPanelLayout.Place(_anchor, _margin, _size, Screen.width, Screen.height);
             GUILayout.BeginArea(rect, _title, GUI.skin.window);
             GUILayout.Space(TitleBarHeight);
+
+            // 가로 막대는 숨긴다. 패널 내용은 창 너비에 맞춰 그려지므로 세로로만 스크롤하면 된다.
+            _contentScroll = GUILayout.BeginScrollView(_contentScroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar);
             DrawContents();
+            GUILayout.EndScrollView();
+
             GUILayout.EndArea();
         }
 

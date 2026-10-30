@@ -12,30 +12,44 @@ namespace MediKitTwin.ArmA
     {
         private readonly float _pickStandoffM;
         private readonly float _placeStandoffM;
+        private readonly float _approachExtraM;
         private readonly Vector3 _boxStandDirection;
 
-        public ArmBaseStandPlanner(float pickStandoffM, float placeStandoffM, Vector3 boxStandDirection)
+        public ArmBaseStandPlanner(float pickStandoffM, float placeStandoffM, float approachExtraM, Vector3 boxStandDirection)
         {
-            if (pickStandoffM < 0f || placeStandoffM < 0f)
+            if (pickStandoffM < 0f || placeStandoffM < 0f || approachExtraM < 0f)
             {
-                throw new ArgumentOutOfRangeException(nameof(pickStandoffM), "서는 거리는 0 이상이어야 한다.");
+                throw new ArgumentOutOfRangeException(nameof(pickStandoffM), "서는 거리와 접근 여유는 0 이상이어야 한다.");
             }
 
             _pickStandoffM = pickStandoffM;
             _placeStandoffM = placeStandoffM;
+            _approachExtraM = approachExtraM;
             _boxStandDirection = Flatten(boxStandDirection);
         }
 
-        /// <summary>선반 물건 앞의 자리. outward는 칸에서 바깥으로 나가는 수평 단위 방향이다.</summary>
-        public Vector3 ForShelfItem(Vector3 itemPosition, Vector3 outward)
+        /// <summary>
+        /// 선반 물건 앞 자리로 들어가기 전에 거치는 경유지. 서는 자리와 같은 선(칸에서 바깥으로 뻗은 선) 위에서 접근 여유만큼 더 떨어져 있다.
+        /// 여기를 거치면 선반과 나란한 방향이 아니라 칸 정면에서 수직으로 들어가므로 베이스가 선반 모서리를 스치지 않는다.
+        /// </summary>
+        public Vector3 ForShelfItemApproach(Vector3 itemPosition, Vector3 outward, float extraStandoffM = 0f)
         {
-            return OnFloor(itemPosition, Flatten(outward), _pickStandoffM);
+            return OnFloor(itemPosition, Flatten(outward), _pickStandoffM + extraStandoffM + _approachExtraM);
         }
 
-        /// <summary>박스 슬롯 곁의 자리.</summary>
-        public Vector3 ForBoxSlot(Vector3 slotPosition)
+        /// <summary>
+        /// 선반 물건 앞의 자리. outward는 칸에서 바깥으로 나가는 수평 단위 방향이다.
+        /// extraStandoffM은 기본 거리에 더하는 거리로, 팔이 기본 자리에서 닿지 못할 때 더 물러나 다시 시도하는 데 쓴다.
+        /// </summary>
+        public Vector3 ForShelfItem(Vector3 itemPosition, Vector3 outward, float extraStandoffM = 0f)
         {
-            return OnFloor(slotPosition, _boxStandDirection, _placeStandoffM);
+            return OnFloor(itemPosition, Flatten(outward), _pickStandoffM + extraStandoffM);
+        }
+
+        /// <summary>박스 슬롯 곁의 자리. extraStandoffM은 팔이 닿지 못할 때 더 물러나 다시 서는 거리다.</summary>
+        public Vector3 ForBoxSlot(Vector3 slotPosition, float extraStandoffM = 0f)
+        {
+            return OnFloor(slotPosition, _boxStandDirection, _placeStandoffM + extraStandoffM);
         }
 
         private static Vector3 OnFloor(Vector3 origin, Vector3 direction, float distance)

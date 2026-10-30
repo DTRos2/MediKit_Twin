@@ -11,5 +11,8 @@ namespace MediKitTwin.ArmA
     public interface IArmBasePositioner
     {
         IEnumerator MoveArmBaseTo(Vector3 worldPosition, Action<bool> done);
+
+        /// <summary>마지막 이동이 실패한 이유를 사람이 읽는 문장으로 돌려준다. 성공했거나 아직 움직이지 않았으면 빈 문자열이다.</summary>
+        string LastFailureReason { get; }
     }
 }

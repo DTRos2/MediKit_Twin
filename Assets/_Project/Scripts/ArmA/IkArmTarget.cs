@@ -24,6 +24,7 @@ namespace MediKitTwin.ArmA
         private IInverseKinematics _solver;
         private float[] _seed;
         private float[] _solution;
+        private float[] _probeSolution;
         private Pose _targetWorld;
         private bool _hasTarget;
         private bool _dirty;
@@ -56,6 +57,15 @@ namespace MediKitTwin.ArmA
             _hasTarget = false;
             _hasSolution = false;
             LastSolveSucceeded = false;
+        }
+
+        public IkResult Probe(Pose worldPose)
+        {
+            EnsureSolver();
+
+            // 풀이 결과는 쓰지 않고 별도 배열에 받는다. 목표와 현재 풀이 상태는 건드리지 않는다.
+            _model.GetJointPositions(_seed);
+            return _solver.Solve(ToBaseFrame(worldPose), _seed, _probeSolution);
         }
 
         public bool HasReachedTarget(float positionToleranceM, float rotationToleranceDeg)
@@ -116,16 +126,19 @@ namespace MediKitTwin.ArmA
             // 시드는 현재 자세다. 가까운 해를 찾아 팔이 갑자기 다른 자세로 뒤집히는 것을 막는다.
             _model.GetJointPositions(_seed);
 
-            Transform baseLink = _model.BaseLink;
-            var targetInBase = new Pose(
-                baseLink.InverseTransformPoint(_targetWorld.position),
-                Quaternion.Inverse(baseLink.rotation) * _targetWorld.rotation);
-
-            IkResult result = _solver.Solve(targetInBase, _seed, _solution);
+            IkResult result = _solver.Solve(ToBaseFrame(_targetWorld), _seed, _solution);
             LastResult = result;
             LastSolveSucceeded = result.Converged;
             _hasSolution = result.Converged || _moveWhenUnreachable;
             _dirty = false;
+        }
+
+        private Pose ToBaseFrame(Pose worldPose)
+        {
+            Transform baseLink = _model.BaseLink;
+            return new Pose(
+                baseLink.InverseTransformPoint(worldPose.position),
+                Quaternion.Inverse(baseLink.rotation) * worldPose.rotation);
         }
 
         private void EnsureSolver()
@@ -145,6 +158,7 @@ namespace MediKitTwin.ArmA
             int count = _model.JointNames.Count;
             _seed = new float[count];
             _solution = new float[count];
+            _probeSolution = new float[count];
         }
     }
 }
