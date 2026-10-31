@@ -44,7 +44,8 @@ namespace MediKitTwin.ArmA
                 OrientationSearchSettings search,
                 string waypointStep,
                 string standStep,
-                string reachStep)
+                string reachStep,
+                float? facingYawDeg)
             {
                 StandoffOffsets = standoffOffsets;
                 WaypointFor = waypointFor;
@@ -55,6 +56,7 @@ namespace MediKitTwin.ArmA
                 WaypointStep = waypointStep;
                 StandStep = standStep;
                 ReachStep = reachStep;
+                FacingYawDeg = facingYawDeg;
             }
 
             public IReadOnlyList<float> StandoffOffsets { get; }
@@ -75,6 +77,9 @@ namespace MediKitTwin.ArmA
             public string StandStep { get; }
 
             public string ReachStep { get; }
+
+            /// <summary>서는 자리에서 바라볼 방향(월드 Y축 기준 도). 없으면 마지막 이동 방향으로 선다.</summary>
+            public float? FacingYawDeg { get; }
         }
 
         [Tooltip("도구 끝점 목표를 받는 쪽(IToolPoseTarget 구현체, 보통 IkArmTarget).")]
@@ -106,9 +111,20 @@ namespace MediKitTwin.ArmA
         [Tooltip("박스 슬롯에 닿는 도구 방향을 찾을 때 기본 방향(똑바로 아래)에서 벗어날 수 있는 범위. 비틀기는 위에서 보아 손을 돌리는 것이다.")]
         [SerializeField] private OrientationSearchSettings _boxSearch = new OrientationSearchSettings(30f, 30f, 15f, 30f, 15f, 180f, 90f);
 
-        [Header("판정")]
+        [Header("판정 — 쥐고 놓는 동작 (엄격)")]
+        [Tooltip("물건을 쥐는 자리와 박스 슬롯에 놓는 자리에서 허용하는 위치 오차(m).")]
         [SerializeField, Min(0.001f)] private float _positionToleranceM = 0.01f;
+        [Tooltip("물건을 쥐는 자리와 박스 슬롯에 놓는 자리에서 허용하는 회전 오차(도).")]
         [SerializeField, Min(0.5f)] private float _rotationToleranceDeg = 5f;
+
+        [Header("판정 — 접근·후퇴·들어올리기 (느슨)")]
+        [Tooltip("물건 앞, 박스 위처럼 지나가는 자리에서 허용하는 위치 오차(m). 시간 초과로 실패하면 키운다.")]
+        [SerializeField, Min(0.001f)] private float _travelPositionToleranceM = 0.03f;
+        [Tooltip("지나가는 자리에서 허용하는 회전 오차(도). 시간 초과로 실패하면 키운다.")]
+        [SerializeField, Min(0.5f)] private float _travelRotationToleranceDeg = 10f;
+
+        [Header("판정 — 시간")]
+        [Tooltip("한 동작이 목표에 닿기를 기다리는 최대 시간(초).")]
         [SerializeField, Min(1f)] private float _stepTimeoutSeconds = 10f;
 
         private IToolPoseTarget _tool;
@@ -143,7 +159,7 @@ namespace MediKitTwin.ArmA
                     _approach.PickStandoffM, _approach.PlaceStandoffM, _approach.ApproachExtraM, _approach.BoxStandDirection);
             }
 
-            _mover = new ToolPoseMover(_tool, _positionToleranceM, _rotationToleranceDeg, _stepTimeoutSeconds);
+            _mover = new ToolPoseMover(_tool, _travelPositionToleranceM, _travelRotationToleranceDeg, _stepTimeoutSeconds);
             _searcher = new GraspOrientationSearcher(pose => _tool.Probe(pose).Converged);
         }
 
@@ -166,7 +182,8 @@ namespace MediKitTwin.ArmA
                 _shelfSearch,
                 StepShelfApproachWaypoint,
                 StepShelfStandPoint,
-                StepShelfNear);
+                StepShelfNear,
+                FacingYawFor(ArmBaseStandPlanner.ShelfItemFacingYawDeg(outward, FacingOffsetDeg())));
 
             // 서는 자리에 도착하면 팔이 닿는 방향을 찾는다. 찾은 방향으로 접근, 집기, 후퇴를 모두 한다.
             var search = new OrientationSearchResult();
@@ -186,7 +203,7 @@ namespace MediKitTwin.ArmA
                 yield break;
             }
 
-            yield return MoveTool(new Pose(itemPosition, rotation), StepShelfReach, result, ok => isOk = ok);
+            yield return MoveToolPrecisely(new Pose(itemPosition, rotation), StepShelfReach, result, ok => isOk = ok);
             if (!isOk)
             {
                 yield break;
@@ -232,7 +249,8 @@ namespace MediKitTwin.ArmA
                 _boxSearch,
                 string.Empty,
                 StepBoxStandPoint,
-                StepBoxAbove);
+                StepBoxAbove,
+                FacingYawFor(_standPlanner?.BoxSlotFacingYawDeg(FacingOffsetDeg())));
 
             var search = new OrientationSearchResult();
             yield return ApproachAndSearch(plan, result, found => search = found);
@@ -250,7 +268,7 @@ namespace MediKitTwin.ArmA
                 yield break;
             }
 
-            yield return MoveTool(new Pose(slotPosition, rotation), StepBoxSlot, result, ok => isOk = ok);
+            yield return MoveToolPrecisely(new Pose(slotPosition, rotation), StepBoxSlot, result, ok => isOk = ok);
             if (!isOk)
             {
                 yield break;
@@ -283,7 +301,7 @@ namespace MediKitTwin.ArmA
 
                 if (plan.WaypointFor != null)
                 {
-                    yield return MoveBase(plan.WaypointFor(extra), plan.WaypointStep, result, ok => isOk = ok);
+                    yield return MoveBase(plan.WaypointFor(extra), plan.FacingYawDeg, plan.WaypointStep, result, ok => isOk = ok);
                     if (!isOk)
                     {
                         done(new OrientationSearchResult());
@@ -291,7 +309,7 @@ namespace MediKitTwin.ArmA
                     }
                 }
 
-                yield return MoveBase(plan.StandFor(extra), plan.StandStep, result, ok => isOk = ok);
+                yield return MoveBase(plan.StandFor(extra), plan.FacingYawDeg, plan.StandStep, result, ok => isOk = ok);
                 if (!isOk)
                 {
                     done(new OrientationSearchResult());
@@ -311,7 +329,9 @@ namespace MediKitTwin.ArmA
                     yield break;
                 }
 
-                result.Fail(TransferFailure.MotionFailed, $"{plan.ReachStep}: 서는 자리에서 팔이 닿는 방향을 {search.TriedCount}가지 찾아봤지만 없었다");
+                result.Fail(
+                    TransferFailure.MotionFailed,
+                    $"{plan.ReachStep}: 서는 자리에서 팔이 닿는 방향을 {search.TriedCount}가지 찾아봤지만 없었다 ({DescribeReach(plan)})");
             }
 
             if (plan.StandoffOffsets.Count > 1)
@@ -323,7 +343,7 @@ namespace MediKitTwin.ArmA
         }
 
         // 이동 모듈이 없으면(고정 팔) 이동 없이 도착한 것으로 본다. 실패하면 단계 이름과 함께 결과에 남긴다.
-        private IEnumerator MoveBase(Vector3? standPoint, string step, TransferResult result, Action<bool> done)
+        private IEnumerator MoveBase(Vector3? standPoint, float? facingYawDeg, string step, TransferResult result, Action<bool> done)
         {
             if (_basePositioner == null || !standPoint.HasValue)
             {
@@ -332,7 +352,9 @@ namespace MediKitTwin.ArmA
             }
 
             bool isArrived = false;
-            yield return _basePositioner.MoveArmBaseTo(standPoint.Value, arrived => isArrived = arrived);
+            yield return facingYawDeg.HasValue
+                ? _basePositioner.MoveArmBaseTo(standPoint.Value, facingYawDeg.Value, arrived => isArrived = arrived)
+                : _basePositioner.MoveArmBaseTo(standPoint.Value, arrived => isArrived = arrived);
             if (!isArrived)
             {
                 result.Fail(TransferFailure.MotionFailed, $"{step}: 베이스가 서는 자리에 도착하지 못했다 ({_basePositioner.LastFailureReason})");
@@ -341,17 +363,62 @@ namespace MediKitTwin.ArmA
             done(isArrived);
         }
 
-        // 도구 끝점을 목표로 보낸다. 방향은 미리 닿는 것을 확인했으므로, 여기서 실패하면 무언가에 걸렸거나 시간이 모자란 것이다.
+        // 지나가는 자리(접근, 후퇴, 들어올리기)는 느슨한 오차로 판정한다.
         private IEnumerator MoveTool(Pose target, string step, TransferResult result, Action<bool> done)
         {
+            return MoveToolWithin(target, _travelPositionToleranceM, _travelRotationToleranceDeg, step, result, done);
+        }
+
+        // 쥐고 놓는 자리는 엄격한 오차로 판정한다.
+        private IEnumerator MoveToolPrecisely(Pose target, string step, TransferResult result, Action<bool> done)
+        {
+            return MoveToolWithin(target, _positionToleranceM, _rotationToleranceDeg, step, result, done);
+        }
+
+        // 도구 끝점을 목표로 보낸다. 방향은 미리 닿는 것을 확인했으므로, 여기서 실패하면 무언가에 걸렸거나 시간이 모자란 것이다.
+        private IEnumerator MoveToolWithin(
+            Pose target, float positionToleranceM, float rotationToleranceDeg, string step, TransferResult result, Action<bool> done)
+        {
             bool isReached = false;
-            yield return _mover.MoveTo(target, reached => isReached = reached);
+            yield return _mover.MoveTo(target, positionToleranceM, rotationToleranceDeg, reached => isReached = reached);
             if (!isReached)
             {
                 result.Fail(TransferFailure.MotionFailed, $"{step}: {DescribeToolFailure()}");
             }
 
             done(isReached);
+        }
+
+        // 기본 방향으로 각 지점에 닿는 정도를 적는다. 오차가 크면 팔이 닿는 범위 밖이고,
+        // 오차가 거의 없는데 못 닿았다면 현재 자세에서 너무 멀리 돌아야만 닿는 것이다(IK의 관절 이동 제한).
+        private string DescribeReach(ReachPlan plan)
+        {
+            var parts = new string[plan.Positions.Count];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                IkResult ik = _tool.Probe(new Pose(plan.Positions[i], plan.Nominal));
+                bool isFarOnly = !ik.Converged && ik.PositionError <= _positionToleranceM;
+                string reach = isFarOnly
+                    ? "현재 자세에서 너무 멀리 돌아야 닿음"
+                    : $"오차 {ik.PositionError:F2}m/{ik.RotationErrorDeg:F0}도";
+                parts[i] = $"지점{i + 1}: {reach}{DescribePlacement(plan.Positions[i])}";
+            }
+
+            return string.Join(", ", parts);
+        }
+
+        // 팔 베이스에서 본 지점의 수평 거리와 높이 차. 팔의 닿는 반경과 견주어 거리 문제인지 높이 문제인지 가려내는 데 쓴다.
+        private string DescribePlacement(Vector3 worldPoint)
+        {
+            if (!(_toolTarget is IToolReachFrame frame))
+            {
+                return string.Empty;
+            }
+
+            Vector3 offset = frame.OffsetFromArmBase(worldPoint);
+            float height = offset.y;
+            float horizontal = new Vector2(offset.x, offset.z).magnitude;
+            return $" [팔 베이스에서 수평 {horizontal:F2}m, 높이 {height:+0.00;-0.00}m]";
         }
 
         private string DescribeToolFailure()
@@ -363,6 +430,17 @@ namespace MediKitTwin.ArmA
 
             IkResult ik = _tool.LastResult;
             return $"팔이 닿는 자세를 찾지 못했다(IK 위치 오차 {ik.PositionError:F3}m, 회전 오차 {ik.RotationErrorDeg:F1}도)";
+        }
+
+        // 구역을 정면으로 보고 서는 설정이 꺼져 있으면 방향을 정하지 않는다.
+        private float? FacingYawFor(float? facingYawDeg)
+        {
+            return _approach != null && _approach.FaceTargetAtStand ? facingYawDeg : null;
+        }
+
+        private float FacingOffsetDeg()
+        {
+            return _approach != null ? _approach.FacingOffsetDeg : 0f;
         }
 
         // 칸 방향을 알 수 없으면(영벡터) 월드 앞쪽에서 들어간다. 수평 성분만 쓴다.

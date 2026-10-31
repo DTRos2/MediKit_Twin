@@ -11,7 +11,7 @@ namespace MediKitTwin.ArmA
     {
         [Header("서는 자리")]
         [Tooltip("선반 물건에서 칸 밖 방향으로 떨어져 서는 거리(m). 팔이 물건에 닿고 베이스가 선반에 부딪히지 않는 사이로 정한다.")]
-        [SerializeField, Min(0f)] private float _pickStandoffM = 0.42f;
+        [SerializeField, Min(0f)] private float _pickStandoffM = 0.65f;
         [Tooltip("선반 앞 첫 자리에서 팔이 닿지 못하면, 기본 거리에 이 값들을 차례로 더한 거리에 다시 서서 시도한다(m). 첫 값은 보통 0(기본 거리). 비우면 한 번만 시도한다.")]
         [SerializeField] private float[] _pickStandoffOffsetsM = { 0f, 0.1f, 0.2f };
         [Tooltip("박스 슬롯 곁 첫 자리에서 팔이 닿지 못하면, 기본 거리에 이 값들을 차례로 더한 거리에 다시 서서 시도한다(m). 비우면 한 번만 시도한다.")]
@@ -22,6 +22,14 @@ namespace MediKitTwin.ArmA
         [SerializeField, Min(0f)] private float _placeStandoffM = 0.55f;
         [Tooltip("박스 슬롯에서 베이스가 서는 쪽의 수평 방향(월드). 선반에서 지그로 돌아올 때 지그의 어느 쪽에 설지 정한다.")]
         [SerializeField] private Vector3 _boxStandDirection = new Vector3(0f, 0f, 1f);
+
+        [Header("서는 방향")]
+        [Tooltip("켜면 물건 앞과 박스 곁에서 그 구역을 정면으로 보고 선다. 끄면 도착 방향은 마지막 이동 방향이다.")]
+        [SerializeField] private bool _faceTargetAtStand = true;
+        [Tooltip("베이스 정면과 팔이 뻗는 정면이 어긋난 만큼의 보정(도). 팔의 첫 관절(shoulder_Link)이 구역 앞에서 0도 근처가 되도록 맞춘다.")]
+        [SerializeField, Range(-180f, 180f)] private float _facingOffsetDeg;
+        [Tooltip("서는 방향이 이 각도(도) 안으로 맞으면 도착으로 본다.")]
+        [SerializeField, Min(0.5f)] private float _facingToleranceDeg = 3f;
 
         [Header("이동 정밀도")]
         [Tooltip("팔 베이스가 목표에서 이 거리 안이면 도착으로 본다(m).")]
@@ -36,10 +44,10 @@ namespace MediKitTwin.ArmA
         [SerializeField, Min(1f)] private float _timeoutSeconds = 30f;
 
         [Header("이동 중 팔 접기")]
-        [Tooltip("모든 관절이 접힌 자세에서 이 각도(rad) 안이면 접힌 것으로 본다.")]
-        [SerializeField, Min(0.001f)] private float _stowToleranceRad = 0.05f;
+        [Tooltip("모든 관절이 접힌 자세에서 이 각도(rad) 안이면 접힌 것으로 본다. 중력이나 접촉으로 끝까지 못 접혀 \"팔을 접지 못했다\"로 실패하면 키운다.")]
+        [SerializeField, Min(0.001f)] private float _stowToleranceRad = 0.1f;
         [Tooltip("팔을 접기를 기다리는 최대 시간(초). 넘으면 이송 실패로 본다.")]
-        [SerializeField, Min(1f)] private float _stowTimeoutSeconds = 10f;
+        [SerializeField, Min(1f)] private float _stowTimeoutSeconds = 15f;
 
         [Header("이동 중 충돌")]
         [Tooltip("로봇암 링크가 속한 레이어 이름. 이동하는 동안 선반 레이어와의 충돌을 끈다. 둘 중 하나라도 비우면 끄지 않는다. " +
@@ -70,6 +78,12 @@ namespace MediKitTwin.ArmA
         }
 
         public Vector3 BoxStandDirection => _boxStandDirection;
+
+        public bool FaceTargetAtStand => _faceTargetAtStand;
+
+        public float FacingOffsetDeg => _facingOffsetDeg;
+
+        public float FacingToleranceDeg => _facingToleranceDeg;
 
         public float ArriveToleranceM => _arriveToleranceM;
 

@@ -40,6 +40,11 @@ namespace MediKitTwin.ArmA.Tests
                 yield return null;
                 done(_result);
             }
+
+            public IEnumerator MoveArmBaseTo(Vector3 worldPosition, float facingYawDeg, Action<bool> done)
+            {
+                return MoveArmBaseTo(worldPosition, done);
+            }
         }
 
         private bool Move(FakeInner inner)

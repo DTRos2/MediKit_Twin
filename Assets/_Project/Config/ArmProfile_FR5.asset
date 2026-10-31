@@ -52,4 +52,12 @@ MonoBehaviour:
     _rotationWeight: 0.5
     _maxStepDeg: 10
     _restarts: 10
+    _maxJointTravelDeg: 120
+    _jointCosts:
+    - 1
+    - 1
+    - 1
+    - 4
+    - 4
+    - 4
     _restartSeed: 2024
