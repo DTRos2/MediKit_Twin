@@ -52,6 +52,29 @@ namespace MediKitTwin.ArmA
             return OnFloor(slotPosition, _boxStandDirection, _placeStandoffM + extraStandoffM);
         }
 
+        /// <summary>선반 물건 앞에 섰을 때 물건을 정면으로 보는 방향(월드 Y축 기준 도). offsetDeg는 베이스 정면과 팔 정면이 어긋난 만큼의 보정이다. 방향을 알 수 없으면 null이다.</summary>
+        public static float? ShelfItemFacingYawDeg(Vector3 outward, float offsetDeg = 0f)
+        {
+            return FacingYawDeg(-outward, offsetDeg);
+        }
+
+        /// <summary>박스 슬롯 곁에 섰을 때 슬롯을 정면으로 보는 방향(월드 Y축 기준 도). 방향을 알 수 없으면 null이다.</summary>
+        public float? BoxSlotFacingYawDeg(float offsetDeg = 0f)
+        {
+            return FacingYawDeg(-_boxStandDirection, offsetDeg);
+        }
+
+        private static float? FacingYawDeg(Vector3 direction, float offsetDeg)
+        {
+            Vector3 flat = Flatten(direction);
+            if (flat.sqrMagnitude < 1e-8f)
+            {
+                return null;
+            }
+
+            return Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg + offsetDeg;
+        }
+
         private static Vector3 OnFloor(Vector3 origin, Vector3 direction, float distance)
         {
             return new Vector3(origin.x + direction.x * distance, 0f, origin.z + direction.z * distance);

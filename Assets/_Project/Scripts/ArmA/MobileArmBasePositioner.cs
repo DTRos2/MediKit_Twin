@@ -13,6 +13,8 @@ namespace MediKitTwin.ArmA
     /// </summary>
     public sealed class MobileArmBasePositioner : IArmBasePositioner
     {
+        public const float DefaultFacingToleranceDeg = 3f;
+
         private readonly IMobileBase _mobile;
         private readonly IArmBaseLocator _armBase;
         private readonly MountedBaseGoalPlanner _goalPlanner;
@@ -21,7 +23,9 @@ namespace MediKitTwin.ArmA
         private readonly int _maxCorrections;
         private readonly float _timeoutSeconds;
         private readonly int _settleFrames;
+        private readonly float _facingToleranceDeg;
 
+        /// <param name="facingToleranceDeg">도착 방향을 정해 준 이동에서, 베이스 방향이 이 각도 안이면 맞은 것으로 본다.</param>
         public MobileArmBasePositioner(
             IMobileBase mobile,
             IArmBaseLocator armBase,
@@ -30,8 +34,10 @@ namespace MediKitTwin.ArmA
             float toleranceM,
             int maxCorrections,
             float timeoutSeconds,
-            int settleFrames)
+            int settleFrames,
+            float facingToleranceDeg = DefaultFacingToleranceDeg)
         {
+            _facingToleranceDeg = facingToleranceDeg;
             _mobile = mobile ?? throw new ArgumentNullException(nameof(mobile));
             _armBase = armBase ?? throw new ArgumentNullException(nameof(armBase));
             _goalPlanner = goalPlanner ?? throw new ArgumentNullException(nameof(goalPlanner));
@@ -46,6 +52,17 @@ namespace MediKitTwin.ArmA
 
         public IEnumerator MoveArmBaseTo(Vector3 worldPosition, Action<bool> done)
         {
+            return Move(worldPosition, null, done);
+        }
+
+        public IEnumerator MoveArmBaseTo(Vector3 worldPosition, float facingYawDeg, Action<bool> done)
+        {
+            return Move(worldPosition, facingYawDeg, done);
+        }
+
+        // facingYawDeg가 없으면 도착 방향은 이동 방향이다. 있으면 위치뿐 아니라 그 방향까지 맞아야 도착으로 본다.
+        private IEnumerator Move(Vector3 worldPosition, float? facingYawDeg, Action<bool> done)
+        {
             LastFailureReason = string.Empty;
 
             // 시작 전에도 기다려 팔이 베이스를 따라와 자리를 잡은 값으로 재게 한다.
@@ -54,14 +71,13 @@ namespace MediKitTwin.ArmA
             // 처음 이동 1번에 보정 최대 횟수를 더한 만큼 보낸다.
             for (int attempt = 0; attempt <= _maxCorrections; attempt++)
             {
-                Vector3 error = FlatError(worldPosition);
-                if (error.magnitude <= _toleranceM)
+                if (IsArrived(worldPosition, facingYawDeg))
                 {
                     done(true);
                     yield break;
                 }
 
-                BaseGoal goal = _goalPlanner.Plan(_mobile.Position, _mobile.YawDeg, _armBase.BaseWorldPosition, worldPosition);
+                BaseGoal goal = PlanGoal(worldPosition, facingYawDeg);
                 _mobile.DriveTo(goal.Position, goal.YawDeg);
 
                 float startedAt = _now();
@@ -83,13 +99,31 @@ namespace MediKitTwin.ArmA
             }
 
             float remaining = FlatError(worldPosition).magnitude;
-            bool isArrived = remaining <= _toleranceM;
+            bool isArrived = IsArrived(worldPosition, facingYawDeg);
             if (!isArrived)
             {
-                LastFailureReason = $"보정 {_maxCorrections}회 뒤에도 팔 베이스 오차 {remaining:0.000}m가 허용치 {_toleranceM:0.000}m보다 크다";
+                LastFailureReason = $"보정 {_maxCorrections}회 뒤에도 팔 베이스 오차 {remaining:0.000}m가 허용치 {_toleranceM:0.000}m보다 크거나 방향이 맞지 않는다";
             }
 
             done(isArrived);
+        }
+
+        private BaseGoal PlanGoal(Vector3 worldPosition, float? facingYawDeg)
+        {
+            return facingYawDeg.HasValue
+                ? _goalPlanner.Plan(_mobile.Position, _mobile.YawDeg, _armBase.BaseWorldPosition, worldPosition, facingYawDeg.Value)
+                : _goalPlanner.Plan(_mobile.Position, _mobile.YawDeg, _armBase.BaseWorldPosition, worldPosition);
+        }
+
+        private bool IsArrived(Vector3 worldPosition, float? facingYawDeg)
+        {
+            if (FlatError(worldPosition).magnitude > _toleranceM)
+            {
+                return false;
+            }
+
+            return !facingYawDeg.HasValue
+                || Mathf.Abs(Mathf.DeltaAngle(_mobile.YawDeg, facingYawDeg.Value)) <= _facingToleranceDeg;
         }
 
         private IEnumerator Settle()

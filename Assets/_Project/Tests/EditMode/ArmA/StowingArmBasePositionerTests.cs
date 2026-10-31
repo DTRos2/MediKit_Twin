@@ -39,12 +39,20 @@ namespace MediKitTwin.ArmA.Tests
 
             public string LastFailureReason => "안쪽 이유";
 
+            internal float? FacingYawDeg;
+
             public IEnumerator MoveArmBaseTo(Vector3 worldPosition, Action<bool> done)
             {
                 _calls.Add("move");
                 Target = worldPosition;
                 done(true);
                 yield break;
+            }
+
+            public IEnumerator MoveArmBaseTo(Vector3 worldPosition, float facingYawDeg, Action<bool> done)
+            {
+                FacingYawDeg = facingYawDeg;
+                return MoveArmBaseTo(worldPosition, done);
             }
         }
 
@@ -67,6 +75,20 @@ namespace MediKitTwin.ArmA.Tests
             Assert.That(result, Is.True);
             Assert.That(_calls, Is.EqualTo(new[] { "stow", "move" }));
             Assert.That(inner.Target, Is.EqualTo(target));
+        }
+
+        [Test]
+        public void MovingWithAFacing_StowsFirst_ThenPassesTheFacingToTheInnerPositioner()
+        {
+            var inner = new FakeInner(_calls);
+            var positioner = new StowingArmBasePositioner(inner, new FakeStower(_calls, true));
+            bool result = false;
+
+            CoroutineRunner.Drain(positioner.MoveArmBaseTo(Vector3.one, 45f, done => result = done), null);
+
+            Assert.That(result, Is.True);
+            Assert.That(_calls, Is.EqualTo(new[] { "stow", "move" }));
+            Assert.That(inner.FacingYawDeg, Is.EqualTo(45f));
         }
 
         [Test]

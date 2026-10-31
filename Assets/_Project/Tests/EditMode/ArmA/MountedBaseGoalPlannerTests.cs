@@ -47,6 +47,23 @@ namespace MediKitTwin.ArmA.Tests
         }
 
         [Test]
+        public void WithAnExplicitFacing_ArmBaseStillLandsOnTheTarget_AndTheBaseFacesThatWay()
+        {
+            var offsetInRoot = new Vector3(0.1f, 0f, -0.6f);
+            var rootPosition = new Vector3(1f, 0f, 1f);
+            Vector3 armBase = rootPosition + offsetInRoot;
+            var target = new Vector3(4f, 0f, 1f);
+
+            foreach (float facing in new[] { 0f, 90f, 180f, -60f })
+            {
+                BaseGoal goal = Create().Plan(rootPosition, 0f, armBase, target, facing);
+
+                Assert.That(goal.YawDeg, Is.EqualTo(facing));
+                Assert.That(Vector3.Distance(ArmBaseAt(goal, offsetInRoot), target), Is.LessThan(1e-3f), $"방향 {facing}");
+            }
+        }
+
+        [Test]
         public void ForAVeryShortMove_KeepsTheCurrentYaw()
         {
             var offsetInRoot = new Vector3(0f, 0f, -0.6f);

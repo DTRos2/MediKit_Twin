@@ -44,7 +44,8 @@ namespace MediKitTwin.ArmA
                 _config.ArriveToleranceM,
                 _config.MaxCorrections,
                 _config.TimeoutSeconds,
-                _config.SettleFrames);
+                _config.SettleFrames,
+                _config.FacingToleranceDeg);
 
             // 안쪽부터: 이동 → (이동 중 충돌 끄기) → (이동 전 팔 접기). 접을 때는 충돌이 켜져 있어야 접다가 걸리는 것도 드러난다.
             IMotionScope collisionScope = CreateCollisionScope();
@@ -100,6 +101,11 @@ namespace MediKitTwin.ArmA
         public IEnumerator MoveArmBaseTo(Vector3 worldPosition, Action<bool> done)
         {
             return _positioner.MoveArmBaseTo(worldPosition, done);
+        }
+
+        public IEnumerator MoveArmBaseTo(Vector3 worldPosition, float facingYawDeg, Action<bool> done)
+        {
+            return _positioner.MoveArmBaseTo(worldPosition, facingYawDeg, done);
         }
     }
 }

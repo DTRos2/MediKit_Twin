@@ -24,18 +24,25 @@ namespace MediKitTwin.ArmA
             _minHeadingTravelM = minHeadingTravelM;
         }
 
+        /// <summary>도착 방향은 이동 방향으로 정한다. 조금만 움직이면 지금 방향을 유지한다.</summary>
         public BaseGoal Plan(Vector3 rootPosition, float rootYawDeg, Vector3 armBasePosition, Vector3 targetArmBase)
         {
-            // 루트 기준으로 본 팔 베이스의 위치. 루트가 돌아도 변하지 않는다.
-            Vector3 offsetInRoot = Quaternion.Euler(0f, -rootYawDeg, 0f) * Flatten(armBasePosition - rootPosition);
-
             Vector3 travel = Flatten(targetArmBase - armBasePosition);
             float yawDeg = travel.magnitude < _minHeadingTravelM
                 ? rootYawDeg
                 : Mathf.Atan2(travel.x, travel.z) * Mathf.Rad2Deg;
 
-            Vector3 root = Flatten(targetArmBase) - Quaternion.Euler(0f, yawDeg, 0f) * offsetInRoot;
-            return new BaseGoal(new Vector3(root.x, rootPosition.y, root.z), yawDeg);
+            return Plan(rootPosition, rootYawDeg, armBasePosition, targetArmBase, yawDeg);
+        }
+
+        /// <summary>도착 방향을 호출한 쪽이 정한다. 작업 구역을 정면으로 보고 서게 할 때 쓴다.</summary>
+        public BaseGoal Plan(Vector3 rootPosition, float rootYawDeg, Vector3 armBasePosition, Vector3 targetArmBase, float facingYawDeg)
+        {
+            // 루트 기준으로 본 팔 베이스의 위치. 루트가 돌아도 변하지 않는다.
+            Vector3 offsetInRoot = Quaternion.Euler(0f, -rootYawDeg, 0f) * Flatten(armBasePosition - rootPosition);
+
+            Vector3 root = Flatten(targetArmBase) - Quaternion.Euler(0f, facingYawDeg, 0f) * offsetInRoot;
+            return new BaseGoal(new Vector3(root.x, rootPosition.y, root.z), facingYawDeg);
         }
 
         private static Vector3 Flatten(Vector3 vector)

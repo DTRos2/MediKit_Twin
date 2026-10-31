@@ -23,10 +23,20 @@ namespace MediKitTwin.ArmA
 
         public IEnumerator MoveArmBaseTo(Vector3 worldPosition, Action<bool> done)
         {
+            return MoveInScope(_inner.MoveArmBaseTo(worldPosition, done));
+        }
+
+        public IEnumerator MoveArmBaseTo(Vector3 worldPosition, float facingYawDeg, Action<bool> done)
+        {
+            return MoveInScope(_inner.MoveArmBaseTo(worldPosition, facingYawDeg, done));
+        }
+
+        private IEnumerator MoveInScope(IEnumerator move)
+        {
             _scope.Begin();
             try
             {
-                yield return _inner.MoveArmBaseTo(worldPosition, done);
+                yield return move;
             }
             finally
             {

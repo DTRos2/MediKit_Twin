@@ -27,12 +27,18 @@ namespace MediKitTwin.ArmA
         /// <summary>목표에 닿으면 done(true), 시간이 지나거나 닿을 수 없으면 done(false)를 부른다.</summary>
         public IEnumerator MoveTo(Pose target, Action<bool> done)
         {
+            return MoveTo(target, _positionToleranceM, _rotationToleranceDeg, done);
+        }
+
+        /// <summary>단계마다 허용 오차를 다르게 줄 때 쓴다. 경유 동작은 느슨하게, 쥐고 놓는 동작은 엄격하게 하기 위해서다.</summary>
+        public IEnumerator MoveTo(Pose target, float positionToleranceM, float rotationToleranceDeg, Action<bool> done)
+        {
             _tool.SetToolTarget(target);
 
             float elapsed = 0f;
             while (elapsed < _timeoutSeconds)
             {
-                if (_tool.HasReachedTarget(_positionToleranceM, _rotationToleranceDeg))
+                if (_tool.HasReachedTarget(positionToleranceM, rotationToleranceDeg))
                 {
                     done(true);
                     yield break;

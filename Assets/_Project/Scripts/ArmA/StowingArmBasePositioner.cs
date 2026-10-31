@@ -24,6 +24,17 @@ namespace MediKitTwin.ArmA
 
         public IEnumerator MoveArmBaseTo(Vector3 worldPosition, Action<bool> done)
         {
+            return StowThen(() => _inner.MoveArmBaseTo(worldPosition, done), done);
+        }
+
+        public IEnumerator MoveArmBaseTo(Vector3 worldPosition, float facingYawDeg, Action<bool> done)
+        {
+            return StowThen(() => _inner.MoveArmBaseTo(worldPosition, facingYawDeg, done), done);
+        }
+
+        // 팔을 접은 뒤에야 안쪽 이동을 만들어 시작한다. 접지 못하면 이동하지 않는다.
+        private IEnumerator StowThen(Func<IEnumerator> move, Action<bool> done)
+        {
             bool isStowed = false;
             yield return _stower.Stow(stowed => isStowed = stowed);
             _isStowFailure = !isStowed;
@@ -33,7 +44,7 @@ namespace MediKitTwin.ArmA
                 yield break;
             }
 
-            yield return _inner.MoveArmBaseTo(worldPosition, done);
+            yield return move();
         }
     }
 }

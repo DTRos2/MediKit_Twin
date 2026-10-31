@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MediKitTwin.Demo
@@ -20,6 +21,34 @@ namespace MediKitTwin.Demo
             }
 
             return null;
+        }
+
+        /// <summary>구현체를 모두 모아 돌려준다. 로봇이 여러 대일 때 고르는 데 쓴다. 켜진 오브젝트만 본다.</summary>
+        public static List<MonoBehaviour> FindAll<T>() where T : class
+        {
+            return FindAllMatching(behaviour => behaviour is T);
+        }
+
+        /// <summary>두 인터페이스를 모두 구현한 컴포넌트만 모아 돌려준다. 같은 컴포넌트가 읽기와 쓰기를 함께 맡아야 할 때 쓴다. 켜진 오브젝트만 본다.</summary>
+        public static List<MonoBehaviour> FindAll<TFirst, TSecond>()
+            where TFirst : class
+            where TSecond : class
+        {
+            return FindAllMatching(behaviour => behaviour is TFirst && behaviour is TSecond);
+        }
+
+        private static List<MonoBehaviour> FindAllMatching(System.Predicate<MonoBehaviour> matches)
+        {
+            var found = new List<MonoBehaviour>();
+            foreach (MonoBehaviour behaviour in Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Exclude))
+            {
+                if (matches(behaviour))
+                {
+                    found.Add(behaviour);
+                }
+            }
+
+            return found;
         }
     }
 }

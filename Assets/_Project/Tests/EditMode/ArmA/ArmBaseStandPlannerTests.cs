@@ -16,6 +16,32 @@ namespace MediKitTwin.ArmA.Tests
         }
 
         [Test]
+        public void ShelfItemFacingYaw_LooksAtTheItem_AndAddsTheMountOffset()
+        {
+            // 칸에서 -Z 쪽으로 나오므로 선 자리에서 칸을 보려면 +Z(0도)를 봐야 한다.
+            float? facing = ArmBaseStandPlanner.ShelfItemFacingYawDeg(new Vector3(0f, 0f, -1f));
+            float? offset = ArmBaseStandPlanner.ShelfItemFacingYawDeg(new Vector3(0f, 0f, -1f), 30f);
+
+            Assert.That(facing, Is.EqualTo(0f).Within(1e-3f));
+            Assert.That(offset, Is.EqualTo(30f).Within(1e-3f));
+        }
+
+        [Test]
+        public void ShelfItemFacingYaw_WithNoDirection_IsUnknown()
+        {
+            Assert.That(ArmBaseStandPlanner.ShelfItemFacingYawDeg(Vector3.zero), Is.Null);
+        }
+
+        [Test]
+        public void BoxSlotFacingYaw_LooksBackAlongTheStandDirection()
+        {
+            // 슬롯의 +Z 쪽에 서므로 슬롯을 보려면 -Z(180도)를 봐야 한다.
+            float? facing = Create().BoxSlotFacingYawDeg();
+
+            Assert.That(Mathf.Abs(Mathf.DeltaAngle(facing.Value, 180f)), Is.LessThan(1e-3f));
+        }
+
+        [Test]
         public void ForShelfItem_ExtraStandoff_StandsFurtherOutOnTheSameLine()
         {
             var item = new Vector3(1f, 1.2f, 2.6f);

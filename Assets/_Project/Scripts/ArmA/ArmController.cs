@@ -143,6 +143,13 @@ namespace MediKitTwin.ArmA
 
             IsReady = true;
 
+            // 빈 배열은 자세가 아니라 "예약 없음"이다. Enter Play Mode Options로 도메인과 씬을 다시 불러오지 않으면
+            // 이전 실행의 빈 예약값이 남을 수 있어, 에러로 알리지 않고 시작 자세로 시작한다.
+            if (_pendingPose != null && _pendingPose.Length == 0)
+            {
+                _pendingPose = null;
+            }
+
             if (_pendingPose != null)
             {
                 ApplyPendingPose();
@@ -190,7 +197,8 @@ namespace MediKitTwin.ArmA
             if (!IsReady)
             {
                 _pendingPose = (float[])anglesRad.Clone();
-                _pendingPoseCaller = StackTraceUtility.ExtractStackTrace();
+                // 파일 이름과 줄 번호까지 남기기 위해 System.Diagnostics.StackTrace를 쓴다(ExtractStackTrace는 빈 문자열이 나올 수 있다).
+                _pendingPoseCaller = new System.Diagnostics.StackTrace(1, true).ToString();
                 return;
             }
 

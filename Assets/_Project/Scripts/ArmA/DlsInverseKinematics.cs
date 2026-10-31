@@ -21,6 +21,7 @@ namespace MediKitTwin.ArmA
         private readonly double[] _error = new double[TaskDimension];
         private readonly double[] _solved = new double[TaskDimension];
         private readonly float[] _step;
+        private readonly double[] _inverseCost;
 
         public DlsInverseKinematics(KinematicChain chain, DlsIkSettings settings)
         {
@@ -28,6 +29,12 @@ namespace MediKitTwin.ArmA
             _settings = settings;
             _jacobian = new double[TaskDimension, chain.JointCount];
             _step = new float[chain.JointCount];
+
+            _inverseCost = new double[chain.JointCount];
+            for (int i = 0; i < _inverseCost.Length; i++)
+            {
+                _inverseCost[i] = 1.0 / settings.JointCost(i, chain.JointCount);
+            }
         }
 
         public IkResult Solve(Pose targetInBase, float[] seedRad, float[] resultRad)
@@ -98,7 +105,7 @@ namespace MediKitTwin.ArmA
             _error[5] = rotationDelta.z * rotationWeight;
         }
 
-        // 관절 변화량 dq = Jt (J Jt + damping^2 I)^-1 e
+        // 관절 변화량 dq = W^-1 Jt (J W^-1 Jt + damping^2 I)^-1 e. W는 관절별 비용이라, 비용이 큰 관절은 덜 움직인다.
         private void SolveStep(int count)
         {
             double lambdaSquared = (double)_settings.Damping * _settings.Damping;
@@ -110,7 +117,7 @@ namespace MediKitTwin.ArmA
                     double sum = 0.0;
                     for (int k = 0; k < count; k++)
                     {
-                        sum += _jacobian[row, k] * _jacobian[column, k];
+                        sum += _jacobian[row, k] * _jacobian[column, k] * _inverseCost[k];
                     }
 
                     _normal[row, column] = sum + (row == column ? lambdaSquared : 0.0);
@@ -130,7 +137,7 @@ namespace MediKitTwin.ArmA
                     sum += _jacobian[row, i] * _solved[row];
                 }
 
-                _step[i] = (float)sum;
+                _step[i] = (float)(sum * _inverseCost[i]);
                 largest = Mathf.Max(largest, Mathf.Abs(_step[i]));
             }
 
