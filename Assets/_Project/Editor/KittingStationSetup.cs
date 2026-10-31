@@ -54,7 +54,7 @@ public static class KittingStationSetup
         GetOrAdd<OrderCsvDemoPanel>(station);
         GetOrAdd<ShelfStockDemoPanel>(station);
         GetOrAdd<KittingStatusDemoPanel>(station);
-        GetOrAdd<ArmJointDemoPanel>(station);
+        var jointPanel = GetOrAdd<ArmJointDemoPanel>(station);
 
         var holder = GetOrAdd<ScriptAttachHolder>(arm.gameObject);
         var transfer = GetOrAdd<ArmItemTransfer>(arm.gameObject);
@@ -73,6 +73,7 @@ public static class KittingStationSetup
             & SerializedFieldAssigner.SetReference(controller, "_itemTransfer", transfer)
             & SerializedFieldAssigner.SetReference(controller, "_scenario", scenario)
             & SerializedFieldAssigner.SetReference(handoff, "_boxSupply", boxSupply)
+            & SerializedFieldAssigner.SetReference(jointPanel, "_arm", arm)
             & WireManualKitting(manual, shelf, boxSupply, transfer, controller, recipes)
             & isBaseWired;
 

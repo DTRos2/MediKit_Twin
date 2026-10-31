@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using MediKitTwin.Common;
 using UnityEngine;
 
@@ -7,7 +6,7 @@ namespace MediKitTwin.Demo
     /// <summary>
     /// 로봇암 관절을 하나씩 손으로 움직여 보는 패널. 관절마다 슬라이더와 -/+ 버튼이 있고, 시작 자세로 보내거나 지금 자세에 맞출 수 있다.
     /// 어느 각도에서 물건에 닿는지, 어느 관절이 한계에 붙는지를 눈으로 찾는 데 쓴다.
-    /// 로봇은 IArmState(읽기)와 IArmDriver(쓰기)로만 다루므로 FR5, UR3 어느 쪽에도 쓰고, 로봇이 여러 대면 버튼으로 바꾼다.
+    /// 로봇은 IArmState(읽기)와 IArmDriver(쓰기)로만 다루므로 FR5, UR3 어느 쪽에도 쓴다. 조작할 로봇을 지정하면 그 로봇만, 아니면 버튼으로 바꿔 가며 조작한다.
     /// "수동 제어"를 켠 동안만 목표를 보낸다. 끄면 현재 각도를 보여 주기만 해서 자동 키팅과 겨루지 않는다.
     /// 수동 제어를 켤 때 도구 끝점 목표(IK)를 지운다. 남아 있으면 IK가 매 프레임 관절 목표를 덮어쓰기 때문이다.
     /// </summary>
@@ -16,15 +15,15 @@ namespace MediKitTwin.Demo
         private const float NameWidth = 100f;
         private const float NudgeButtonWidth = 28f;
         private const float ValueWidth = 110f;
+        private const float RobotButtonWidth = 90f;
 
-        [Tooltip("처음에 조작할 로봇(IArmState와 IArmDriver를 구현한 컴포넌트, 보통 ArmController). 비워 두면 씬에서 찾은 첫 로봇이다.")]
+        [Tooltip("조작할 로봇(IArmState와 IArmDriver를 구현한 컴포넌트, 보통 ArmController). 지정하면 이 로봇만 조작하고 다른 로봇은 고르지 않는다. 비워 두면 씬에서 찾은 모든 로봇을 버튼으로 바꿔 가며 조작한다.")]
         [SerializeField] private MonoBehaviour _arm;
 
         [Tooltip("-/+ 버튼을 한 번 누를 때 움직이는 각도(도).")]
         [SerializeField, Min(0.1f)] private float _nudgeDeg = 5f;
 
-        private readonly List<MonoBehaviour> _robots = new List<MonoBehaviour>();
-        private int _robotIndex;
+        private CandidateSelection<MonoBehaviour> _robots;
 
         private IArmState _state;
         private IArmDriver _driver;
@@ -42,24 +41,25 @@ namespace MediKitTwin.Demo
 
         private void Awake()
         {
-            // 상태를 읽는 쪽과 목표를 주는 쪽이 같은 로봇이어야 하므로 둘 다 구현한 것만 고른다.
-            foreach (MonoBehaviour candidate in DemoComponentFinder.FindAll<IArmDriver>())
+            // 비어 있는 칸은 에디터에서 가짜 null일 수 있어, Unity의 ==로 확인해 진짜 null로 넘긴다.
+            MonoBehaviour only = _arm != null ? _arm : null;
+
+            // 상태를 읽는 쪽과 목표를 주는 쪽이 같은 로봇이어야 하므로 둘 다 구현한 것만 후보로 삼는다.
+            _robots = new CandidateSelection<MonoBehaviour>(DemoComponentFinder.FindAll<IArmState, IArmDriver>(), only);
+
+            if (_robots.IsOnlyMissing)
             {
-                if (candidate is IArmState)
-                {
-                    _robots.Add(candidate);
-                }
+                Debug.LogWarning($"{name}: 지정한 로봇 {_arm.name}을(를) 조작할 수 없다(꺼져 있거나 IArmState와 IArmDriver를 구현하지 않음). 씬에서 찾은 로봇으로 대신한다.", this);
             }
 
-            if (_robots.Count == 0)
+            if (_robots.IsEmpty)
             {
                 Debug.LogError($"{name}: 로봇암(IArmState와 IArmDriver를 구현한 컴포넌트)을 찾을 수 없다.", this);
                 enabled = false;
                 return;
             }
 
-            int preferred = _arm != null ? _robots.IndexOf(_arm) : -1;
-            SelectRobot(preferred >= 0 ? preferred : 0);
+            SelectRobot(_robots.Current);
         }
 
         protected override void DrawContents()
@@ -94,10 +94,10 @@ namespace MediKitTwin.Demo
         private void DrawRobotSelector()
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"로봇: {_robots[_robotIndex].name}");
-            if (_robots.Count > 1 && GUILayout.Button("다음 로봇", GUILayout.Width(90f)))
+            GUILayout.Label($"로봇: {_robots.Current.name}");
+            if (_robots.HasChoice && GUILayout.Button("다음 로봇", GUILayout.Width(RobotButtonWidth)))
             {
-                SelectRobot((_robotIndex + 1) % _robots.Count);
+                SelectRobot(_robots.SelectNext());
             }
 
             GUILayout.EndHorizontal();
@@ -157,6 +157,7 @@ namespace MediKitTwin.Demo
                 SendTargets();
             }
 
+            // 슬라이더로 정한 목표를 버리고 목표를 지금 각도로 되돌린다. 슬라이더 값을 적용하는 버튼이 아니다.
             if (GUILayout.Button("지금 자세에 맞춤"))
             {
                 _editor.Reset(_currentRad);
@@ -174,10 +175,8 @@ namespace MediKitTwin.Demo
             GUILayout.Label("값: 목표° (현재°)");
         }
 
-        private void SelectRobot(int index)
+        private void SelectRobot(MonoBehaviour robot)
         {
-            _robotIndex = index;
-            MonoBehaviour robot = _robots[index];
             _state = (IArmState)robot;
             _driver = (IArmDriver)robot;
             _tool = robot.GetComponent<IToolPoseTarget>();
