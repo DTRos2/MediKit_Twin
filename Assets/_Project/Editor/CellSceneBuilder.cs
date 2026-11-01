@@ -40,28 +40,33 @@ namespace MediKitTwin.EditorTools
         private const float WallThickness = 0.04f;
         private static readonly Vector3 BinSize = new Vector3(0.98f, 0.45f, 1.68f);
 
-        // 지그 위 키트 박스의 바깥 크기(x 0.44 · y 0.10 · z 0.34m)와 벽 두께. 지그 판(0.5 x 0.4m)보다 작다.
-        private static readonly Vector3 KitBoxSize = new Vector3(0.44f, 0.10f, 0.34f);
+        // 지그 위 키트 박스의 바깥 크기(x 0.0976 · y 0.10 · z 0.2387m)와 벽 두께. 지그 판(0.5 x 0.4m)보다 작다.
+        // 로봇암 B 그리퍼가 뚜껑을 잡을 수 있게(최대 벌림 0.14m) 뚜껑 폭이 0.1276m가 되도록 정한 크기이다.
+        private static readonly Vector3 KitBoxSize = new Vector3(0.0976f, 0.10f, 0.2387f);
         private const float KitBoxWall = 0.01f;
         private static readonly Color ColorCardboard = new Color(0.78f, 0.60f, 0.38f);
 
-        // 뚜껑: 바깥 크기(0.46 x 0.04 x 0.36m), 벽 두께. 값은 씬에서 직접 고친 PF_LidSupplyTable과 같다.
+        // 뚜껑: 바깥 크기와 벽 두께. 값은 씬에서 직접 고친 PF_LidSupplyTable과 같다.
         // 뚜껑 안쪽은 키트 박스보다 사방 LidClearance(0.5cm)씩 넓다. 로봇암 B의 덮기 허용 오차가 이 틈이다.
-        // 바깥 크기 = 키트 박스 + 2 x (틈 + 벽 두께) = 0.47 x 0.04 x 0.37m
+        // 바깥 크기 = 키트 박스 + 2 x (틈 + 벽 두께) = 0.1176 x 0.04 x 0.2587m
+        // 그리퍼는 x 방향 양면을 쥐고, 긴 변(z)은 팔 반경 방향을 향한다.
+        // UR3 그리퍼 패드 사이 간격이 0.1285m이므로(Tools > MediKit > Measure ArmB Gripper Gap) 뚜껑 폭은 이보다 한쪽 5mm 이상 좁아야 한다.
+        // 벽을 5mm로 얇게 해서 키트 박스(0.0976m)는 그대로 두고 뚜껑 폭을 0.1176m(한쪽 여유 약 5.5mm)로 맞췄다.
         private const float LidClearance = 0.005f;
-        private static readonly Vector3 LidSize = new Vector3(
+        internal static readonly Vector3 LidSize = new Vector3(
             KitBoxSize.x + 2f * (LidClearance + LidWall), LidHeight, KitBoxSize.z + 2f * (LidClearance + LidWall));
-        private const float LidHeight = 0.04f;
-        private const float LidWall = 0.01f;
+        internal const float LidHeight = 0.04f;
+        internal const float LidWall = 0.005f;
 
         // 뚜껑 박스: 맨 위 뚜껑이 항상 같은 높이(LidPositionY)에 나와 있고, 박스 윗면(림)은 뚜껑 아래쪽보다 LidRimClearance만큼 낮다.
         // 그래야 로봇암 B의 손가락이 벽에 걸리지 않고 뚜껑 테두리를 잡는다. 남은 뚜껑 수와 상관없이 높이가 같도록 구현 때 맞춘다.
-        private const float LidPositionY = 0.639f;
+        private const float LidPositionY = 0.924f;
         private const float LidRimClearance = 0.02f;
         private const float LidBoxBottomY = 0.004f;
-        private const float LidBoxHeight = LidPositionY - LidHeight * 0.5f - LidRimClearance - LidBoxBottomY; // 0.595
-        private const float LidBoxCenterY = LidBoxBottomY + LidBoxHeight * 0.5f; // 0.3015
-        private static readonly Vector3 LidBoxSize = new Vector3(0.54f, LidBoxHeight, 0.44f);
+        private const float LidBoxHeight = LidPositionY - LidHeight * 0.5f - LidRimClearance - LidBoxBottomY; // 0.88
+        private const float LidBoxCenterY = LidBoxBottomY + LidBoxHeight * 0.5f; // 0.444
+        // 뚜껑 박스는 뚜껑보다 사방 3.5cm씩 크다: 0.1876 x 0.3287m
+        private static readonly Vector3 LidBoxSize = new Vector3(LidSize.x + 0.07f, LidBoxHeight, LidSize.z + 0.07f);
         private static readonly Vector3 LidPositionInBox = new Vector3(0f, LidPositionY, 0.008f);
         private const float LidBoxWall = 0.01f;
         private const int LidCapacity = 5;
@@ -149,6 +154,16 @@ namespace MediKitTwin.EditorTools
             RebuildPrefab("PF_KittingJig", BuildJig);
             AssetDatabase.SaveAssets();
             Debug.Log("[CellSceneBuilder] PF_KittingJig 재생성 완료");
+        }
+
+        // 뚜껑 크기나 뚜껑 박스 높이를 바꾼 뒤 PF_LidSupplyTable을 빌더 값으로 다시 만든다. 씬에 놓인 인스턴스의 위치는 유지된다.
+        // 다시 만들면 뚜껑에 붙인 Rigidbody와 Graspable이 지워지므로 이어서 Tools > MediKit > Setup ArmB Lid Grasp를 실행해야 한다.
+        [MenuItem("Tools/MediKit/Rebuild LidSupplyTable Prefab")]
+        public static void RebuildLidSupplyTablePrefab()
+        {
+            RebuildPrefab("PF_LidSupplyTable", BuildLidSupplyTable);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CellSceneBuilder] PF_LidSupplyTable 재생성 완료. 이어서 Tools > MediKit > Setup ArmB Lid Grasp를 실행하세요.");
         }
 
         [MenuItem("Tools/MediKit/Rebuild UnloaderRobot Prefab")]
@@ -419,8 +434,8 @@ namespace MediKitTwin.EditorTools
             // 슬롯 센서 위치는 RecipeSO.SlotLocalPosition과 같다. (박스 기준 로컬 좌표, 지그 회전 0)
             var slots = new[]
             {
-                new Vector2(-0.08f, 0.05f), new Vector2(0.08f, 0.05f),
-                new Vector2(-0.08f, -0.05f), new Vector2(0.08f, -0.05f),
+                new Vector2(0f, 0.082f), new Vector2(0f, 0.0273f),
+                new Vector2(0f, -0.0273f), new Vector2(0f, -0.082f),
             };
             for (int i = 0; i < slots.Length; i++)
             {
@@ -609,7 +624,9 @@ namespace MediKitTwin.EditorTools
             // 뚜껑을 집으면 아래에서 올라오는 동작은 나중에 스크립트로 구현한다.
             OpenBox("LidBox", root, new Vector3(0f, LidBoxCenterY, 0f), LidBoxSize, LidBoxWall, ColorCardboard, "M_KitBox", openTop: true, openFront: false);
             BuildLidStack(root);
-            root.gameObject.AddComponent<MediKitTwin.ArmB.LidDispenser>();
+            // 프리팹을 다시 만들 때는 루트에 이미 있으므로 없을 때만 붙인다.
+            if (root.GetComponent<MediKitTwin.ArmB.LidDispenser>() == null)
+                root.gameObject.AddComponent<MediKitTwin.ArmB.LidDispenser>();
         }
 
         // 뚜껑 LidCapacity장을 위로 쌓고, 맨 아래 뚜껑 밑에 승강판과 기둥을 둔다. 이미 있는 Lid_*, LidLift, LidLiftPost는 호출 전에 지운다.
@@ -635,7 +652,7 @@ namespace MediKitTwin.EditorTools
                 new Vector3(LidLiftPostSize, postHeight, LidLiftPostSize), ColorGray, "M_Gray");
         }
 
-        // 키트 박스(0.44 x 0.34m)에 씌우는 뚜껑: 윗판과 아래로 내려온 테두리 4면, 아래는 뚫려 있다. 중심은 부모 기준 위치이다.
+        // 키트 박스(0.0976 x 0.2387m)에 씌우는 뚜껑: 윗판과 아래로 내려온 테두리 4면, 아래는 뚫려 있다. 중심은 부모 기준 위치이다.
         private static void BuildLid(string name, Transform parent, Vector3 center)
         {
             var lid = new GameObject(name).transform;

@@ -29,12 +29,19 @@ namespace MediKitTwin.ArmB
         private Vector3[] slotLocalPositions;
         private Vector3 slotStep;
         private float riseSpeed;
+        private bool riseHeld;
 
         /// <summary>뚜껑이 올라오는 중이면 true. 이때는 새 뚜껑을 가져갈 수 없다.</summary>
         public bool IsBusy { get; private set; }
 
         /// <summary>맨 위 뚜껑이 놓이는 위치(월드). 로봇암 B의 집는 목표가 된다.</summary>
         public Vector3 TopLidWorldPosition => transform.TransformPoint(slotLocalPositions[0]);
+
+        /// <summary>맨 위 뚜껑. 없으면 null. 진단에서 뚜껑의 충돌체를 읽을 때 쓴다.</summary>
+        public Transform TopLid => stack.Count > 0 ? stack[0] : null;
+
+        /// <summary>맨 위 뚜껑의 월드 회전. 뚜껑의 긴 변(forward)이 가리키는 방향을 알 때 쓴다. 올라오는 중이 아닐 때 읽는다.</summary>
+        public Quaternion TopLidWorldRotation => stack.Count > 0 ? stack[0].rotation : transform.rotation;
 
         private void Awake()
         {
@@ -58,8 +65,10 @@ namespace MediKitTwin.ArmB
         /// <summary>
         /// 맨 위 뚜껑을 가져간다. 뚜껑은 이 박스에서 떼어져 호출한 쪽이 갖고, 아래에서 새 뚜껑이 올라온다.
         /// 올라오는 중이면 false이다.
+        /// riseImmediately가 false이면 새 뚜껑이 올라오지 않고 기다린다. 로봇암이 뚜껑을 들어 올려 자리를 비운 뒤 StartRise를 불러야 한다.
+        /// (바로 올라오면 올라오는 뚜껑이 아직 자리에 있는 뚜껑과 겹친다.)
         /// </summary>
-        public bool TryTakeTopLid(out Transform lid)
+        public bool TryTakeTopLid(out Transform lid, bool riseImmediately = true)
         {
             lid = null;
             if (IsBusy || stack.Count == 0) return false;
@@ -79,12 +88,19 @@ namespace MediKitTwin.ArmB
 
             RenameLids();
             IsBusy = true;
+            riseHeld = !riseImmediately;
             return true;
+        }
+
+        /// <summary>TryTakeTopLid(…, false)로 멈춰 둔 뚜껑 올림을 시작한다.</summary>
+        public void StartRise()
+        {
+            riseHeld = false;
         }
 
         private void Update()
         {
-            if (!IsBusy) return;
+            if (!IsBusy || riseHeld) return;
 
             bool arrived = true;
             for (int i = 0; i < stack.Count; i++)
