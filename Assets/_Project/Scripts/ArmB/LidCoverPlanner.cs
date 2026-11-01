@@ -42,6 +42,24 @@ namespace MediKitTwin.ArmB
             return boxTopY + lidWall - lidHeight * 0.5f;
         }
 
+        /// <summary>
+        /// 두 도구 회전의 수평 방향(yaw) 차이(도). 도구 Y(물체의 긴 변 방향)를 바닥에 눕혀서 비교한다.
+        /// 뚜껑 긴 변이 박스 긴 변과 어긋나는 정도라서, 반길이 약 13cm에서 1도는 약 2mm이다. 뚜껑과 박스 사이 틈(5mm)에 직접 걸린다.
+        /// </summary>
+        public static float YawErrorDeg(Quaternion actual, Quaternion target)
+        {
+            return Vector3.Angle(GroundDirection(actual * Vector3.up), GroundDirection(target * Vector3.up));
+        }
+
+        /// <summary>
+        /// 두 도구 회전의 기울기 차이(도). 도구 접근 방향(+Z)이 얼마나 벌어졌는지이다.
+        /// 놓으면 뚜껑이 평평하게 내려앉으므로 수평 방향보다 느슨하게 봐도 된다.
+        /// </summary>
+        public static float TiltErrorDeg(Quaternion actual, Quaternion target)
+        {
+            return Vector3.Angle(actual * Vector3.forward, target * Vector3.forward);
+        }
+
         /// <summary>position 위 height 만큼 떨어진 자세.</summary>
         public static Pose Above(Vector3 position, float height, Quaternion rotation)
         {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.Serialization;
 using MediKitTwin.Common;
 using UnityEngine;
 
@@ -54,8 +55,9 @@ namespace MediKitTwin.ArmB
         [SerializeField, Min(0.5f)] private float looseRotationToleranceDeg = 5f;
         [Tooltip("쥐고 덮는 지점의 회전 오차(도). 뚜껑 긴 변 0.27m에서 1도는 약 5mm이므로 작게 둔다.")]
         [SerializeField, Min(0.1f)] private float preciseRotationToleranceDeg = 2f;
-        [Tooltip("박스 위에 뚜껑을 내려놓는 하강의 회전 오차(도). 뚜껑은 놓으면 박스 위에 평평하게 내려앉으므로 쥘 때보다 넓게 둔다. 팔 처짐으로 3도쯤 어긋난다.")]
-        [SerializeField, Min(0.5f)] private float coverRotationToleranceDeg = 5f;
+        [Tooltip("박스 위에 뚜껑을 내려놓는 하강의 기울기 오차(도). 뚜껑은 놓으면 박스 위에 평평하게 내려앉으므로 쥘 때보다 넓게 둔다. 팔 처짐으로 3도쯤 어긋난다. 수평 방향(박스 긴 변과의 어긋남)은 Precise Rotation Tolerance Deg로 엄격하게 본다.")]
+        [FormerlySerializedAs("coverRotationToleranceDeg")]
+        [SerializeField, Min(0.5f)] private float coverTiltToleranceDeg = 5f;
         [Tooltip("박스 위에 뚜껑을 내려놓는 하강의 가로 오차(m). 뚜껑과 박스 사이 틈이 사방 5mm이므로 그보다 작게 둔다.")]
         [SerializeField, Min(0.0005f)] private float coverToleranceM = 0.003f;
         [Tooltip("한 목표에 닿기까지 기다리는 시간(초, 시뮬레이션 시간). 지나면 Fault. SRS FR-10은 3초이다.")]
@@ -256,7 +258,7 @@ namespace MediKitTwin.ArmB
             }
 
             Vector3 aboveBox = coverPosition + Vector3.up * approachHeight;
-            yield return MoveTool(new Pose(aboveBox, coverRotation), coverToleranceM, coverRotationToleranceDeg, Precision.Cover);
+            yield return MoveTool(new Pose(aboveBox, coverRotation), coverToleranceM, coverTiltToleranceDeg, Precision.Cover);
             if (!_stepReached)
             {
                 DropLid(body);
@@ -264,7 +266,7 @@ namespace MediKitTwin.ArmB
                 yield break;
             }
 
-            yield return MoveLinear(aboveBox, coverPosition, coverRotation, coverToleranceM, coverRotationToleranceDeg, Precision.Cover);
+            yield return MoveLinear(aboveBox, coverPosition, coverRotation, coverToleranceM, coverTiltToleranceDeg, Precision.Cover);
             if (!_stepReached)
             {
                 DropLid(body);
@@ -448,7 +450,7 @@ namespace MediKitTwin.ArmB
                 }
             }
 
-            _stepNote = (precision == Precision.Grasp ? PadClearanceNote() : string.Empty) + $"{stepTimeoutSeconds:0.#}초 안에 허용 오차({ToleranceText(positionToleranceM, precision)}, 회전 {rotationToleranceDeg:0.#}도)에 들지 못함 (IK 위치 오차 {_tool.LastResult.PositionError:0.0000}m, 회전 오차 {_tool.LastResult.RotationErrorDeg:0.0}도, 목표 {target.position}){ActualPoseNote(target)}";
+            _stepNote = (precision == Precision.Grasp ? PadClearanceNote() : string.Empty) + $"{stepTimeoutSeconds:0.#}초 안에 허용 오차({ToleranceText(positionToleranceM, precision)}, {RotationText(rotationToleranceDeg, precision)})에 들지 못함 (IK 위치 오차 {_tool.LastResult.PositionError:0.0000}m, 회전 오차 {_tool.LastResult.RotationErrorDeg:0.0}도, 목표 {target.position}){ActualPoseNote(target)}";
         }
 
         // 팔 끝점의 실제 위치와 목표의 차이. 팔이 어디서 막혔는지 가늠할 때 쓴다.
@@ -461,7 +463,7 @@ namespace MediKitTwin.ArmB
 
             Pose actual = _state.ToolPose;
             Vector3 diff = actual.position - target.position;
-            return $" 실제 끝점 {actual.position}, 목표와의 차이 x {diff.x * 1000f:0}mm y {diff.y * 1000f:0}mm z {diff.z * 1000f:0}mm (거리 {diff.magnitude * 1000f:0}mm), 회전 차이 {Quaternion.Angle(actual.rotation, target.rotation):0.0}도{JointNote()}";
+            return $" 실제 끝점 {actual.position}, 목표와의 차이 x {diff.x * 1000f:0}mm y {diff.y * 1000f:0}mm z {diff.z * 1000f:0}mm (거리 {diff.magnitude * 1000f:0}mm), 회전 차이 {Quaternion.Angle(actual.rotation, target.rotation):0.0}도(수평 방향 {LidCoverPlanner.YawErrorDeg(actual.rotation, target.rotation):0.0}도, 기울기 {LidCoverPlanner.TiltErrorDeg(actual.rotation, target.rotation):0.0}도){JointNote()}";
         }
 
         // 손가락 패드와 맨 위 뚜껑 옆면 사이 간격(닫히는 방향, mm). 음수면 겹쳐 있다. 어느 쪽 패드가 뚜껑에 붙었는지 가린다.
@@ -600,7 +602,7 @@ namespace MediKitTwin.ArmB
             }
 
             Pose actual = _state.ToolPose;
-            if (Quaternion.Angle(actual.rotation, target.rotation) > rotationToleranceDeg)
+            if (!RotationReached(actual.rotation, target.rotation, rotationToleranceDeg, precision))
             {
                 return false;
             }
@@ -618,6 +620,26 @@ namespace MediKitTwin.ArmB
             // Cover: 가로 두 방향을 엄격하게, 높이는 느슨하게 본다.
             float horizontal = new Vector2(error.x, error.z).magnitude;
             return horizontal <= positionToleranceM && Mathf.Abs(error.y) <= looseToleranceM;
+        }
+
+        // Cover는 수평 방향(박스 긴 변과의 어긋남)을 preciseRotationToleranceDeg로, 기울기를 rotationToleranceDeg로 따로 본다.
+        // 그 밖에는 두 회전 사이 각도 하나로 본다.
+        private bool RotationReached(Quaternion actual, Quaternion target, float rotationToleranceDeg, Precision precision)
+        {
+            if (precision == Precision.Cover)
+            {
+                return LidCoverPlanner.YawErrorDeg(actual, target) <= preciseRotationToleranceDeg
+                       && LidCoverPlanner.TiltErrorDeg(actual, target) <= rotationToleranceDeg;
+            }
+
+            return Quaternion.Angle(actual, target) <= rotationToleranceDeg;
+        }
+
+        private string RotationText(float rotationToleranceDeg, Precision precision)
+        {
+            return precision == Precision.Cover
+                ? $"수평 방향 {preciseRotationToleranceDeg:0.#}도, 기울기 {rotationToleranceDeg:0.#}도"
+                : $"회전 {rotationToleranceDeg:0.#}도";
         }
 
         private string ToleranceText(float positionToleranceM, Precision precision)

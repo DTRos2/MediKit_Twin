@@ -66,6 +66,35 @@ namespace MediKitTwin.ArmB.Tests
         }
 
         [Test]
+        public void YawErrorDeg_RotationAboutVertical_ReturnsThatAngleAndNoTilt()
+        {
+            Quaternion target = LidCoverPlanner.ToolRotation(Vector3.right);
+            Quaternion actual = Quaternion.AngleAxis(3f, Vector3.up) * target;
+
+            Assert.That(LidCoverPlanner.YawErrorDeg(actual, target), Is.EqualTo(3f).Within(0.01f));
+            Assert.That(LidCoverPlanner.TiltErrorDeg(actual, target), Is.EqualTo(0f).Within(0.01f));
+        }
+
+        [Test]
+        public void TiltErrorDeg_TiltAboutHorizontalAxis_ReturnsThatAngleAndNoYaw()
+        {
+            // 도구 Y가 월드 X를 향할 때 월드 Z축으로 기울이면 접근 방향만 벌어지고 수평 방향은 그대로다.
+            Quaternion target = LidCoverPlanner.ToolRotation(Vector3.right);
+            Quaternion actual = Quaternion.AngleAxis(4f, Vector3.forward) * target;
+
+            Assert.That(LidCoverPlanner.TiltErrorDeg(actual, target), Is.EqualTo(4f).Within(0.01f));
+            Assert.That(LidCoverPlanner.YawErrorDeg(actual, target), Is.EqualTo(0f).Within(0.01f));
+        }
+
+        [Test]
+        public void YawErrorDeg_IdenticalRotations_ReturnsZero()
+        {
+            Quaternion rotation = LidCoverPlanner.ToolRotation(new Vector3(-1f, 0f, -0.01f));
+
+            Assert.That(LidCoverPlanner.YawErrorDeg(rotation, rotation), Is.EqualTo(0f).Within(1e-3f));
+        }
+
+        [Test]
         public void Above_RaisesOnlyThePosition()
         {
             Quaternion rotation = Quaternion.Euler(0f, 30f, 0f);
