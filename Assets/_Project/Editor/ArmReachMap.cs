@@ -22,6 +22,9 @@ namespace MediKitTwin.EditorTools
         // 키트 박스 윗면(컨베이어 윗면 기준 0.135m)에 덮은 뚜껑 윗판이 올 높이 여유(m). 뚜껑 높이 0.04의 절반 정도.
         private const float CoverClearance = 0.02f;
 
+        // 그리퍼가 최대로 벌어지는 폭(m). 뚜껑 x 폭이 이 안에 들어와야 쥘 수 있다.
+        private const float GripperMaxOpening = 0.14f;
+
         // 뚜껑을 잡을 때 그리퍼 방향을 돌려 보는 각도(도). 하나라도 풀리면 닿는다고 본다.
         private static readonly float[] Yaws = { 0f, 90f, 180f, 270f };
 
@@ -78,7 +81,7 @@ namespace MediKitTwin.EditorTools
             Debug.Log($"[ArmReachMap] 뚜껑 잡는 높이 y={graspY:0.00}: 닿는 칸 {graspCount}개, {graspRange}");
             Debug.Log($"[ArmReachMap] 키트 박스 덮는 높이 y={coverY:0.00}: 닿는 칸 {coverCount}개, {coverRange}");
 
-            if (hasLid) ReportLidEdges(arm, solver, lidCenter);
+            if (hasLid) ReportLidGrasp(arm, solver, lidCenter);
             else Debug.LogWarning("[ArmReachMap] Lid_01을 찾지 못해 현재 뚜껑 위치 판정은 건너뜁니다.");
 
             if (sensor == null)
@@ -94,13 +97,8 @@ namespace MediKitTwin.EditorTools
                 foreach (Transform kitBox in kitBoxes)
                 {
                     var coverCenter = new Vector3(kitBox.position.x, coverY, kitBox.position.z);
-                    ReportPoint(arm, solver, $"키트 박스 위에 덮기, {kitBox.name} 중심", coverCenter);
-
-                    // 그리퍼는 팔 쪽 뚜껑 가장자리를 잡고 있으므로, 덮을 때 그리퍼 끝은 박스 중심보다 팔 쪽으로 0.235m(뚜껑 반폭) 앞에 온다.
-                    Vector3 toArm = arm.BaseLink.position - coverCenter;
-                    toArm.y = 0f;
-                    if (toArm.sqrMagnitude > 1e-6f)
-                        ReportPoint(arm, solver, $"키트 박스 위에 덮기, {kitBox.name}의 팔 쪽 뚜껑 가장자리(그리퍼 끝)", coverCenter + toArm.normalized * 0.235f);
+                    // 그리퍼는 뚜껑 중심에서 x 방향 양면을 쥐고 있으므로, 덮을 때 그리퍼 끝은 박스 중심 바로 위에 온다.
+                    ReportPoint(arm, solver, $"키트 박스 위에 덮기, {kitBox.name} 중심(그리퍼 끝)", coverCenter);
                 }
             }
 
@@ -538,13 +536,13 @@ namespace MediKitTwin.EditorTools
             SceneView.RepaintAll();
         }
 
-        // 뚜껑을 잡는 높이는 맨 위 뚜껑의 월드 높이이다. 씬에 없으면 기본값(0.639m)을 쓴다.
+        // 뚜껑을 잡는 높이는 맨 위 뚜껑의 월드 높이이다. 씬에 없으면 기본값(0.91m)을 쓴다.
         private static float LidGraspHeight(out Vector3 lidCenter, out bool found)
         {
             GameObject lid = FindActive("Lid_01");
             found = lid != null;
             lidCenter = found ? lid.transform.position : Vector3.zero;
-            return found ? lidCenter.y : 0.639f;
+            return found ? lidCenter.y : 0.91f;
         }
 
         // 덮는 높이는 컨베이어 위 키트 박스 윗면에 뚜껑 윗판이 닿는 높이이다. 기준은 패킹 센서(Sensor_Packing)의 컨베이어 윗면이다.
@@ -631,20 +629,41 @@ namespace MediKitTwin.EditorTools
             return false;
         }
 
-        // 맨 위 뚜껑의 네 테두리 가운데 점(그리퍼가 집을 곳)이 닿는지 적는다.
-        private static void ReportLidEdges(ArmController arm, IInverseKinematics solver, Vector3 lidCenter)
+        // 맨 위 뚜껑을 집는 점이 닿는지 적는다. 그리퍼는 뚜껑 중심에서 x 방향 양면을 쥐므로(최대 벌림 0.14m 안에 들어오는 폭)
+        // 집는 점은 뚜껑 중심이다. 뚜껑 크기는 뚜껑 자신의 축 기준으로 읽는다. 뚜껑이 월드에서 돌아 있어도 x는 그리퍼가 쥐는 폭이다.
+        private static void ReportLidGrasp(ArmController arm, IInverseKinematics solver, Vector3 lidCenter)
         {
-            // 뚜껑 바깥 크기 0.47 x 0.37m의 가장자리 점. 테두리 윗부분을 집으므로 높이는 뚜껑 중심이다.
-            var edges = new[]
+            GameObject lid = FindActive("Lid_01");
+            if (lid != null && TryGetLocalSize(lid.transform, out Vector3 size))
             {
-                ("+X 가장자리", lidCenter + new Vector3(0.235f, 0f, 0f)),
-                ("-X 가장자리", lidCenter + new Vector3(-0.235f, 0f, 0f)),
-                ("+Z 가장자리", lidCenter + new Vector3(0f, 0f, 0.185f)),
-                ("-Z 가장자리", lidCenter + new Vector3(0f, 0f, -0.185f)),
-            };
+                string fit = size.x <= GripperMaxOpening ? "그리퍼 벌림 안에 들어옴" : "그리퍼 벌림보다 넓음";
+                Debug.Log($"[ArmReachMap] 뚜껑 크기(뚜껑 축 기준) x {size.x:0.0000} · y {size.y:0.0000} · z {size.z:0.0000}m, 그리퍼 최대 벌림 {GripperMaxOpening:0.00}m: {fit} (여유 {(GripperMaxOpening - size.x) * 0.5f * 1000f:0.0}mm씩)");
+                Debug.Log($"[ArmReachMap] 뚜껑 방향: 월드 yaw {lid.transform.eulerAngles.y:0.0}도, 긴 변(z)이 가리키는 월드 방향 {lid.transform.forward}");
+            }
 
-            // 네 곳을 모두 적지만 실제로 집는 곳은 팔 쪽 가장자리 하나이므로 가까운 쪽만 닿으면 된다.
-            foreach (var (label, point) in edges) ReportPoint(arm, solver, "뚜껑 집기 " + label, point);
+            ReportPoint(arm, solver, "뚜껑 집기 중심(그리퍼 끝)", lidCenter);
+        }
+
+        // 오브젝트 아래 모든 메시를 감싸는 크기를 그 오브젝트의 로컬 축 기준으로 잰다(월드 스케일 반영).
+        private static bool TryGetLocalSize(Transform root, out Vector3 size)
+        {
+            Bounds bounds = default;
+            bool any = false;
+            foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>())
+            {
+                if (filter.sharedMesh == null) continue;
+                Bounds mesh = filter.sharedMesh.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 corner = mesh.center + Vector3.Scale(mesh.extents, new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
+                    Vector3 local = root.InverseTransformPoint(filter.transform.TransformPoint(corner));
+                    if (!any) { bounds = new Bounds(local, Vector3.zero); any = true; }
+                    else bounds.Encapsulate(local);
+                }
+            }
+
+            size = Vector3.Scale(bounds.size, root.lossyScale);
+            return any;
         }
 
         private static void ReportPoint(ArmController arm, IInverseKinematics solver, string label, Vector3 worldPosition)
