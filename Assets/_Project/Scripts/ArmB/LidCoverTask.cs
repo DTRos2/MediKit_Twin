@@ -54,9 +54,17 @@ namespace MediKitTwin.ArmB
         [SerializeField, Min(0.5f)] private float looseRotationToleranceDeg = 5f;
         [Tooltip("쥐고 덮는 지점의 회전 오차(도). 뚜껑 긴 변 0.27m에서 1도는 약 5mm이므로 작게 둔다.")]
         [SerializeField, Min(0.1f)] private float preciseRotationToleranceDeg = 2f;
+        [Tooltip("박스 위에 뚜껑을 내려놓는 하강의 회전 오차(도). 뚜껑은 놓으면 박스 위에 평평하게 내려앉으므로 쥘 때보다 넓게 둔다. 팔 처짐으로 3도쯤 어긋난다.")]
+        [SerializeField, Min(0.5f)] private float coverRotationToleranceDeg = 5f;
+        [Tooltip("박스 위에 뚜껑을 내려놓는 하강의 가로 오차(m). 뚜껑과 박스 사이 틈이 사방 5mm이므로 그보다 작게 둔다.")]
+        [SerializeField, Min(0.0005f)] private float coverToleranceM = 0.003f;
         [Tooltip("한 목표에 닿기까지 기다리는 시간(초, 시뮬레이션 시간). 지나면 Fault. SRS FR-10은 3초이다.")]
         [SerializeField, Min(0.5f)] private float stepTimeoutSeconds = 3f;
         [SerializeField, Min(0.5f)] private float graspTimeoutSeconds = 3f;
+
+        [Header("그리퍼")]
+        [Tooltip("손가락 관절(knuckle, finger)의 구동 힘 한계(N·m). ArmDriveSetup 기본값 1000은 실제 그리퍼의 수십~백 배여서 얇은 뚜껑 벽을 뚫고 지나간다. 쥐기 직전에 이 값으로 낮춘다. 손가락 길이 약 6cm에서 5N·m는 약 80N이다. 0이면 건드리지 않는다.")]
+        [SerializeField, Min(0f)] private float fingerForceLimit = 5f;
 
         [Header("끝점 보정")]
         [Tooltip("쥐고 덮는 동작에서 팔이 중력과 마찰로 목표에서 어긋나면, 어긋난 만큼 반대로 목표를 옮겨 바로잡는다. 0이면 끈다.")]
@@ -172,6 +180,7 @@ namespace MediKitTwin.ArmB
                 yield break;
             }
 
+            ApplyFingerForceLimit();
             _grip.Open();
 
             // 내려가기 전에 뚜껑 바로 위에 정밀하게 맞춘다. 여유가 한쪽 6mm뿐이라 여기서 어긋나면 손가락이 뚜껑 윗판에 얹힌다.
@@ -235,10 +244,11 @@ namespace MediKitTwin.ArmB
             float boxTopY = TopOf(kitBox);
             float coverY = LidCoverPlanner.CoverHeight(boxTopY, lidHeight, lidWall);
             Vector3 boxCenter = kitBox.position;
-            var coverPosition = new Vector3(boxCenter.x, coverY, boxCenter.z);
+            var lidCenterTarget = new Vector3(boxCenter.x, coverY, boxCenter.z);
 
-            // 쥔 뚜껑의 긴 변에 가까운 쪽을 먼저 써서 손목이 덜 돌게 한다.
-            if (!TryChooseRotation(coverPosition + Vector3.up * approachHeight, kitBox.forward, lid.forward, out Quaternion coverRotation))
+            // 쥔 뚜껑은 그리퍼에 대해 몇 mm 비껴서, 조금 기울어져 붙어 있다. 그 자세를 재서 반영해야 뚜껑 중심이 박스 중심에 온다.
+            // 반영하지 않으면 끝점(TCP)을 박스 중심에 맞춰 뚜껑이 한쪽으로 쏠리고, 높이 오차만큼 박스를 누르게 된다.
+            if (!TryPlanCover(lid, kitBox.forward, lidCenterTarget, out Quaternion coverRotation, out Vector3 coverPosition))
             {
                 DropLid(body);
                 Fail("키트 박스 위로 팔이 닿지 않습니다.");
@@ -246,7 +256,7 @@ namespace MediKitTwin.ArmB
             }
 
             Vector3 aboveBox = coverPosition + Vector3.up * approachHeight;
-            yield return MoveTool(new Pose(aboveBox, coverRotation), preciseToleranceM, preciseRotationToleranceDeg, Precision.Cover);
+            yield return MoveTool(new Pose(aboveBox, coverRotation), coverToleranceM, coverRotationToleranceDeg, Precision.Cover);
             if (!_stepReached)
             {
                 DropLid(body);
@@ -254,7 +264,7 @@ namespace MediKitTwin.ArmB
                 yield break;
             }
 
-            yield return MoveLinear(aboveBox, coverPosition, coverRotation, preciseToleranceM, preciseRotationToleranceDeg, Precision.Cover);
+            yield return MoveLinear(aboveBox, coverPosition, coverRotation, coverToleranceM, coverRotationToleranceDeg, Precision.Cover);
             if (!_stepReached)
             {
                 DropLid(body);
@@ -294,8 +304,47 @@ namespace MediKitTwin.ArmB
             lid.SetParent(kitBox, true);
             body.isKinematic = true;
 
+            Vector3 seatError = lid.position - lidCenterTarget;
+            Debug.Log($"[LidCoverTask] 뚜껑 덮기 완료: 뚜껑 중심이 박스 중심에서 가로 {new Vector2(seatError.x, seatError.z).magnitude * 1000f:0.0}mm, 높이 {seatError.y * 1000f:0.0}mm 차이. LidClosed 발행", this);
             CellEvents.RaiseLidClosed(kit);
             Finish(true);
+        }
+
+        // 쥔 뚜껑의 중심이 lidCenterTarget에 오고 긴 변이 박스 긴 변과 나란하도록 끝점(TCP) 목표를 만든다.
+        // 지금 뚜껑이 끝점에 대해 어디에 어떤 자세로 붙어 있는지(위치 오차, 기울어짐)를 재서 그만큼 보정한다.
+        // 팔 상태를 읽을 수 없으면 뚜껑이 끝점에 정확히 있다고 보고 계산한다.
+        private bool TryPlanCover(Transform lid, Vector3 boxLongAxis, Vector3 lidCenterTarget, out Quaternion toolRotation, out Vector3 toolPosition)
+        {
+            bool measured = _state != null && _state.IsReady;
+            Vector3 heldLocal = Vector3.zero;
+            Quaternion heldRotation = Quaternion.identity;
+            if (measured)
+            {
+                Pose tool = _state.ToolPose;
+                Quaternion inverse = Quaternion.Inverse(tool.rotation);
+                heldLocal = inverse * (lid.position - tool.position);
+                heldRotation = inverse * lid.rotation;
+            }
+
+            // 뚜껑 긴 변은 앞뒤가 같은 모양이다. 쥔 뚜껑의 긴 변에 가까운 쪽을 먼저 써서 손목이 덜 돌게 한다.
+            foreach (Vector3 axis in LidCoverPlanner.CandidateAxes(boxLongAxis, lid.forward))
+            {
+                Quaternion rotation = measured
+                    ? Quaternion.LookRotation(axis, Vector3.up) * Quaternion.Inverse(heldRotation)
+                    : LidCoverPlanner.ToolRotation(axis);
+                Vector3 position = lidCenterTarget - rotation * heldLocal;
+
+                if (_tool.Probe(new Pose(position + Vector3.up * approachHeight, rotation)).Converged)
+                {
+                    toolRotation = rotation;
+                    toolPosition = position;
+                    return true;
+                }
+            }
+
+            toolRotation = Quaternion.identity;
+            toolPosition = lidCenterTarget;
+            return false;
         }
 
         // 뚜껑 위에서 방향 후보를 앞에서부터 IK로 확인해 닿는 첫 방향을 쓴다.
@@ -327,6 +376,30 @@ namespace MediKitTwin.ArmB
                 {
                     yield break;
                 }
+            }
+        }
+
+        // 손가락 관절의 구동 힘 한계를 낮춘다. 힘이 너무 크면 패드가 얇은 뚜껑 벽을 뚫고 들어가 그리퍼가 열리지 않는다.
+        // 구동 설정이 적용된 뒤여야 하므로 Awake가 아니라 쥐기 직전에 한다. 팔 관절은 건드리지 않는다.
+        private void ApplyFingerForceLimit()
+        {
+            if (fingerForceLimit <= 0f)
+            {
+                return;
+            }
+
+            foreach (ArticulationBody body in toolTarget.GetComponentsInChildren<ArticulationBody>())
+            {
+                bool isFinger = body.name.IndexOf("knuckle", StringComparison.OrdinalIgnoreCase) >= 0
+                                || body.name.EndsWith("_finger", StringComparison.OrdinalIgnoreCase);
+                if (!isFinger || body.jointType != ArticulationJointType.RevoluteJoint)
+                {
+                    continue;
+                }
+
+                ArticulationDrive drive = body.xDrive;
+                drive.forceLimit = fingerForceLimit;
+                body.xDrive = drive;
             }
         }
 

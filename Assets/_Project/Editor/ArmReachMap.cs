@@ -588,6 +588,95 @@ namespace MediKitTwin.EditorTools
             else Debug.LogWarning(report + "\n  패드 간격이 뚜껑 폭보다 좁아 뚜껑을 감싸 쥘 수 없습니다.");
         }
 
+        // 팔 끝점에서 가장 가까운 뚜껑(Lid_*)과 두 손가락 패드의 실제 위치 관계를 적는다. 어느 단계에서든 플레이 중에 실행한다.
+        // 닫히는 방향(도구 X)으로 패드 안쪽 면과 뚜껑 옆면 사이 간격, 접근 방향(도구 Z)으로 패드 하단이 뚜껑 윗면·아랫면 대비 어디인지,
+        // 뚜껑 중심이 TCP에서 얼마나 떨어졌는지, 두 패드 사이 간격(그리퍼가 열렸는지)을 보여 준다.
+        [MenuItem("Tools/MediKit/Report ArmB Pad-Lid Gap")]
+        public static void ReportPadLidGap()
+        {
+            if (!EditorApplication.isPlaying)
+            {
+                Debug.LogError("[ArmReachMap] 플레이 모드에서 실행하세요.");
+                return;
+            }
+
+            ArmController arm = FindArmB();
+            if (arm == null || !arm.IsReady)
+            {
+                Debug.LogError("[ArmReachMap] UR3 프로필을 쓰는 ArmController를 찾지 못했거나 아직 준비되지 않았습니다.");
+                return;
+            }
+
+            Pose tool = arm.ToolPose;
+            Vector3 closeAxis = tool.rotation * Vector3.right;
+            Vector3 longAxis = tool.rotation * Vector3.up;
+            Vector3 approachAxis = tool.rotation * Vector3.forward;
+
+            Transform lid = null;
+            float nearest = float.MaxValue;
+            foreach (Transform candidate in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (!candidate.name.StartsWith("Lid_") || !candidate.gameObject.scene.IsValid()) continue;
+                float distance = (candidate.position - tool.position).sqrMagnitude;
+                if (distance < nearest) { nearest = distance; lid = candidate; }
+            }
+
+            if (lid == null)
+            {
+                Debug.LogWarning("[ArmReachMap] Lid_로 시작하는 뚜껑을 찾지 못했습니다.");
+                return;
+            }
+
+            var negative = new List<Collider>();
+            var positive = new List<Collider>();
+            foreach (Collider collider in arm.RobotRoot.GetComponentsInChildren<Collider>())
+            {
+                if (PathOf(collider.transform, arm.RobotRoot).IndexOf("inner_finger_pad", System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+                (Vector3.Dot(collider.bounds.center - tool.position, closeAxis) < 0f ? negative : positive).Add(collider);
+            }
+
+            Collider[] lidColliders = lid.GetComponentsInChildren<Collider>();
+            if (negative.Count == 0 || positive.Count == 0
+                || !ProjectRange(lidColliders, closeAxis, out float lidMin, out float lidMax)
+                || !ProjectRange(lidColliders, approachAxis, out float lidTop, out float lidBottom)
+                || !ProjectRange(negative, closeAxis, out _, out float negativeInner)
+                || !ProjectRange(positive, closeAxis, out float positiveInner, out _)
+                || !ProjectRange(negative, approachAxis, out _, out float negativeBottom)
+                || !ProjectRange(positive, approachAxis, out _, out float positiveBottom))
+            {
+                Debug.LogWarning("[ArmReachMap] 패드나 뚜껑 콜라이더를 찾지 못했습니다.");
+                return;
+            }
+
+            Vector3 offset = lid.position - tool.position;
+            var report = new System.Text.StringBuilder($"[ArmReachMap] 패드-뚜껑 위치 ({lid.name}, 부모 {(lid.parent != null ? lid.parent.name : "없음")}, 도구 축 기준 mm)");
+            report.Append($"\n  패드 사이 간격 {(positiveInner - negativeInner) * 1000f:0.0} (열림이면 약 128.5), 뚜껑 폭 {(lidMax - lidMin) * 1000f:0.0}");
+            report.Append($"\n  패드 안쪽 면과 뚜껑 옆면 사이(음수면 겹침): -쪽 {(lidMin - negativeInner) * 1000f:0.0}, +쪽 {(positiveInner - lidMax) * 1000f:0.0}");
+            report.Append($"\n  뚜껑 중심이 TCP에서: 닫히는 방향 {Vector3.Dot(offset, closeAxis) * 1000f:0.0}, 긴 변 방향 {Vector3.Dot(offset, longAxis) * 1000f:0.0}, 접근(아래) 방향 {Vector3.Dot(offset, approachAxis) * 1000f:0.0}");
+            report.Append($"\n  패드 하단이 뚜껑 윗면보다 {(Mathf.Min(negativeBottom, positiveBottom) - lidTop) * 1000f:0.0} 아래, 아랫면보다 {(Mathf.Min(negativeBottom, positiveBottom) - lidBottom) * 1000f:0.0} (음수면 아랫면 위)");
+            Debug.Log(report.ToString());
+        }
+
+        // 콜라이더 모서리를 axis에 투영한 최소·최대
+        private static bool ProjectRange(IEnumerable<Collider> colliders, Vector3 axis, out float min, out float max)
+        {
+            min = float.MaxValue;
+            max = float.MinValue;
+            bool any = false;
+            foreach (Collider collider in colliders)
+            {
+                foreach (Vector3 corner in ColliderCorners(collider))
+                {
+                    float value = Vector3.Dot(corner, axis);
+                    min = Mathf.Min(min, value);
+                    max = Mathf.Max(max, value);
+                    any = true;
+                }
+            }
+
+            return any;
+        }
+
         private static IEnumerable<Vector3> ColliderCorners(Collider collider)
         {
             if (collider is BoxCollider box)
