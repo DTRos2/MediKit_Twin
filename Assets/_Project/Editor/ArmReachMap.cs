@@ -99,6 +99,10 @@ namespace MediKitTwin.EditorTools
                     var coverCenter = new Vector3(kitBox.position.x, coverY, kitBox.position.z);
                     // 그리퍼는 뚜껑 중심에서 x 방향 양면을 쥐고 있으므로, 덮을 때 그리퍼 끝은 박스 중심 바로 위에 온다.
                     ReportPoint(arm, solver, $"키트 박스 위에 덮기, {kitBox.name} 중심(그리퍼 끝)", coverCenter);
+
+                    // 뚜껑이 박스에 실제로 앉았을 때의 높이(박스 윗면 기준). 위의 덮는 높이보다 낮으므로 따로 확인한다.
+                    float seatedY = MediKitTwin.ArmB.LidCoverPlanner.CoverHeight(TopOf(kitBox), CellSceneBuilder.LidHeight, CellSceneBuilder.LidWall);
+                    ReportPoint(arm, solver, $"키트 박스에 뚜껑이 앉은 높이, {kitBox.name} 중심(그리퍼 끝)", new Vector3(kitBox.position.x, seatedY, kitBox.position.z));
                 }
             }
 
@@ -525,6 +529,117 @@ namespace MediKitTwin.EditorTools
             return solver.Solve(targetInBase, seed, result).Converged;
         }
 
+        // 그리퍼가 열린 상태에서 두 손가락 패드 사이 실제 간격을 잰다. 뚜껑 폭이 이 안에 들어가는지 확인하는 용도이다.
+        // 손가락이 닫히는 방향은 도구 X, 접근 방향은 도구 +Z이다. 패드는 이름에 inner_finger_pad가 들어간 콜라이더로 찾는다.
+        [MenuItem("Tools/MediKit/Measure ArmB Gripper Gap")]
+        public static void MeasureGripperGap()
+        {
+            if (!EditorApplication.isPlaying)
+            {
+                Debug.LogError("[ArmReachMap] 플레이 모드에서 그리퍼가 열린 상태로 실행하세요.");
+                return;
+            }
+
+            ArmController arm = FindArmB();
+            if (arm == null || !arm.IsReady)
+            {
+                Debug.LogError("[ArmReachMap] UR3 프로필을 쓰는 ArmController를 찾지 못했거나 아직 준비되지 않았습니다.");
+                return;
+            }
+
+            Pose tool = arm.ToolPose;
+            Vector3 closeAxis = tool.rotation * Vector3.right;
+            Vector3 approachAxis = tool.rotation * Vector3.forward;
+
+            var report = new System.Text.StringBuilder($"[ArmReachMap] 그리퍼 패드 (도구 X = 닫히는 방향, 도구 Z = 접근 방향, TCP 기준 m)");
+            var ranges = new List<(float min, float max)>();
+            foreach (Collider collider in arm.RobotRoot.GetComponentsInChildren<Collider>())
+            {
+                string path = PathOf(collider.transform, arm.RobotRoot);
+                if (path.IndexOf("inner_finger_pad", System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+
+                float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+                foreach (Vector3 corner in ColliderCorners(collider))
+                {
+                    Vector3 offset = corner - tool.position;
+                    float x = Vector3.Dot(offset, closeAxis);
+                    float z = Vector3.Dot(offset, approachAxis);
+                    minX = Mathf.Min(minX, x); maxX = Mathf.Max(maxX, x);
+                    minZ = Mathf.Min(minZ, z); maxZ = Mathf.Max(maxZ, z);
+                }
+
+                ranges.Add((minX, maxX));
+                string side = path.Contains("left") ? "왼쪽" : path.Contains("right") ? "오른쪽" : "?";
+                report.Append($"\n  {side} 패드: 닫히는 방향 {minX:0.0000} ~ {maxX:0.0000}, 접근 방향 {minZ:0.0000} ~ {maxZ:0.0000}");
+            }
+
+            if (ranges.Count != 2)
+            {
+                Debug.LogWarning(report + $"\n  패드 콜라이더가 {ranges.Count}개 잡혔습니다(2개여야 함). 이름 검색을 확인하세요.");
+                return;
+            }
+
+            ranges.Sort((a, b) => a.min.CompareTo(b.min));
+            float gap = ranges[1].min - ranges[0].max;
+            float lidWidth = CellSceneBuilder.LidSize.x;
+            report.Append($"\n  패드 사이 간격 {gap:0.0000}m, 뚜껑 폭 {lidWidth:0.0000}m → 한쪽 여유 {(gap - lidWidth) * 0.5f * 1000f:0.0}mm");
+            report.Append($"\n  양쪽 패드의 TCP 기준 가운데 {(ranges[0].max + ranges[1].min) * 0.5f * 1000f:0.0}mm (0이면 TCP가 두 패드 한가운데)");
+            if (gap > lidWidth) Debug.Log(report.ToString());
+            else Debug.LogWarning(report + "\n  패드 간격이 뚜껑 폭보다 좁아 뚜껑을 감싸 쥘 수 없습니다.");
+        }
+
+        private static IEnumerable<Vector3> ColliderCorners(Collider collider)
+        {
+            if (collider is BoxCollider box)
+            {
+                Vector3 half = box.size * 0.5f;
+                for (int i = 0; i < 8; i++)
+                {
+                    var local = new Vector3((i & 1) == 0 ? -half.x : half.x, (i & 2) == 0 ? -half.y : half.y, (i & 4) == 0 ? -half.z : half.z);
+                    yield return box.transform.TransformPoint(box.center + local);
+                }
+            }
+            else
+            {
+                Bounds bounds = collider.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    yield return bounds.center + Vector3.Scale(bounds.extents, new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
+                }
+            }
+        }
+
+        // 로봇암 B의 회전 관절마다 물리 엔진이 실제로 쓰는 한계와 현재 각도를 적는다.
+        // IK가 쓰는 한계(Measure 결과의 한계 열)와 다르면, 팔이 목표 각도에 가지 못하고 한계에서 멈춘 것이다.
+        [MenuItem("Tools/MediKit/Report ArmB Joint Limits")]
+        public static void ReportJointLimits()
+        {
+            if (!EditorApplication.isPlaying)
+            {
+                Debug.LogError("[ArmReachMap] 플레이 모드에서 실행하세요. (현재 관절 각도를 읽어야 합니다)");
+                return;
+            }
+
+            ArmController arm = FindArmB();
+            if (arm == null || !arm.IsReady)
+            {
+                Debug.LogError("[ArmReachMap] UR3 프로필을 쓰는 ArmController를 찾지 못했거나 아직 준비되지 않았습니다.");
+                return;
+            }
+
+            var report = new System.Text.StringBuilder("[ArmReachMap] 회전 관절 한계(물리 엔진 기준, 도)");
+            foreach (ArticulationBody body in arm.RobotRoot.GetComponentsInChildren<ArticulationBody>())
+            {
+                if (body.jointType != ArticulationJointType.RevoluteJoint || body.dofCount < 1) continue;
+
+                ArticulationDrive drive = body.xDrive;
+                float current = body.jointPosition[0] * Mathf.Rad2Deg;
+                report.Append($"\n  {body.name}: 현재 {current:0.0}, 한계 [{drive.lowerLimit:0.0}, {drive.upperLimit:0.0}], 회전 잠금 {body.twistLock}, 구동 목표 {drive.target:0.0}, 강성 {drive.stiffness:0}, 힘 한계 {drive.forceLimit:0}");
+            }
+
+            Debug.Log(report.ToString());
+        }
+
         [MenuItem("Tools/MediKit/Clear ArmB Reach Map")]
         public static void Clear()
         {
@@ -569,6 +684,14 @@ namespace MediKitTwin.EditorTools
                 if (child.name.IndexOf("KitBox", System.StringComparison.OrdinalIgnoreCase) >= 0) found.Add(child);
                 else CollectKitBoxes(child, found);
             }
+        }
+
+        // 박스의 벽과 바닥 렌더러를 모두 감싼 월드 최고 높이
+        private static float TopOf(Transform box)
+        {
+            float top = box.position.y;
+            foreach (Renderer renderer in box.GetComponentsInChildren<Renderer>()) top = Mathf.Max(top, renderer.bounds.max.y);
+            return top;
         }
 
         private struct Range2
