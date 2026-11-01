@@ -77,3 +77,6 @@ venv/
 /docs/강사님 피드백.txt
 
 *.slnx
+
+# 합성 데이터셋(Tools/MediKit/Synthetic Dataset 출력)
+/Datasets/
