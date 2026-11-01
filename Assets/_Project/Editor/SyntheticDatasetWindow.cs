@@ -239,6 +239,19 @@ public sealed class SyntheticDatasetWindow : EditorWindow
         File.WriteAllText(Path.Combine(runDir, "dataset_info.txt"), BuildInfo(assets, perSplit, cropCount), new UTF8Encoding(false));
 
         Debug.Log($"[SyntheticDataset] 박스 {total}개, 크롭 {cropCount}장을 저장했다: {runDir}");
+
+        // 저장한 결과가 FR-08 인수 기준(행 수와 이미지 수, 테스트 세트의 정상·불량 수)을 지키는지 바로 확인한다. (TC-08)
+        DatasetVerification verification = DatasetVerifier.Verify(runDir);
+        if (verification.IsValid)
+        {
+            Debug.Log($"[SyntheticDataset] 검증 통과: labels.csv {verification.RowCount}행 = 이미지 {verification.ImageCount}장, "
+                + $"테스트 정상 {verification.GetNormalBoxCount(DataSplit.Test)} / 불량 {verification.GetDefectBoxCount(DataSplit.Test)}");
+        }
+        else
+        {
+            Debug.LogError($"[SyntheticDataset] 검증 실패:\n{string.Join("\n", verification.Errors.Take(20))}");
+        }
+
         EditorUtility.RevealInFinder(runDir);
     }
 
