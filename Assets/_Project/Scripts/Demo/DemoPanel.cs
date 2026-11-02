@@ -34,7 +34,7 @@ namespace MediKitTwin.Demo
 
         private void OnGUI()
         {
-            if (!_isVisible)
+            if (!_isVisible || !ShouldDraw)
             {
                 return;
             }
@@ -50,6 +50,12 @@ namespace MediKitTwin.Demo
 
             GUILayout.EndArea();
         }
+
+        /// <summary>
+        /// 지금 패널을 그릴지. 항상 보이는 패널은 그대로 두고, 어떤 일이 있을 때만 보이는 패널이 덮어쓴다.
+        /// 한 프레임의 입력과 그리기 이벤트에서 같은 값을 돌려줘야 한다(IMGUI는 같은 프레임에 같은 모양을 기대한다).
+        /// </summary>
+        protected virtual bool ShouldDraw => true;
 
         /// <summary>창 안쪽에 들어갈 내용을 그린다. 창과 제목은 이미 그려져 있다.</summary>
         protected abstract void DrawContents();
