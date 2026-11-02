@@ -6185,7 +6185,7 @@ MonoBehaviour:
   preciseToleranceM: 0.002
   looseRotationToleranceDeg: 5
   preciseRotationToleranceDeg: 2
-  coverRotationToleranceDeg: 5
+  coverTiltToleranceDeg: 5
   coverToleranceM: 0.003
   stepTimeoutSeconds: 3
   graspTimeoutSeconds: 3

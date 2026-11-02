@@ -19,7 +19,7 @@ namespace MediKitTwin.Inspection
         [Tooltip("주 판정기(IInspector, 보통 CNN). 비워 두면 규칙 판정만 쓴다. 판정할 수 없으면 규칙 판정으로 대체한다.")]
         [SerializeField] private MonoBehaviour _primaryInspector;
 
-        [Tooltip("이 거리 안에서 가장 가까운 박스를 검사 대상으로 본다(m).")]
+        [Tooltip("바닥면(수평) 거리가 이 안에서 가장 가까운 박스를 검사 대상으로 본다(m). 높이는 따지지 않는다.")]
         [SerializeField, Min(0.05f)] private float _boxSearchRadius = 0.4f;
 
         [Tooltip("판정에 걸리는 시간(초). 시뮬레이션 시간이다.")]
@@ -107,7 +107,9 @@ namespace MediKitTwin.Inspection
 
             foreach (SlotSensorArray array in FindObjectsByType<SlotSensorArray>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
             {
-                float sqr = (array.transform.position - transform.position).sqrMagnitude;
+                Vector3 offset = array.transform.position - transform.position;
+                offset.y = 0f;
+                float sqr = offset.sqrMagnitude;
                 if (sqr <= nearestSqr)
                 {
                     nearestSqr = sqr;

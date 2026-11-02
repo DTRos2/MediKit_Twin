@@ -510,6 +510,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 313006516070593850}
+  - component: {fileID: 3802010599573476053}
+  - component: {fileID: 5181481160757614760}
   m_Layer: 0
   m_Name: PF_InspectionStation
   m_TagString: Untagged
@@ -537,3 +539,47 @@ Transform:
   - {fileID: 412742719329800470}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3802010599573476053
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7866746408788709408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc835dbd0bcb67f4e8347530c7632420, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Inspection::MediKitTwin.Inspection.InspectionStation
+  _recipes:
+  - {fileID: 11400000, guid: 596d116be8e846199cfd63828fe686f8, type: 2}
+  - {fileID: 11400000, guid: 6dc8614a7b9b429fb4f059ff10e3e689, type: 2}
+  - {fileID: 11400000, guid: 90ff16254cbe49cbad5f23765c3eb204, type: 2}
+  _primaryInspector: {fileID: 0}
+  _boxSearchRadius: 0.4
+  _inspectSeconds: 0.5
+--- !u!114 &5181481160757614760
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7866746408788709408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 522b227209b924a4788d4db4333adbc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Demo::MediKitTwin.Demo.InspectionSampleSpawner
+  _recipes:
+  - {fileID: 11400000, guid: 596d116be8e846199cfd63828fe686f8, type: 2}
+  - {fileID: 11400000, guid: 6dc8614a7b9b429fb4f059ff10e3e689, type: 2}
+  - {fileID: 11400000, guid: 90ff16254cbe49cbad5f23765c3eb204, type: 2}
+  _looks: {fileID: 11400000, guid: ed989a8d0b194e5c94dab6c6d2735a99, type: 2}
+  _shelfLayout: {fileID: 11400000, guid: 093a5d945e3d4eebbf9ef3bfa0f6c24d, type: 2}
+  _kitCode: EM
+  _targetSlot: 0
+  _seed: 1
+  _spawnPoint: {fileID: 0}
+  _boxCenterOffsetY: -0.15
+  _boxYawDegrees: 0
+  _boxFloorLocalY: -0.04
