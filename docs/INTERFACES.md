@@ -291,6 +291,14 @@
 - 주문은 `OrderSession`이 받는다. 주문 파일을 실행 중에 바꿔도 `IKitSource`, `IOrderStatus` 참조를 다시 잡지 않아도 된다. 로트번호는 이어서 붙이고 `KitSequence`는 파일마다 1부터 센다.
 - 박스 크기(L, M)별 모델은 아직 반영하지 않는다(템플릿이 하나). 컨베이어를 구현하기 전까지는 `ConveyorHandoffStub`이 `KitReady` 뒤에 박스를 치운다.
 
+### 7-11. 검사 구역과 슬롯 감지 센서 (FR-06)
+
+- `InspectionStation`이 `AtInspection`을 받으면 판정 순서(`KitInspection`)를 실행해 `KitData.Verdict`를 채우고 `InspectionResult`를 발행한다. 주 판정기(CNN)가 연결되어 있으면 먼저 시도하고, `TryJudge`가 `false`이면 `INSPECTION_FALLBACK` 경고를 남기고 규칙 판정으로 대체한다.
+- 규칙 판정은 슬롯 센서(`SlotSensor`, 슬롯마다 트리거 콜라이더)를 읽어 `KitData.DetectedComponentIds`를 채운 뒤 `RuleInspector`로 레시피와 비교한다. 센서는 박스 프리팹의 `SlotSensorArray` 아래에 둔다.
+- 구성품 오브젝트에는 `KitComponentTag`(구성품 ID)를 붙인다. 선반 물건의 복제본은 콜라이더가 없어 물리 트리거 이벤트가 오지 않으므로, 센서는 읽을 때 구성품의 위치가 트리거 콜라이더 부피 안인지 직접 확인한다.
+- 센서가 없거나 응답하지 않으면(`SLOT_SENSOR_NO_RESPONSE` 경고) 불량이고 `MissingSlots`는 `null`이다. 레시피를 찾지 못해도(`INSPECTION_RECIPE_MISSING`) 불량으로 본다.
+- `InspectionDebugTrigger`는 컨베이어를 구현하기 전까지 단독 확인용이며, 구현하면 지운다.
+
 ## 8. 확정이 필요한 항목
 
 - [x] 로봇암 A의 URDF 관절 이름은 FR5 URDF(`fr5_gripper.urdf`)의 `j1` ~ `j6`(6개)이다. `arm_a_poses.yaml`, `RosArmTarget`, ROS 쪽 URDF를 이 이름에 맞췄다

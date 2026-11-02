@@ -17,14 +17,13 @@ namespace MediKitTwin.Common
             Method = method;
         }
 
-        /// <summary>정상이면 true, 누락이면 false.</summary>
+        /// <summary>정상이면 true, 누락이나 오구성이 있으면 false.</summary>
         public bool IsPass { get; }
 
         /// <summary>
-        /// 비어 있던 슬롯 번호(레시피의 슬롯 번호). 규칙 판정만 채운다.
-        /// 위치를 알 수 없으면 null이다. CNN은 정상·누락 2클래스 분류라 위치를 모르고,
-        /// 규칙 판정도 슬롯 센서가 응답하지 않으면(FR-06 예외) 어느 슬롯인지 알 수 없다.
-        /// 빈 목록은 "누락 슬롯 없음"이며 IsPass가 true일 때만 쓴다.
+        /// 레시피와 맞지 않는 슬롯 번호(비어 있거나 다른 구성품이 든 슬롯). 규칙 판정과 CNN 판정(슬롯별 분류)이 모두 채운다.
+        /// 슬롯별로 판정할 수 없으면 null이다. 규칙 판정에서 슬롯 센서가 응답하지 않을 때(FR-06 예외)와
+        /// CNN이 슬롯 크롭을 만들지 못할 때가 그렇다. 빈 목록은 "불일치 슬롯 없음"이며 IsPass가 true일 때만 쓴다.
         /// </summary>
         public IReadOnlyList<int> MissingSlots { get; }
 
