@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5690920585754914457}
   - component: {fileID: 5305899110462678160}
   - component: {fileID: 1361751672599054541}
+  - component: {fileID: 7490769441875245996}
   m_Layer: 0
   m_Name: Item_buffer_vial_3
   m_TagString: Untagged
@@ -90,6 +91,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &7490769441875245996
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 29242058442126585}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: buffer_vial
 --- !u!1 &30833548406312716
 GameObject:
   m_ObjectHideFlags: 0
@@ -101,6 +115,7 @@ GameObject:
   - component: {fileID: 1547455956697323199}
   - component: {fileID: 24694786502562030}
   - component: {fileID: 5853665092379882901}
+  - component: {fileID: 2789946034301865161}
   m_Layer: 0
   m_Name: Item_swab_5
   m_TagString: Untagged
@@ -180,6 +195,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &2789946034301865161
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 30833548406312716}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: swab
 --- !u!1 &43157386525991376
 GameObject:
   m_ObjectHideFlags: 0
@@ -191,6 +219,7 @@ GameObject:
   - component: {fileID: 3198072726180299329}
   - component: {fileID: 261079115763004880}
   - component: {fileID: 3684289225472176168}
+  - component: {fileID: 1605430992195488039}
   m_Layer: 0
   m_Name: Item_antiseptic_4
   m_TagString: Untagged
@@ -270,6 +299,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &1605430992195488039
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 43157386525991376}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: antiseptic
 --- !u!1 &199943155798648405
 GameObject:
   m_ObjectHideFlags: 0
@@ -281,6 +323,7 @@ GameObject:
   - component: {fileID: 1550467445988109085}
   - component: {fileID: 6422808865631332189}
   - component: {fileID: 8607277740602870064}
+  - component: {fileID: 1136983024160434276}
   m_Layer: 0
   m_Name: Item_bandage_4
   m_TagString: Untagged
@@ -360,6 +403,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &1136983024160434276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 199943155798648405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: bandage
 --- !u!1 &216282985148685661
 GameObject:
   m_ObjectHideFlags: 0
@@ -595,6 +651,7 @@ GameObject:
   - component: {fileID: 3351749885741977686}
   - component: {fileID: 8733895958785326477}
   - component: {fileID: 61722784310210854}
+  - component: {fileID: 8121600417658441614}
   m_Layer: 0
   m_Name: Item_gloves_3
   m_TagString: Untagged
@@ -674,6 +731,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &8121600417658441614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 447972340272420922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: gloves
 --- !u!1 &478177611129064529
 GameObject:
   m_ObjectHideFlags: 0
@@ -854,6 +924,7 @@ GameObject:
   - component: {fileID: 5964508400367129100}
   - component: {fileID: 585827683832289895}
   - component: {fileID: 5893792009004051356}
+  - component: {fileID: 3082423006700630439}
   m_Layer: 0
   m_Name: Item_tourniquet_5
   m_TagString: Untagged
@@ -933,6 +1004,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3082423006700630439
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 539307909222458913}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: tourniquet
 --- !u!1 &845976904129084185
 GameObject:
   m_ObjectHideFlags: 0
@@ -1394,6 +1478,7 @@ GameObject:
   - component: {fileID: 2594731851964320669}
   - component: {fileID: 8637147787254153883}
   - component: {fileID: 1537922718401124548}
+  - component: {fileID: 3958048160548761781}
   m_Layer: 0
   m_Name: Item_sample_bag_5
   m_TagString: Untagged
@@ -1473,6 +1558,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3958048160548761781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1119554836620931078}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: sample_bag
 --- !u!1 &1216787447775880238
 GameObject:
   m_ObjectHideFlags: 0
@@ -1484,6 +1582,7 @@ GameObject:
   - component: {fileID: 9051881950328976694}
   - component: {fileID: 4749089013511774156}
   - component: {fileID: 4717506986038470593}
+  - component: {fileID: 9184268477691096237}
   m_Layer: 0
   m_Name: Item_swab_4
   m_TagString: Untagged
@@ -1563,6 +1662,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &9184268477691096237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1216787447775880238}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: swab
 --- !u!1 &1217165731046507526
 GameObject:
   m_ObjectHideFlags: 0
@@ -1743,6 +1855,7 @@ GameObject:
   - component: {fileID: 2928784165509360136}
   - component: {fileID: 5978993245309343746}
   - component: {fileID: 3798354581876171498}
+  - component: {fileID: 5085664645195121107}
   m_Layer: 0
   m_Name: Item_buffer_vial_2
   m_TagString: Untagged
@@ -1822,6 +1935,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &5085664645195121107
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1379283221529431381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: buffer_vial
 --- !u!1 &1455890059790661500
 GameObject:
   m_ObjectHideFlags: 0
@@ -1833,6 +1959,7 @@ GameObject:
   - component: {fileID: 1728324184146997672}
   - component: {fileID: 733141702545183120}
   - component: {fileID: 638581350416438232}
+  - component: {fileID: 4589183920439057617}
   m_Layer: 0
   m_Name: Item_alcohol_pad_3
   m_TagString: Untagged
@@ -1912,6 +2039,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &4589183920439057617
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1455890059790661500}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: alcohol_pad
 --- !u!1 &1470059915928230593
 GameObject:
   m_ObjectHideFlags: 0
@@ -1980,6 +2120,7 @@ GameObject:
   - component: {fileID: 2082597146725153365}
   - component: {fileID: 3405001417681784276}
   - component: {fileID: 1345322411231105608}
+  - component: {fileID: 1017343830588373185}
   m_Layer: 0
   m_Name: Item_needle_2
   m_TagString: Untagged
@@ -2059,6 +2200,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &1017343830588373185
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1676351107812529917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: needle
 --- !u!1 &1706103507440181955
 GameObject:
   m_ObjectHideFlags: 0
@@ -2518,6 +2672,7 @@ GameObject:
   - component: {fileID: 6212778256736865779}
   - component: {fileID: 2256081304111824144}
   - component: {fileID: 4365325042026676299}
+  - component: {fileID: 3566981864432214334}
   m_Layer: 0
   m_Name: Item_blood_tube_1
   m_TagString: Untagged
@@ -2597,6 +2752,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3566981864432214334
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1962500147613516827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: blood_tube
 --- !u!1 &1984844777579354429
 GameObject:
   m_ObjectHideFlags: 0
@@ -2944,6 +3112,7 @@ GameObject:
   - component: {fileID: 480786088885609391}
   - component: {fileID: 2465641528182359}
   - component: {fileID: 101082453783114476}
+  - component: {fileID: 3150477310101363726}
   m_Layer: 0
   m_Name: Item_antiseptic_3
   m_TagString: Untagged
@@ -3023,6 +3192,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3150477310101363726
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2555055590219480367}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: antiseptic
 --- !u!1 &2583919670877043192
 GameObject:
   m_ObjectHideFlags: 0
@@ -3146,6 +3328,7 @@ GameObject:
   - component: {fileID: 4506787717720358762}
   - component: {fileID: 3651697907266963522}
   - component: {fileID: 5286206996252638447}
+  - component: {fileID: 961102686257656782}
   m_Layer: 0
   m_Name: Item_gauze_2
   m_TagString: Untagged
@@ -3225,6 +3408,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &961102686257656782
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2663548423180604621}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: gauze
 --- !u!1 &2689379082295715506
 GameObject:
   m_ObjectHideFlags: 0
@@ -3236,6 +3432,7 @@ GameObject:
   - component: {fileID: 5201132350730470688}
   - component: {fileID: 4807066953267683518}
   - component: {fileID: 7498392695663525961}
+  - component: {fileID: 5780674923827484787}
   m_Layer: 0
   m_Name: Item_swab_1
   m_TagString: Untagged
@@ -3315,6 +3512,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &5780674923827484787
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2689379082295715506}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: swab
 --- !u!1 &2795349043665032390
 GameObject:
   m_ObjectHideFlags: 0
@@ -3326,6 +3536,7 @@ GameObject:
   - component: {fileID: 8041939805591048019}
   - component: {fileID: 6302896973798427306}
   - component: {fileID: 8155572484667203095}
+  - component: {fileID: 446211116445381291}
   m_Layer: 0
   m_Name: Item_bandage_1
   m_TagString: Untagged
@@ -3405,6 +3616,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &446211116445381291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2795349043665032390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: bandage
 --- !u!1 &2879124242576699555
 GameObject:
   m_ObjectHideFlags: 0
@@ -3416,6 +3640,7 @@ GameObject:
   - component: {fileID: 1677842770908848039}
   - component: {fileID: 5669336224534764764}
   - component: {fileID: 8004724138621649875}
+  - component: {fileID: 6510934812112360332}
   m_Layer: 0
   m_Name: Item_tourniquet_2
   m_TagString: Untagged
@@ -3495,6 +3720,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &6510934812112360332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2879124242576699555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: tourniquet
 --- !u!1 &2968351703166004497
 GameObject:
   m_ObjectHideFlags: 0
@@ -3954,6 +4192,7 @@ GameObject:
   - component: {fileID: 8416543973465811304}
   - component: {fileID: 3833433683355091296}
   - component: {fileID: 9124612978018462909}
+  - component: {fileID: 210697485052095566}
   m_Layer: 0
   m_Name: Item_antiseptic_1
   m_TagString: Untagged
@@ -4033,6 +4272,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &210697485052095566
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3190502961485260188}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: antiseptic
 --- !u!1 &3249395593004879901
 GameObject:
   m_ObjectHideFlags: 0
@@ -4044,6 +4296,7 @@ GameObject:
   - component: {fileID: 9130116261371706264}
   - component: {fileID: 2956384035943875800}
   - component: {fileID: 2449806050143667459}
+  - component: {fileID: 716302633854125899}
   m_Layer: 0
   m_Name: Item_blood_tube_2
   m_TagString: Untagged
@@ -4123,6 +4376,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &716302633854125899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3249395593004879901}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: blood_tube
 --- !u!1 &3551694847678101691
 GameObject:
   m_ObjectHideFlags: 0
@@ -4134,6 +4400,7 @@ GameObject:
   - component: {fileID: 4735778483198025255}
   - component: {fileID: 1289059408913235924}
   - component: {fileID: 7345913795344274130}
+  - component: {fileID: 3216625379562830892}
   m_Layer: 0
   m_Name: Item_alcohol_pad_5
   m_TagString: Untagged
@@ -4213,6 +4480,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3216625379562830892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3551694847678101691}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: alcohol_pad
 --- !u!1 &3558335720343128235
 GameObject:
   m_ObjectHideFlags: 0
@@ -4224,6 +4504,7 @@ GameObject:
   - component: {fileID: 6500057399089521920}
   - component: {fileID: 4055386665981362332}
   - component: {fileID: 5213667787571764820}
+  - component: {fileID: 73038171205504084}
   m_Layer: 0
   m_Name: Item_test_cassette_1
   m_TagString: Untagged
@@ -4303,6 +4584,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &73038171205504084
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3558335720343128235}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: test_cassette
 --- !u!1 &3691999023307893788
 GameObject:
   m_ObjectHideFlags: 0
@@ -4426,6 +4720,7 @@ GameObject:
   - component: {fileID: 9076092636579526781}
   - component: {fileID: 3553320714753365273}
   - component: {fileID: 4924441399941965371}
+  - component: {fileID: 144957128322256817}
   m_Layer: 0
   m_Name: Item_gloves_2
   m_TagString: Untagged
@@ -4505,6 +4800,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &144957128322256817
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3728345032145954248}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: gloves
 --- !u!1 &3776762144687120906
 GameObject:
   m_ObjectHideFlags: 0
@@ -4516,6 +4824,7 @@ GameObject:
   - component: {fileID: 7305687779919512730}
   - component: {fileID: 6348150757821429697}
   - component: {fileID: 661550459126119944}
+  - component: {fileID: 8494938145291062161}
   m_Layer: 0
   m_Name: Item_gauze_1
   m_TagString: Untagged
@@ -4595,6 +4904,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &8494938145291062161
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3776762144687120906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: gauze
 --- !u!1 &3844170605467504509
 GameObject:
   m_ObjectHideFlags: 0
@@ -4606,6 +4928,7 @@ GameObject:
   - component: {fileID: 5233108041843557425}
   - component: {fileID: 5553133551978170163}
   - component: {fileID: 449456923002365066}
+  - component: {fileID: 6491669373428065270}
   m_Layer: 0
   m_Name: Item_gauze_3
   m_TagString: Untagged
@@ -4685,6 +5008,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &6491669373428065270
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3844170605467504509}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: gauze
 --- !u!1 &3906101567393667993
 GameObject:
   m_ObjectHideFlags: 0
@@ -4696,6 +5032,7 @@ GameObject:
   - component: {fileID: 7684068015961581236}
   - component: {fileID: 1542681895999184997}
   - component: {fileID: 4395434853432215707}
+  - component: {fileID: 1704266963477226158}
   m_Layer: 0
   m_Name: Item_sample_bag_3
   m_TagString: Untagged
@@ -4775,6 +5112,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &1704266963477226158
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3906101567393667993}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: sample_bag
 --- !u!1 &3913558816495839167
 GameObject:
   m_ObjectHideFlags: 0
@@ -4786,6 +5136,7 @@ GameObject:
   - component: {fileID: 414915910820309575}
   - component: {fileID: 6671429840281572069}
   - component: {fileID: 6351575247596553560}
+  - component: {fileID: 4958879370070207251}
   m_Layer: 0
   m_Name: Item_buffer_vial_4
   m_TagString: Untagged
@@ -4865,6 +5216,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &4958879370070207251
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3913558816495839167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: buffer_vial
 --- !u!1 &3933710213037213204
 GameObject:
   m_ObjectHideFlags: 0
@@ -4933,6 +5297,7 @@ GameObject:
   - component: {fileID: 8327310680710303048}
   - component: {fileID: 2203152753289320535}
   - component: {fileID: 7690802454564233095}
+  - component: {fileID: 5217796837265621022}
   m_Layer: 0
   m_Name: Item_alcohol_pad_4
   m_TagString: Untagged
@@ -5012,6 +5377,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &5217796837265621022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4080984784513508127}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: alcohol_pad
 --- !u!1 &4087335878144554905
 GameObject:
   m_ObjectHideFlags: 0
@@ -5135,6 +5513,7 @@ GameObject:
   - component: {fileID: 7791497397289237095}
   - component: {fileID: 5593847338293556766}
   - component: {fileID: 3253806171919928760}
+  - component: {fileID: 4722541068717880797}
   m_Layer: 0
   m_Name: Item_bandage_5
   m_TagString: Untagged
@@ -5214,6 +5593,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &4722541068717880797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4116191775569292141}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: bandage
 --- !u!1 &4116780313656455715
 GameObject:
   m_ObjectHideFlags: 0
@@ -5225,6 +5617,7 @@ GameObject:
   - component: {fileID: 1083001495438899687}
   - component: {fileID: 8511894502596114302}
   - component: {fileID: 8296694958457733785}
+  - component: {fileID: 3427991985459474460}
   m_Layer: 0
   m_Name: Item_antiseptic_5
   m_TagString: Untagged
@@ -5304,6 +5697,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3427991985459474460
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4116780313656455715}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: antiseptic
 --- !u!1 &4160910666794017135
 GameObject:
   m_ObjectHideFlags: 0
@@ -5427,6 +5833,7 @@ GameObject:
   - component: {fileID: 7845172524905147061}
   - component: {fileID: 1593419968662832671}
   - component: {fileID: 8921935308273581225}
+  - component: {fileID: 7539642037653728279}
   m_Layer: 0
   m_Name: Item_tourniquet_4
   m_TagString: Untagged
@@ -5506,6 +5913,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &7539642037653728279
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4193997285809371890}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: tourniquet
 --- !u!1 &4291635020138722310
 GameObject:
   m_ObjectHideFlags: 0
@@ -5686,6 +6106,7 @@ GameObject:
   - component: {fileID: 5915032688087888509}
   - component: {fileID: 4683085737770806188}
   - component: {fileID: 9018163112625551569}
+  - component: {fileID: 5830922475416276635}
   m_Layer: 0
   m_Name: Item_needle_5
   m_TagString: Untagged
@@ -5765,6 +6186,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &5830922475416276635
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4390873252663676404}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: needle
 --- !u!1 &4419266802556526170
 GameObject:
   m_ObjectHideFlags: 0
@@ -6000,6 +6434,7 @@ GameObject:
   - component: {fileID: 2254229565949554813}
   - component: {fileID: 7824430674241582775}
   - component: {fileID: 4740832954773871336}
+  - component: {fileID: 4191799939026959673}
   m_Layer: 0
   m_Name: Item_buffer_vial_1
   m_TagString: Untagged
@@ -6079,6 +6514,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &4191799939026959673
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4486532069945321762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: buffer_vial
 --- !u!1 &4506275932945744207
 GameObject:
   m_ObjectHideFlags: 0
@@ -6483,6 +6931,7 @@ GameObject:
   - component: {fileID: 1331553441637870088}
   - component: {fileID: 8012957688262960089}
   - component: {fileID: 7358208828667259728}
+  - component: {fileID: 1984776039192773906}
   m_Layer: 0
   m_Name: Item_test_cassette_4
   m_TagString: Untagged
@@ -6562,6 +7011,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &1984776039192773906
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4641489805426097140}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: test_cassette
 --- !u!1 &4657406500420823539
 GameObject:
   m_ObjectHideFlags: 0
@@ -6573,6 +7035,7 @@ GameObject:
   - component: {fileID: 6166625632266090852}
   - component: {fileID: 8145900716058427497}
   - component: {fileID: 3146393602994025095}
+  - component: {fileID: 6475747832565650434}
   m_Layer: 0
   m_Name: Item_swab_2
   m_TagString: Untagged
@@ -6652,6 +7115,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &6475747832565650434
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4657406500420823539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: swab
 --- !u!1 &4657477628929890627
 GameObject:
   m_ObjectHideFlags: 0
@@ -6663,6 +7139,7 @@ GameObject:
   - component: {fileID: 7262880458285417817}
   - component: {fileID: 4013900629421625647}
   - component: {fileID: 3451891875089337783}
+  - component: {fileID: 4689553681404964879}
   m_Layer: 0
   m_Name: Item_sample_bag_4
   m_TagString: Untagged
@@ -6742,6 +7219,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &4689553681404964879
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4657477628929890627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: sample_bag
 --- !u!1 &4695604307771284125
 GameObject:
   m_ObjectHideFlags: 0
@@ -6977,6 +7467,7 @@ GameObject:
   - component: {fileID: 990781415458224047}
   - component: {fileID: 3806953173114544548}
   - component: {fileID: 6518853472539313439}
+  - component: {fileID: 4459224855186951620}
   m_Layer: 0
   m_Name: Item_test_cassette_2
   m_TagString: Untagged
@@ -7056,6 +7547,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &4459224855186951620
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4817475839788686375}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: test_cassette
 --- !u!1 &4894465404515691990
 GameObject:
   m_ObjectHideFlags: 0
@@ -7291,6 +7795,7 @@ GameObject:
   - component: {fileID: 5611138681261162503}
   - component: {fileID: 645870392441504598}
   - component: {fileID: 804183120064653203}
+  - component: {fileID: 3133300516480347490}
   m_Layer: 0
   m_Name: Item_needle_3
   m_TagString: Untagged
@@ -7370,6 +7875,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3133300516480347490
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4994769375134709851}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: needle
 --- !u!1 &5003222134131511194
 GameObject:
   m_ObjectHideFlags: 0
@@ -7381,6 +7899,7 @@ GameObject:
   - component: {fileID: 6849698850726208522}
   - component: {fileID: 152419655146648600}
   - component: {fileID: 5675402448400573971}
+  - component: {fileID: 4135826132165120978}
   m_Layer: 0
   m_Name: Item_test_cassette_5
   m_TagString: Untagged
@@ -7460,6 +7979,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &4135826132165120978
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5003222134131511194}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: test_cassette
 --- !u!1 &5128541580392116437
 GameObject:
   m_ObjectHideFlags: 0
@@ -7471,6 +8003,7 @@ GameObject:
   - component: {fileID: 6631410223142583526}
   - component: {fileID: 3508159382857245575}
   - component: {fileID: 5065655764358983351}
+  - component: {fileID: 2705230782284712678}
   m_Layer: 0
   m_Name: Item_sample_bag_1
   m_TagString: Untagged
@@ -7550,6 +8083,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &2705230782284712678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5128541580392116437}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: sample_bag
 --- !u!1 &5134862326287311379
 GameObject:
   m_ObjectHideFlags: 0
@@ -7785,6 +8331,7 @@ GameObject:
   - component: {fileID: 5840033681759907383}
   - component: {fileID: 2696770966277630840}
   - component: {fileID: 5992172363028666688}
+  - component: {fileID: 3118992194434716351}
   m_Layer: 0
   m_Name: Item_gloves_4
   m_TagString: Untagged
@@ -7864,6 +8411,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3118992194434716351
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5223920294410742083}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: gloves
 --- !u!1 &5307190435674793540
 GameObject:
   m_ObjectHideFlags: 0
@@ -7875,6 +8435,7 @@ GameObject:
   - component: {fileID: 7068128560208332692}
   - component: {fileID: 7257070333275131088}
   - component: {fileID: 7414436746065550272}
+  - component: {fileID: 9196228529231450013}
   m_Layer: 0
   m_Name: Item_needle_4
   m_TagString: Untagged
@@ -7954,6 +8515,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &9196228529231450013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5307190435674793540}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: needle
 --- !u!1 &5400925105697270321
 GameObject:
   m_ObjectHideFlags: 0
@@ -7965,6 +8539,7 @@ GameObject:
   - component: {fileID: 1690517981496535013}
   - component: {fileID: 7503653668405000406}
   - component: {fileID: 7382221039828567048}
+  - component: {fileID: 381487371694431998}
   m_Layer: 0
   m_Name: Item_blood_tube_5
   m_TagString: Untagged
@@ -8044,6 +8619,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &381487371694431998
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5400925105697270321}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: blood_tube
 --- !u!1 &5405801593479053709
 GameObject:
   m_ObjectHideFlags: 0
@@ -8449,6 +9037,7 @@ GameObject:
   - component: {fileID: 118316767848773036}
   - component: {fileID: 4546087043955255966}
   - component: {fileID: 3400654129502808310}
+  - component: {fileID: 1122295076690910373}
   m_Layer: 0
   m_Name: Item_alcohol_pad_1
   m_TagString: Untagged
@@ -8528,6 +9117,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &1122295076690910373
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6069629282083792695}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: alcohol_pad
 --- !u!1 &6113817302410612911
 GameObject:
   m_ObjectHideFlags: 0
@@ -8651,6 +9253,7 @@ GameObject:
   - component: {fileID: 488748282708143528}
   - component: {fileID: 902563558673338077}
   - component: {fileID: 607327548429061752}
+  - component: {fileID: 2422943829727201084}
   m_Layer: 0
   m_Name: Item_tourniquet_3
   m_TagString: Untagged
@@ -8730,6 +9333,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &2422943829727201084
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6142010454084647792}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: tourniquet
 --- !u!1 &6200977335399763775
 GameObject:
   m_ObjectHideFlags: 0
@@ -8965,6 +9581,7 @@ GameObject:
   - component: {fileID: 7764288403574545887}
   - component: {fileID: 8286924921743403789}
   - component: {fileID: 1812812269013832184}
+  - component: {fileID: 7430084492688345002}
   m_Layer: 0
   m_Name: Item_swab_3
   m_TagString: Untagged
@@ -9044,6 +9661,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &7430084492688345002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6337716485300049167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: swab
 --- !u!1 &6360003760995683377
 GameObject:
   m_ObjectHideFlags: 0
@@ -9167,6 +9797,7 @@ GameObject:
   - component: {fileID: 6631422316787885400}
   - component: {fileID: 2487519568783580165}
   - component: {fileID: 3247643908669621682}
+  - component: {fileID: 2304625332998527605}
   m_Layer: 0
   m_Name: Item_alcohol_pad_2
   m_TagString: Untagged
@@ -9246,6 +9877,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &2304625332998527605
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6373761909991278245}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: alcohol_pad
 --- !u!1 &6511666594867744786
 GameObject:
   m_ObjectHideFlags: 0
@@ -9314,6 +9958,7 @@ GameObject:
   - component: {fileID: 3035615207297152972}
   - component: {fileID: 4451390959053102528}
   - component: {fileID: 715682969010998584}
+  - component: {fileID: 3708365838587690846}
   m_Layer: 0
   m_Name: Item_gauze_5
   m_TagString: Untagged
@@ -9393,6 +10038,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3708365838587690846
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6543662910467138875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: gauze
 --- !u!1 &6571075273804849132
 GameObject:
   m_ObjectHideFlags: 0
@@ -9852,6 +10510,7 @@ GameObject:
   - component: {fileID: 5261679878085139180}
   - component: {fileID: 9143392030950619665}
   - component: {fileID: 6807466585610230099}
+  - component: {fileID: 470071755595348027}
   m_Layer: 0
   m_Name: Item_tourniquet_1
   m_TagString: Untagged
@@ -9931,6 +10590,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &470071755595348027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6877781394083593896}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: tourniquet
 --- !u!1 &6933586795352299807
 GameObject:
   m_ObjectHideFlags: 0
@@ -10673,6 +11345,7 @@ GameObject:
   - component: {fileID: 321487832683201099}
   - component: {fileID: 8020758645193883634}
   - component: {fileID: 5085710818494886536}
+  - component: {fileID: 2537749359564727283}
   m_Layer: 0
   m_Name: Item_gauze_4
   m_TagString: Untagged
@@ -10752,6 +11425,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &2537749359564727283
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7291613965627365390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: gauze
 --- !u!1 &7432452701255388754
 GameObject:
   m_ObjectHideFlags: 0
@@ -10875,6 +11561,7 @@ GameObject:
   - component: {fileID: 2317057471335541923}
   - component: {fileID: 2431268387962268553}
   - component: {fileID: 3756571175325780999}
+  - component: {fileID: 8346293968739488175}
   m_Layer: 0
   m_Name: Item_gloves_5
   m_TagString: Untagged
@@ -10954,6 +11641,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &8346293968739488175
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7549375626010388521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: gloves
 --- !u!1 &7590064149820871959
 GameObject:
   m_ObjectHideFlags: 0
@@ -10965,6 +11665,7 @@ GameObject:
   - component: {fileID: 5744053385596933643}
   - component: {fileID: 3489479497041157290}
   - component: {fileID: 2935215260267639656}
+  - component: {fileID: 3129051637642895613}
   m_Layer: 0
   m_Name: Item_needle_1
   m_TagString: Untagged
@@ -11044,6 +11745,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3129051637642895613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7590064149820871959}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: needle
 --- !u!1 &7678637953586467180
 GameObject:
   m_ObjectHideFlags: 0
@@ -11279,6 +11993,7 @@ GameObject:
   - component: {fileID: 6581471482474119557}
   - component: {fileID: 1650966878242432318}
   - component: {fileID: 181578713150310108}
+  - component: {fileID: 8649120952550203457}
   m_Layer: 0
   m_Name: Item_blood_tube_3
   m_TagString: Untagged
@@ -11358,6 +12073,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &8649120952550203457
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7746532433199094616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: blood_tube
 --- !u!1 &7750481835984933194
 GameObject:
   m_ObjectHideFlags: 0
@@ -11369,6 +12097,7 @@ GameObject:
   - component: {fileID: 7054563741027760668}
   - component: {fileID: 1667311462946151646}
   - component: {fileID: 4730083924804743158}
+  - component: {fileID: 4704458255719387364}
   m_Layer: 0
   m_Name: Item_gloves_1
   m_TagString: Untagged
@@ -11448,6 +12177,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &4704458255719387364
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7750481835984933194}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: gloves
 --- !u!1 &7799379118552656164
 GameObject:
   m_ObjectHideFlags: 0
@@ -11459,6 +12201,7 @@ GameObject:
   - component: {fileID: 3970407459721738738}
   - component: {fileID: 7052340506236112965}
   - component: {fileID: 3416648515331959374}
+  - component: {fileID: 5387370941045605884}
   m_Layer: 0
   m_Name: Item_buffer_vial_5
   m_TagString: Untagged
@@ -11538,6 +12281,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &5387370941045605884
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7799379118552656164}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: buffer_vial
 --- !u!1 &7817960031627581573
 GameObject:
   m_ObjectHideFlags: 0
@@ -11549,6 +12305,7 @@ GameObject:
   - component: {fileID: 4269033671667859351}
   - component: {fileID: 1647526067702176596}
   - component: {fileID: 673620781075539251}
+  - component: {fileID: 8603486641325139129}
   m_Layer: 0
   m_Name: Item_bandage_2
   m_TagString: Untagged
@@ -11628,6 +12385,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &8603486641325139129
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7817960031627581573}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: bandage
 --- !u!1 &7862046148555909282
 GameObject:
   m_ObjectHideFlags: 0
@@ -11751,6 +12521,7 @@ GameObject:
   - component: {fileID: 5872334671211145107}
   - component: {fileID: 8008137758403506758}
   - component: {fileID: 7356788129201307708}
+  - component: {fileID: 13338037275811482}
   m_Layer: 0
   m_Name: Item_antiseptic_2
   m_TagString: Untagged
@@ -11830,6 +12601,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &13338037275811482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7933043168909551320}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: antiseptic
 --- !u!1 &7962403502676070720
 GameObject:
   m_ObjectHideFlags: 0
@@ -11841,6 +12625,7 @@ GameObject:
   - component: {fileID: 3396250462696032200}
   - component: {fileID: 5922547901460613560}
   - component: {fileID: 6337698289054508210}
+  - component: {fileID: 6323299501269742093}
   m_Layer: 0
   m_Name: Item_sample_bag_2
   m_TagString: Untagged
@@ -11920,6 +12705,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &6323299501269742093
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7962403502676070720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: sample_bag
 --- !u!1 &8242426349440147907
 GameObject:
   m_ObjectHideFlags: 0
@@ -12267,6 +13065,7 @@ GameObject:
   - component: {fileID: 3297027574277957726}
   - component: {fileID: 4498356702549294845}
   - component: {fileID: 6250394206191652219}
+  - component: {fileID: 7192424525752380369}
   m_Layer: 0
   m_Name: Item_blood_tube_4
   m_TagString: Untagged
@@ -12346,6 +13145,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &7192424525752380369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8458074655145148177}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: blood_tube
 --- !u!1 &8494854345430865054
 GameObject:
   m_ObjectHideFlags: 0
@@ -12469,6 +13281,7 @@ GameObject:
   - component: {fileID: 6718986016661399815}
   - component: {fileID: 4580379596969669403}
   - component: {fileID: 1537162738182711713}
+  - component: {fileID: 5956188313838963362}
   m_Layer: 0
   m_Name: Item_bandage_3
   m_TagString: Untagged
@@ -12548,6 +13361,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &5956188313838963362
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8572488381656986226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: bandage
 --- !u!1 &8614376512050736315
 GameObject:
   m_ObjectHideFlags: 0
@@ -12671,6 +13497,7 @@ GameObject:
   - component: {fileID: 8706715676827859519}
   - component: {fileID: 4990771792867927374}
   - component: {fileID: 567342895694888541}
+  - component: {fileID: 2397547412329409019}
   m_Layer: 0
   m_Name: Item_test_cassette_3
   m_TagString: Untagged
@@ -12750,6 +13577,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &2397547412329409019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8778424942450503846}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5594db02082cf34cbbf1a6568559be8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Common::MediKitTwin.Common.KitItemLabel
+  _componentId: test_cassette
 --- !u!1 &8989675832219475016
 GameObject:
   m_ObjectHideFlags: 0
