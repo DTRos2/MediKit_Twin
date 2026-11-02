@@ -80,3 +80,6 @@ venv/
 
 # 합성 데이터셋(Tools/MediKit/Synthetic Dataset 출력)
 /Datasets/
+
+# 검사 카메라 촬영 확인용 저장 폴더 (InspectionStation의 Save Captures)
+/InspectionCaptures/

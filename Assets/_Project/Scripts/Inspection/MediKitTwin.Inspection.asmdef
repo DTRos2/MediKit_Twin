@@ -3,7 +3,8 @@
     "rootNamespace": "MediKitTwin.Inspection",
     "references": [
         "MediKitTwin.Common",
-        "MediKitTwin.Recipes"
+        "MediKitTwin.Recipes",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

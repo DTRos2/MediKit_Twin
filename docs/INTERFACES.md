@@ -298,6 +298,7 @@
 - 구성품 오브젝트에는 `KitItemLabel`(구성품 ID)를 붙인다. 선반 물건의 복제본은 콜라이더가 없어 물리 트리거 이벤트가 오지 않으므로, 센서는 읽을 때 구성품의 위치가 트리거 콜라이더 부피 안인지 직접 확인한다.
 - 센서가 없거나 응답하지 않으면(`SLOT_SENSOR_NO_RESPONSE` 경고) 불량이고 `MissingSlots`는 `null`이다. 레시피를 찾지 못해도(`INSPECTION_RECIPE_MISSING`) 불량으로 본다.
 - `InspectionSampleSpawner`(Demo)는 키팅과 컨베이어를 구현하기 전까지 단독 확인용이다. 레시피대로 채운 샘플 박스(정상, 누락, 오구성, 센서 무응답)를 `Sensor_Inspection` 자리에 만들고 `AtInspection`을 보낸다. 구현하면 지운다.
+- 검사 카메라(`InspectionCameraRig`)는 구역 위에 고정되어 박스 중심 위 `InspectionCameraSettings`의 높이에서 아래를 보며 찍고, `SlotCropper`가 학습 데이터 생성기와 같은 계산으로 슬롯별 크롭을 자른다. 카메라에서만 그림자를 끄고, 설정 위치와 어긋나면 경고한다. `Save Captures`를 켜면 `InspectionCaptures/<시각>/<로트번호>/`에 PNG로 저장한다. CNN 판정(4단계)은 이 크롭을 입력으로 쓴다.
 - 검사 대상 박스는 `InspectionStation`에서 수평 거리가 `Box Search Radius` 안인 가장 가까운 `SlotSensorArray`이다. 높이는 따지지 않는다.
 
 ## 8. 확정이 필요한 항목

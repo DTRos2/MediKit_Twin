@@ -11,6 +11,12 @@ namespace MediKitTwin.Inspection.Tests
     {
         internal static RecipeSO Recipe(string kitCode, params string[] componentIds)
         {
+            return Recipe(kitCode, null, componentIds);
+        }
+
+        // slotPositions가 있으면 슬롯 i+1의 박스 로컬 좌표로 쓴다.
+        internal static RecipeSO Recipe(string kitCode, Vector3[] slotPositions, params string[] componentIds)
+        {
             var recipe = ScriptableObject.CreateInstance<RecipeSO>();
             var items = new List<RecipeItem>();
             for (int i = 0; i < componentIds.Length; i++)
@@ -18,6 +24,11 @@ namespace MediKitTwin.Inspection.Tests
                 object item = new RecipeItem();
                 Set(item, "_componentId", componentIds[i]);
                 Set(item, "_slotNumber", i + 1);
+                if (slotPositions != null)
+                {
+                    Set(item, "_slotLocalPosition", slotPositions[i]);
+                }
+
                 items.Add((RecipeItem)item);
             }
 

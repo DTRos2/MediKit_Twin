@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using MediKitTwin.Common;
 using MediKitTwin.Recipes;
 using UnityEngine;
@@ -25,9 +27,16 @@ namespace MediKitTwin.Inspection
         [Tooltip("판정에 걸리는 시간(초). 시뮬레이션 시간이다.")]
         [SerializeField, Min(0f)] private float _inspectSeconds = 0.5f;
 
+        [Tooltip("검사 카메라. 비워 두면 이 오브젝트나 자식의 InspectionCameraRig를 쓰고, 그것도 없으면 촬영하지 않는다.")]
+        [SerializeField] private InspectionCameraRig _cameraRig;
+
+        [Tooltip("촬영한 전체 이미지와 슬롯 크롭을 프로젝트 폴더의 InspectionCaptures/<플레이 시작 시각>/<로트번호>에 PNG로 저장한다. 플레이할 때마다 새 폴더가 생겨 이전 결과를 덮어쓰지 않는다. 크롭이 맞게 잘리는지 눈으로 확인할 때 쓴다.")]
+        [SerializeField] private bool _saveCaptures;
+
         private readonly Dictionary<string, RecipeSO> _recipeByKit = new Dictionary<string, RecipeSO>();
         private IStationStateReporter _reporter;
         private KitInspection _inspection;
+        private readonly string _captureSession = DateTime.Now.ToString("yyyyMMdd-HHmmss");
         private bool _busy;
 
         private void Awake()
@@ -48,6 +57,11 @@ namespace MediKitTwin.Inspection
                 {
                     Debug.LogError($"{name}: Primary Inspector는 IInspector를 구현해야 한다.", this);
                 }
+            }
+
+            if (_cameraRig == null)
+            {
+                _cameraRig = GetComponentInChildren<InspectionCameraRig>();
             }
 
             _reporter = new StationStateReporter(StationId.Inspection);
@@ -92,11 +106,56 @@ namespace MediKitTwin.Inspection
 
             yield return new WaitForSeconds(_inspectSeconds);
 
-            kit.Verdict = _inspection.Run(kit, FindBoxSensors());
+            SlotSensorArray box = FindBoxSensors();
+            if (_saveCaptures)
+            {
+                SaveCaptures(kit, box);
+            }
+
+            kit.Verdict = _inspection.Run(kit, box);
             CellEvents.RaiseInspectionResult(kit);
 
             _reporter.Set(StationState.Idle);
             _busy = false;
+        }
+
+        // 박스를 찍어 슬롯 크롭과 함께 PNG로 저장한다. 판정에는 쓰지 않는다. (크롭 확인용, CNN 판정은 이 크롭을 입력으로 쓸 예정)
+        private void SaveCaptures(KitData kit, SlotSensorArray box)
+        {
+            if (_cameraRig == null || box == null || !_recipeByKit.TryGetValue(kit.KitCode ?? string.Empty, out RecipeSO recipe))
+            {
+                CellEvents.RaiseWarning("INSPECTION_CAPTURE_SKIPPED", $"촬영할 카메라, 박스, 레시피 중 없는 것이 있어 건너뛴다. (로트 {kit.LotNumber})");
+                return;
+            }
+
+            if (!_cameraRig.TryCaptureCrops(box.transform, recipe, out SlotCropSet crops, out Texture2D full))
+            {
+                if (full != null)
+                {
+                    Destroy(full);
+                }
+
+                CellEvents.RaiseWarning("INSPECTION_CROP_FAILED", $"슬롯 크롭을 만들지 못했다. 검사 카메라 설정을 확인한다. (로트 {kit.LotNumber})");
+                return;
+            }
+
+            string sessionFolder = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "InspectionCaptures", _captureSession);
+            string folder = Path.Combine(sessionFolder, kit.LotNumber);
+            for (int copy = 2; Directory.Exists(folder); copy++)
+            {
+                folder = Path.Combine(sessionFolder, $"{kit.LotNumber}_{copy}");
+            }
+
+            Directory.CreateDirectory(folder);
+            File.WriteAllBytes(Path.Combine(folder, "full.png"), full.EncodeToPNG());
+            foreach (SlotCrop crop in crops.Crops)
+            {
+                File.WriteAllBytes(Path.Combine(folder, $"slot{crop.SlotNumber}.png"), crop.Image.EncodeToPNG());
+            }
+
+            Debug.Log($"[Inspection] 촬영 이미지를 저장했다: {folder}", this);
+            crops.Dispose();
+            Destroy(full);
         }
 
         // 구역 가까이에 있는 박스의 센서 묶음. 없으면 null이며, 규칙 판정에서는 센서 무응답으로 본다.
