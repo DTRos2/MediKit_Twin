@@ -6,7 +6,8 @@
         "MediKitTwin.ArmA",
         "MediKitTwin.Inventory",
         "MediKitTwin.Orders",
-        "MediKitTwin.Recipes"
+        "MediKitTwin.Recipes",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

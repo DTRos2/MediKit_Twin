@@ -41,9 +41,13 @@ namespace MediKitTwin.ArmA
         private KittingProcess _process;
         private KittingOutcomeHandler _outcomeHandler;
         private IStationStateReporter _station;
+        private IManualHoldState _holdState;
         private bool _isPauseRequested;
+        private bool _isHoldAnnounced;
 
-        /// <summary>멈춤을 요청받아 키트 사이에서 실제로 쉬고 있으면 true. 사람이 로봇을 직접 쓰는 동안(수동 키팅)이다.</summary>
+        /// <summary>
+        /// 키트 사이에서 실제로 쉬고 있으면 true. 멈춤을 요청받았거나(수동 키팅), 사람이 팔을 직접 조작하는 동안(수동 제어 패널)이다.
+        /// </summary>
         public bool IsPaused { get; private set; }
 
         public void RequestPause()
@@ -59,6 +63,8 @@ namespace MediKitTwin.ArmA
         /// <summary>지금 만들고 있는 키트. 쉬는 중이면 null이다.</summary>
         public KitData CurrentKit { get; private set; }
 
+        private bool IsArmHeld => _holdState != null && _holdState.IsHeld;
+
         public IKittingStatus Status => _status;
 
         public StationState State => _station != null ? _station.State : StationState.Idle;
@@ -71,6 +77,7 @@ namespace MediKitTwin.ArmA
             var boxSupply = _boxSupply as IBoxSupply;
             var boxLocator = _boxSupply as IKitBoxLocator;
             var transfer = _itemTransfer as IItemTransfer;
+            _holdState = _itemTransfer as IManualHoldState;
 
             if (_source == null || stock == null || itemLocator == null || boxSupply == null || boxLocator == null
                 || transfer == null || _scenario == null)
@@ -102,7 +109,17 @@ namespace MediKitTwin.ArmA
             while (true)
             {
                 // 멈춤 요청은 키트 사이에서만 받는다. 하던 키트는 끝까지 만든다.
-                if (_isPauseRequested)
+                // 사람이 팔을 직접 조작하는 중이면 팔 목표가 막혀 하던 키트가 곧바로 정리되어 끝나므로, 그 뒤에 여기서 쉰다.
+                // 이때는 한 번 알린다. 아무 말 없이 멈추면 주문을 적용해도 아무 일도 안 일어나는 것으로 보인다.
+                bool isHeld = IsArmHeld;
+                if (isHeld && !_isHoldAnnounced)
+                {
+                    Debug.LogWarning($"{name}: 수동 제어가 켜져 있어 키팅을 쉰다. Arm Joints 패널의 수동 제어를 끄면 이어서 시작한다.", this);
+                }
+
+                _isHoldAnnounced = isHeld;
+
+                if (_isPauseRequested || isHeld)
                 {
                     IsPaused = true;
                     yield return null;

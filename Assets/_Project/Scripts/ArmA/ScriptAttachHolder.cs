@@ -38,6 +38,9 @@ namespace MediKitTwin.ArmA
             _carried?.Follow();
         }
 
+        /// <summary>복제본을 붙이는 방식은 쥐기에 실패하지 않으므로 항상 빈 글자다.</summary>
+        public string LastFailureReason => string.Empty;
+
         public void OpenGripper()
         {
             _grip.Open();
@@ -45,7 +48,7 @@ namespace MediKitTwin.ArmA
 
         public IEnumerator Grasp(ShelfPickItem item, Action<bool> done)
         {
-            _carried = CarriedItem.Grab(item.Prototype, () => _state.ToolPose);
+            _carried = CarriedItem.Grab(item.Prototype, item.Pose, () => _state.ToolPose);
             _grip.Close();
             yield return new WaitForSeconds(_gripperSettleSeconds);
             done(true);

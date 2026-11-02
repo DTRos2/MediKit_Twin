@@ -26,6 +26,30 @@ namespace MediKitTwin.ArmA.Tests
             Assert.That(result.Detail, Is.Empty);
         }
 
+        [TestCase(TransferFailure.CollisionRisk, true)]
+        [TestCase(TransferFailure.TaughtPoseStale, true)]
+        [TestCase(TransferFailure.MotionFailed, false)]
+        [TestCase(TransferFailure.GraspFailed, false)]
+        [TestCase(TransferFailure.RecognitionFailed, false)]
+        public void OnlyFailuresThatNeverMovedTheArm_CanBeRetriedBySearching(TransferFailure failure, bool expected)
+        {
+            var result = new TransferResult();
+
+            result.Fail(failure);
+
+            Assert.That(result.CanRetryBySearching, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ASuccessfulResult_CannotBeRetriedBySearching()
+        {
+            var result = new TransferResult();
+
+            result.Succeed();
+
+            Assert.That(result.CanRetryBySearching, Is.False);
+        }
+
         [Test]
         public void Succeed_ClearsAnEarlierFailureDetail()
         {

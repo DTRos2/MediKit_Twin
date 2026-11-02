@@ -9,7 +9,7 @@ namespace MediKitTwin.ArmA
     /// MobileArmBasePositioner를 씬에 붙이는 얇은 컴포넌트. 굴러가는 베이스(IMobileBase)와 팔 베이스 위치(IArmBaseLocator),
     /// 설정을 받아 순수 클래스를 만들고 IArmBasePositioner로 내놓는다. 이동 판단은 여기가 아니라 순수 클래스가 한다.
     /// </summary>
-    public sealed class ArmBasePositionerBehaviour : MonoBehaviour, IArmBasePositioner
+    public sealed class ArmBasePositionerBehaviour : MonoBehaviour, IArmBasePositioner, IArmBaseStateSource, IArmStowPoseSource, IArmPhaseSource
     {
         [Tooltip("굴러가는 베이스(IMobileBase 구현체, 보통 ArmA의 MobileBaseDriver).")]
         [SerializeField] private MonoBehaviour _mobileBase;
@@ -24,6 +24,7 @@ namespace MediKitTwin.ArmA
         [SerializeField] private MonoBehaviour _armDriver;
 
         private IArmBasePositioner _positioner;
+        private IArmDriver _stowDriver;
 
         private void Awake()
         {
@@ -57,9 +58,14 @@ namespace MediKitTwin.ArmA
             IArmStower stower = CreateStower();
             if (stower != null)
             {
-                _positioner = new StowingArmBasePositioner(_positioner, stower);
+                var stowing = new StowingArmBasePositioner(_positioner, stower);
+                stowing.PhaseReached += phase => PhaseReached?.Invoke(phase);
+                _positioner = stowing;
             }
         }
+
+        /// <summary>이동 전에 팔을 접도록 되어 있을 때만 단계(접었다, 도착했다)를 알린다. 팔을 편 채 이동하면 알릴 것이 없다.</summary>
+        public event Action<ArmMotionPhase> PhaseReached;
 
         // 두 레이어 이름이 모두 프로젝트에 정의되어 있어야 끌 수 있다. 이름이 비었으면 쓰지 않는 설정이고, 이름은 있는데 없는 레이어면 설정 실수이므로 알린다.
         private IMotionScope CreateCollisionScope()
@@ -93,8 +99,50 @@ namespace MediKitTwin.ArmA
                 return null;
             }
 
+            _stowDriver = driver;
             return new ArmStowMover(tool, driver, () => SimClock.Now, _config.StowToleranceRad, _config.StowTimeoutSeconds);
         }
+
+        /// <summary>이동 전에 팔을 접도록 되어 있으면 그 접는 자세(시작 자세)를 새 배열로 준다. 접지 않으면 false.</summary>
+        public bool TryGetStowPose(out float[] jointsRad)
+        {
+            jointsRad = null;
+            if (_stowDriver == null)
+            {
+                return false;
+            }
+
+            float[] home = _stowDriver.HomePoseRad;
+            jointsRad = (float[])home.Clone();
+            return true;
+        }
+
+        /// <summary>
+        /// 팔 베이스 링크의 월드 자세와 베이스 루트의 방향을 알려 준다. 팔 모델(IArmModel)이 아니거나 아직 준비되지 않았으면 false다.
+        /// 서 보기 전에 서는 자리에서 팔이 닿을지 가늠하는 쪽이 쓴다.
+        /// </summary>
+        public bool TryGetState(out Pose armBaseWorldPose, out float rootYawDeg)
+        {
+            armBaseWorldPose = default;
+            rootYawDeg = 0f;
+
+            var mobile = _mobileBase as IMobileBase;
+            var arm = _armBase as IArmModel;
+            if (mobile == null || arm == null || !arm.IsReady || arm.BaseLink == null)
+            {
+                return false;
+            }
+
+            armBaseWorldPose = new Pose(arm.BaseLink.position, arm.BaseLink.rotation);
+            rootYawDeg = mobile.YawDeg;
+            return true;
+        }
+
+        /// <summary>이 이동 모듈이 옮기는 굴러가는 베이스. 지정되지 않았거나 IMobileBase가 아니면 null이다.</summary>
+        public IMobileBase MobileBase => _mobileBase as IMobileBase;
+
+        /// <summary>팔 베이스 위치를 알려 주는 쪽(보통 ArmController). 어느 팔이 이 베이스에 실려 있는지 알아내는 데 쓴다.</summary>
+        public MonoBehaviour ArmBaseSource => _armBase;
 
         public string LastFailureReason => _positioner != null ? _positioner.LastFailureReason : string.Empty;
 

@@ -66,6 +66,29 @@ namespace MediKitTwin.ArmA
             return new Pose(position + rotation * _toolPosition, rotation * _toolRotation);
         }
 
+        /// <summary>
+        /// 관절 각도(rad)로 각 관절 링크의 베이스 기준 자세를 구한다. linkPoses[i]는 i번째 관절 링크 오브젝트의 자세다(씬의 링크 변환과 같다).
+        /// 도구 끝점 계산(Forward)과 같은 곡선을 따라가므로, 링크에 붙은 충돌체를 임의의 관절 각도에서 어디에 놓을지 알 수 있다.
+        /// </summary>
+        /// <param name="linkPoses">결과를 받을 배열. 관절 수 이상의 길이여야 한다.</param>
+        public void ForwardLinks(float[] anglesRad, Pose[] linkPoses)
+        {
+            Vector3 position = Vector3.zero;
+            Quaternion rotation = Quaternion.identity;
+
+            for (int i = 0; i < _joints.Length; i++)
+            {
+                JointSpec joint = _joints[i];
+                Quaternion before = rotation * joint.LocalRotation;
+                Vector3 positionBefore = position + rotation * joint.LocalPosition;
+                Quaternion spin = Quaternion.AngleAxis(anglesRad[i] * Mathf.Rad2Deg, joint.Axis);
+
+                rotation = before * spin;
+                position = positionBefore + before * (joint.Pivot - spin * joint.Pivot);
+                linkPoses[i] = new Pose(position, rotation);
+            }
+        }
+
         public void ClampToLimits(float[] anglesRad)
         {
             for (int i = 0; i < _joints.Length; i++)

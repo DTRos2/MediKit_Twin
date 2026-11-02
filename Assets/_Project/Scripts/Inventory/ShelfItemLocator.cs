@@ -28,7 +28,7 @@ namespace MediKitTwin.Inventory
             }
 
             // 칸은 +Z 쪽이 열려 있다(에디터 빌더의 OpenBox). 칸 오브젝트의 forward가 곧 칸 밖으로 나가는 방향이다.
-            item = new ShelfPickItem(new Pose(front.position, front.rotation), cell.transform.forward, front.gameObject);
+            item = new ShelfPickItem(new Pose(front.position, front.rotation), cell.transform.forward, front.gameObject, shelfSlotId);
             return true;
         }
     }

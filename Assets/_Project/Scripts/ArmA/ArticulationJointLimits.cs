@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MediKitTwin.ArmA
@@ -21,6 +22,18 @@ namespace MediKitTwin.ArmA
         public static float UpperRad(ArticulationBody body)
         {
             return IsLimited(body) ? body.xDrive.upperLimit * Mathf.Deg2Rad : Mathf.PI;
+        }
+
+        /// <summary>관절 여러 개의 한계를 지금 몸체에 들어 있는 값 그대로 읽는다. 기준(offset)을 보정하기 전의 값이 URDF 한계다.</summary>
+        public static void ReadAll(IReadOnlyList<ArticulationBody> joints, out float[] lowerRad, out float[] upperRad)
+        {
+            lowerRad = new float[joints.Count];
+            upperRad = new float[joints.Count];
+            for (int i = 0; i < joints.Count; i++)
+            {
+                lowerRad[i] = LowerRad(joints[i]);
+                upperRad[i] = UpperRad(joints[i]);
+            }
         }
     }
 }
