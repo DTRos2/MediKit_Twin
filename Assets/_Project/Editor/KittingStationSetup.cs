@@ -54,16 +54,17 @@ public static class KittingStationSetup
         GetOrAdd<OrderCsvDemoPanel>(station);
         GetOrAdd<ShelfStockDemoPanel>(station);
         GetOrAdd<KittingStatusDemoPanel>(station);
+        GetOrAdd<RecognitionMarkerOverlay>(station);
         var jointPanel = GetOrAdd<ArmJointDemoPanel>(station);
 
-        var holder = GetOrAdd<ScriptAttachHolder>(arm.gameObject);
+        // 손가락이 물건에 닿아 멈추고 조인트로 들고 가는 물리 파지를 쓴다. 연출만 하는 ScriptAttachHolder로 바꾸려면 이 줄을 바꾼다.
+        var holder = GetOrAdd<PhysicsGraspHolder>(arm.gameObject);
         var transfer = GetOrAdd<ArmItemTransfer>(arm.gameObject);
         bool isBaseWired = WireBaseMovement(arm, tool, shelf, transfer);
 
         bool isWired =
             SerializedFieldAssigner.SetReferenceList(orders, "_recipes", recipes.Cast<Object>().ToList())
             & SerializedFieldAssigner.SetReference(holder, "_gripper", gripper)
-            & SerializedFieldAssigner.SetReference(holder, "_armState", arm)
             & SerializedFieldAssigner.SetReference(transfer, "_toolTarget", tool)
             & SerializedFieldAssigner.SetReference(transfer, "_holder", holder)
             & SerializedFieldAssigner.SetReference(controller, "_kitSource", orders)

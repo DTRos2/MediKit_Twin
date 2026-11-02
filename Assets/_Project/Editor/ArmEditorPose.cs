@@ -82,8 +82,10 @@ public static class ArmEditorPose
 
         // 링크가 URDF 0도 자세인 지금 순기구학을 만들어, 부호가 맞는 시작 자세를 고른다.
         var zeros = new float[rig.Joints.Length];
+        ArticulationJointLimits.ReadAll(rig.Joints, out float[] lowerLimits, out float[] upperLimits);
         KinematicChain chain = KinematicChainBuilder.Build(
-            rig.Base, rig.Joints, rig.Tool, profile.ToolPositionOffset, profile.ToolRotationOffset, zeros);
+            rig.Base, rig.Joints, rig.Tool, profile.ToolPositionOffset, profile.ToolRotationOffset,
+            zeros, lowerLimits, upperLimits);
         float[] home = HomePoseSelector.Choose(profile, chain, rig.Base);
 
         Rotate(rig, home, 1f);
