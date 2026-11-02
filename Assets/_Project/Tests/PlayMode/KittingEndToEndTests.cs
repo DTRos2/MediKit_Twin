@@ -39,7 +39,6 @@ namespace MediKitTwin.PlayMode.Tests
         private const string DefaultOrder = "1,A병원,EM,2\n2,B병원,DX,3\n3,C병원,BL,2";
         private const int DefaultOrderKitCount = 7;
 
-        private const int CaptureFramerate = 50;
         private const float SimTimeoutSeconds = 900f;
         private const double WallTimeoutSeconds = 1500d;
 
@@ -239,7 +238,10 @@ namespace MediKitTwin.PlayMode.Tests
             System.Func<int, float> simTimeoutFor, System.Func<int, double> wallTimeoutFor)
         {
             LogAssert.ignoreFailingMessages = true;
-            Time.captureFramerate = CaptureFramerate;
+            FrameTimingSettings timing = FrameTimingSettings.FromEnvironment();
+            int previousTargetFramerate = Application.targetFrameRate;
+            int previousVSyncCount = QualitySettings.vSyncCount;
+            ApplyFrameTiming(timing);
 
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
             yield return null;
@@ -258,7 +260,22 @@ namespace MediKitTwin.PlayMode.Tests
             yield return run.Execute(order, kits);
 
             Time.captureFramerate = 0;
+            Application.targetFrameRate = previousTargetFramerate;
+            QualitySettings.vSyncCount = previousVSyncCount;
             onRun(run);
+        }
+
+        // 프레임 시간을 고정하거나 프레임 수를 제한한다. 프레임 수를 제한하려면 수직 동기화가 꺼져 있어야 제한이 먹는다.
+        private static void ApplyFrameTiming(FrameTimingSettings timing)
+        {
+            Time.captureFramerate = timing.CaptureFramerate;
+            if (timing.TargetFramerate > 0)
+            {
+                QualitySettings.vSyncCount = 0;
+                Application.targetFrameRate = timing.TargetFramerate;
+            }
+
+            Debug.Log($"[E2E] 시간 설정: 프레임 고정 {timing.CaptureFramerate}fps(0이면 고정 안 함), 프레임 상한 {timing.TargetFramerate}fps(0이면 제한 없음)");
         }
 
         private static T FindOne<T>() where T : class
