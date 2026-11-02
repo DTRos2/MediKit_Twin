@@ -14,6 +14,7 @@ namespace MediKitTwin.ArmA
     ///  3) 그리퍼를 닫는다. 기존 JointGripper가 닫은 뒤 도구 끝점 반경 안의 Graspable을 고정 조인트로 붙인다(마찰에 의존하지 않는 안정 파지).
     ///  4) 손가락이 물건에 걸려 멈췄는지(IGripContact) 확인한다. 끝까지 닫혔다면 손가락 사이에 물건이 없는 것이므로 실패로 알린다.
     ///  5) 붙은 것을 확인한 뒤에야 물건을 물리로 풀고 중력을 켠다. 붙기 전에 켜면 손가락 사이로 떨어진다.
+    ///     풀기 직전에 손가락과의 충돌을 끈다. 손가락은 닫을 때 이미 물건에 막혀 멈췄고, 이후는 조인트가 붙잡는다.
     /// 놓을 때는 박스와의 충돌을 되살리고 그리퍼를 열어, 물건이 손에서 풀려난 자세 그대로 중력으로 떨어져 바닥판과 이미 놓인 물건에 걸려 멈추게 한다(PlacedItemLanding).
     /// 멈춘 자리에서 고정해 박스의 자식으로 둔다. 슬롯 자리로 옮겨 놓지 않으므로 쥔 자세가 어긋났거나 박스에 걸리면 그 결과가 그대로 드러난다.
     /// 실패하면 이유를 LastFailureReason에 남기고 복제본을 지운다.
@@ -125,6 +126,7 @@ namespace MediKitTwin.ArmA
                 yield break;
             }
 
+            IgnoreFingersWhileHeld();
             _held.EnablePhysics(useGravity: true);
             done(true);
         }
@@ -223,6 +225,19 @@ namespace MediKitTwin.ArmA
                 yield return new WaitForFixedUpdate();
                 elapsed += Time.fixedDeltaTime;
             }
+        }
+
+        // 쥔 뒤에는 조인트가 물건을 붙잡으므로 손가락과의 충돌은 끈다. 켜 두면 손가락이 물건을 누르는 힘과 조인트가 붙잡는 힘이 맞서서
+        // 팔이 가속할 때마다 물건이 손가락 사이에서 튀고 손가락이 안쪽으로 밀렸다 돌아온다(프레임 단위로 확인). 닫을 때 손가락이 물건에 막혀
+        // 멈추는 것은 이 시점 전에 이미 끝났다. 놓을 때는 PlacedItemLanding이 어차피 손가락과 떼어 놓는다.
+        private void IgnoreFingersWhileHeld()
+        {
+            if (_contact == null)
+            {
+                return;
+            }
+
+            CollisionIsolation.Isolate(_held.Colliders, _contact.FingerColliders, null);
         }
 
         // 쥔 물건이 손가락 외의 모든 충돌체와 부딪히지 않게 한다. 손가락 정보를 모르면 건드리지 않는다.
