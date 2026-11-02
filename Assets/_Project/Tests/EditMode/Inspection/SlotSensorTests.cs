@@ -52,7 +52,7 @@ namespace MediKitTwin.Inspection.Tests
         {
             GameObject item = Make($"Item_{componentId}", parent);
             item.transform.position = worldPosition;
-            item.AddComponent<KitComponentTag>().Configure(componentId);
+            item.AddComponent<KitItemLabel>().Configure(componentId);
         }
 
         [Test]

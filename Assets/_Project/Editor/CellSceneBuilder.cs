@@ -595,7 +595,7 @@ namespace MediKitTwin.EditorTools
                 UnityEngine.Object.DestroyImmediate(item.GetComponent<Collider>());
 
                 // 복제본이 박스에 놓여도 슬롯 감지 센서가 구성품 ID를 읽을 수 있도록 표시를 붙인다.
-                item.AddComponent<MediKitTwin.Common.KitComponentTag>().Configure(componentId);
+                item.AddComponent<MediKitTwin.Common.KitItemLabel>().Configure(componentId);
             }
         }
 

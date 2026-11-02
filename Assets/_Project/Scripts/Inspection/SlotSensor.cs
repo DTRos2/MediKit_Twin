@@ -4,7 +4,7 @@ using UnityEngine;
 namespace MediKitTwin.Inspection
 {
     /// <summary>
-    /// 박스 슬롯 하나의 감지 센서. 트리거 콜라이더가 슬롯 부피를 정하고, 그 안에 있는 구성품(KitComponentTag)의 ID를 읽는다. (FR-06)
+    /// 박스 슬롯 하나의 감지 센서. 트리거 콜라이더가 슬롯 부피를 정하고, 그 안에 있는 구성품(KitItemLabel)의 ID를 읽는다. (FR-06)
     /// 박스 프리팹에 두며 콜라이더는 레시피의 슬롯 좌표와 같은 자리에 놓는다.
     /// 선반 물건의 복제본은 콜라이더가 없어 물리 트리거 이벤트가 오지 않으므로, 읽을 때 위치가 부피 안인지 직접 확인한다.
     /// </summary>
@@ -46,15 +46,15 @@ namespace MediKitTwin.Inspection
             string found = null;
             float nearest = float.MaxValue;
 
-            foreach (KitComponentTag tag in FindObjectsByType<KitComponentTag>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            foreach (KitItemLabel label in FindObjectsByType<KitItemLabel>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
             {
-                Vector3 local = transform.InverseTransformPoint(tag.transform.position) - _volume.center;
+                Vector3 local = transform.InverseTransformPoint(label.transform.position) - _volume.center;
                 Vector3 half = _volume.size * 0.5f;
                 bool inside = Mathf.Abs(local.x) <= half.x && Mathf.Abs(local.y) <= half.y && Mathf.Abs(local.z) <= half.z;
                 if (inside && local.sqrMagnitude < nearest)
                 {
                     nearest = local.sqrMagnitude;
-                    found = tag.ComponentId;
+                    found = label.ComponentId;
                 }
             }
 
