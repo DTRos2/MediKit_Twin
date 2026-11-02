@@ -29,6 +29,7 @@ namespace MediKitTwin.PlayMode.Tests
         private readonly StageBaseLog _stageLog;
         private readonly ArmPoseSnapshot _poseSnapshot;
         private readonly ToolPathRecorder _toolPath;
+        private readonly GraspHoldRecorder _graspHold;
         private readonly string _boxName;
         private readonly float _simTimeoutSeconds;
         private readonly double _wallTimeoutSeconds;
@@ -50,6 +51,7 @@ namespace MediKitTwin.PlayMode.Tests
             _overlapProbe = new ArmOverlapProbe(robot.transform);
             _poseSnapshot = new ArmPoseSnapshot(arm, watchedCell);
             _toolPath = new ToolPathRecorder(arm, 0.25f);
+            _graspHold = new GraspHoldRecorder(robot.GetComponentInChildren<JointGripper>(), controller);
             Recorder = new KittingProgressRecorder(station);
             _stageLog = new StageBaseLog(controller, _overlapProbe);
             Recorder.StageChanged += _stageLog.Record;
@@ -89,6 +91,7 @@ namespace MediKitTwin.PlayMode.Tests
                 Recorder.Sample(Time.time - startSim);
                 _toolPath.Sample(Time.time - startSim);
                 _firstJointTrace.Sample(Time.time - startSim);
+                _graspHold.Sample(Time.time - startSim);
                 CompletedKits = _station.Status.CompletedKitCount - completedBefore;
 
                 if (CompletedKits >= kitsToFinish)
@@ -116,6 +119,12 @@ namespace MediKitTwin.PlayMode.Tests
             Placed = new PlacedItemSnapshot(_boxName);
             Report = BuildReport(Time.time - startSim, wall.Elapsed.TotalSeconds, kitsToFinish);
             UnityEngine.Debug.Log(Report);
+
+            // 쥐는 순간과 쥐고 있는 동안의 움직임은 길어서 환경 변수로 켰을 때만 따로 남긴다.
+            if (GraspHoldRecorder.IsEnabled)
+            {
+                UnityEngine.Debug.Log($"[E2E] 쥐기 기록:\n{_graspHold.Lines}");
+            }
         }
 
         // 팔 접기 허용 오차는 씬에 놓인 이동 설정에서 읽는다. 설정을 못 찾으면 에셋이 정한 기본값을 쓴다(값을 여기 베끼지 않는다).
