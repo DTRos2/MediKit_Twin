@@ -16,6 +16,8 @@ namespace MediKitTwin.ArmA
         private readonly float[] _lowerRad;
         private readonly float[] _upperRad;
         private readonly float[] _offsetRad;
+        private readonly float[] _clampedGoal;
+        private readonly float[] _stepRad;
 
         public JointBank(ArticulationBody[] joints)
         {
@@ -26,6 +28,8 @@ namespace MediKitTwin.ArmA
             _lowerRad = new float[count];
             _upperRad = new float[count];
             _offsetRad = new float[count];
+            _clampedGoal = new float[count];
+            _stepRad = new float[count];
 
             for (int i = 0; i < count; i++)
             {
@@ -79,13 +83,32 @@ namespace MediKitTwin.ArmA
             Array.Copy(urdfAnglesRad, _goal, _goal.Length);
         }
 
-        /// <summary>명령을 목표 쪽으로 maxStepRad만큼 옮기고 구동 목표에 반영한다. 매 FixedUpdate에 한 번 부른다.</summary>
-        public void Step(float maxStepRad)
+        /// <summary>
+        /// 명령을 목표 쪽으로 maxStepRad만큼 옮기고 구동 목표에 반영한다. 매 FixedUpdate에 한 번 부른다.
+        /// 명령은 실제 관절 각도에서 maxLeadRad보다 앞서 나가지 못한다. 선반 등에 막혔을 때 구동이 최대 힘으로 밀어붙이다
+        /// 풀리는 순간 튕겨 날뛰는 것을 막기 위해서다(JointCommandLead).
+        /// </summary>
+        /// <param name="synchronize">
+        /// 켜면 가장 먼 관절만 maxStepRad로 가고 나머지는 같은 시각에 도착하게 속도를 줄인다(SynchronizedJointStep).
+        /// 끄면 관절마다 따로 maxStepRad로 가서, 조금 움직이는 관절이 먼저 도착해 도구 끝점이 휘어진 길로 간다.
+        /// </param>
+        public void Step(float maxStepRad, float maxLeadRad, bool synchronize = false)
         {
             for (int i = 0; i < _joints.Length; i++)
             {
-                float goal = Mathf.Clamp(_goal[i], _lowerRad[i], _upperRad[i]);
-                _command[i] = Mathf.MoveTowards(_command[i], goal, maxStepRad);
+                _clampedGoal[i] = Mathf.Clamp(_goal[i], _lowerRad[i], _upperRad[i]);
+            }
+
+            if (synchronize)
+            {
+                SynchronizedJointStep.Compute(_command, _clampedGoal, maxStepRad, _stepRad);
+            }
+
+            for (int i = 0; i < _joints.Length; i++)
+            {
+                float step = synchronize ? _stepRad[i] : maxStepRad;
+                float measured = _joints[i].jointPosition[0] + _offsetRad[i];
+                _command[i] = JointCommandLead.Advance(_command[i], _clampedGoal[i], measured, step, maxLeadRad);
                 ApplyDriveTarget(i, _command[i]);
             }
         }

@@ -60,6 +60,12 @@ namespace MediKitTwin.ArmA
         [SerializeField] private string _baseLinkName = "base_link";
         [SerializeField] private JointEntry[] _joints = Array.Empty<JointEntry>();
         [SerializeField, Min(1f)] private float _maxJointSpeedDegPerSec = 90f;
+        [Tooltip("관절 명령이 실제 관절 각도보다 앞서 나갈 수 있는 최대 각도(도). 팔이 선반에 막혔을 때 구동이 끝없이 밀어붙이다 풀리며 튕기는 것을 막는다. " +
+                 "정상 동작 중의 추종 지연보다 크게 둔다. 너무 작으면 빠르게 움직일 때 팔이 끌려오듯 느려진다.")]
+        [SerializeField, Min(0.5f)] private float _maxCommandLeadDeg = 5f;
+        [Tooltip("켜면 모든 관절이 같은 시각에 목표에 도착하도록 속도를 맞춘다(가장 먼 관절이 최대 속도). 끄면 관절마다 따로 최대 속도로 가서, 조금 움직이는 관절이 먼저 도착해 도구 끝점이 휘어진 길로 간다. " +
+                 "휘어진 길은 선반 칸 안에서 손가락이 아래 판에 박히는 원인이 된다. 이동 시간은 같다.")]
+        [SerializeField] private bool _synchronizedJointMotion = true;
 
         [Tooltip("시작 자세(도, 관절 순서). 비우면 모든 관절 0도로 시작한다. 모든 관절 0도는 팔을 수평으로 뻗은 자세라 로봇이 누운 것처럼 보인다.")]
         [SerializeField] private float[] _homePoseDeg = Array.Empty<float>();
@@ -81,6 +87,8 @@ namespace MediKitTwin.ArmA
         public string BaseLinkName => _baseLinkName;
         public JointEntry[] Joints => _joints;
         public float MaxJointSpeedRadPerSec => _maxJointSpeedDegPerSec * Mathf.Deg2Rad;
+        public float MaxCommandLeadRad => _maxCommandLeadDeg * Mathf.Deg2Rad;
+        public bool SynchronizedJointMotion => _synchronizedJointMotion;
 
         /// <summary>시작 자세(rad). 관절 수와 맞지 않으면 모든 관절 0.</summary>
         public float[] HomePoseRad

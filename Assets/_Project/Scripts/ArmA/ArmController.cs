@@ -15,7 +15,7 @@ namespace MediKitTwin.ArmA
     // 다른 컴포넌트(IK, 그리퍼, 강화학습 환경)가 Start에서 JointNames를 읽으므로 먼저 초기화한다.
     [DefaultExecutionOrder(-50)]
     [RequireComponent(typeof(ArmDriveSetup))]
-    public class ArmController : MonoBehaviour, IArmModel, IArmDriver, IForwardKinematics, IGripperHost, IArmBaseLocator
+    public class ArmController : MonoBehaviour, IArmModel, IArmDriver, IForwardKinematics, IGripperHost, IArmBaseLocator, IArmLinkSource
     {
         // 물리 엔진이 관절 상태를 안정적으로 돌려주기까지 기다리는 FixedUpdate 횟수.
         private const int WarmupFixedSteps = 2;
@@ -54,6 +54,7 @@ namespace MediKitTwin.ArmA
 
         public DlsIkSettings IkSettings => _profile.Ik;
         public Transform RobotRoot => transform;
+        public IReadOnlyList<ArticulationBody> JointBodies => _rig != null ? _rig.Joints : System.Array.Empty<ArticulationBody>();
         public IReadOnlyList<ArmProfileSO.GripperJointEntry> GripperJoints => _profile.GripperJoints;
         public ArticulationBody ToolBody => _rig.Tool != null ? _rig.Tool.GetComponent<ArticulationBody>() : null;
         public float MaxJointSpeedRadPerSec => _profile.MaxJointSpeedRadPerSec;
@@ -122,7 +123,7 @@ namespace MediKitTwin.ArmA
 
             // 목표가 없으면 직전 목표를 그대로 유지한다.
             _target?.TryGetTargets(_bank.Goal);
-            _bank.Step(MaxJointSpeedRadPerSec * Time.fixedDeltaTime);
+            _bank.Step(MaxJointSpeedRadPerSec * Time.fixedDeltaTime, _profile.MaxCommandLeadRad, _profile.SynchronizedJointMotion);
         }
 
         // 첫 물리 스텝 뒤에 한 번만 실행한다.
@@ -138,8 +139,15 @@ namespace MediKitTwin.ArmA
 
             var current = new float[_bank.Count];
             _bank.ReadAngles(current);
+            // 순기구학과 IK는 URDF 각도로 일하므로 한계도 URDF 기준이어야 한다. 몸체의 한계는 위에서 기준을 보정하며 이미 밀렸으니,
+            // 보정 전에 읽어 둔 JointBank의 한계를 쓴다. 몸체에서 다시 읽으면 기준이 밀린 로봇(FR5)은 IK 한계가 offset만큼 어긋난다.
+            var lowerLimits = new float[_bank.Count];
+            var upperLimits = new float[_bank.Count];
+            _bank.GetLimits(lowerLimits, upperLimits);
+
             _chain = KinematicChainBuilder.Build(
-                _rig.Base, _rig.Joints, _rig.Tool, _profile.ToolPositionOffset, _profile.ToolRotationOffset, current);
+                _rig.Base, _rig.Joints, _rig.Tool, _profile.ToolPositionOffset, _profile.ToolRotationOffset,
+                current, lowerLimits, upperLimits);
 
             IsReady = true;
 

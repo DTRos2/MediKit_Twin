@@ -93,5 +93,112 @@ namespace MediKitTwin.ArmA.Tests
         {
             Assert.Throws<ArgumentNullException>(() => OrientationCandidates.Generate(Nominal, null));
         }
+
+        private static IReadOnlyList<OrientationCandidate> Ranked(float rollCostWeight) =>
+            OrientationCandidates.GenerateRanked(Nominal, new OrientationSearchSettings(45f, 15f, 15f, 30f, 15f, 90f, 90f, rollCostWeight));
+
+        [Test]
+        public void DefaultRollCostWeight_CountsRollAsATenthOfTilt()
+        {
+            var settings = new OrientationSearchSettings(45f, 15f, 15f, 30f, 15f, 90f, 90f);
+
+            Assert.That(settings.RollCostWeight, Is.EqualTo(0.1f).Within(1e-4f));
+        }
+
+        [Test]
+        public void ARollOnlyCandidate_IsCountedByTheRollWeight()
+        {
+            OrientationCandidate rollOnly = FindCandidate(Ranked(0.1f), pitch: 0f, yaw: 0f, roll: 90f);
+
+            Assert.That(rollOnly.DeviationDeg, Is.EqualTo(9f).Within(1e-3f), "90도를 0.1배로 센다");
+        }
+
+        [Test]
+        public void WithTheDefaultWeight_RollingTheWristComesBeforeTilting()
+        {
+            IReadOnlyList<OrientationCandidate> ranked = Ranked(0.1f);
+
+            Assert.That(ranked[0].DeviationDeg, Is.EqualTo(0f).Within(1e-4f));
+            Assert.That(Mathf.Abs(ranked[1].RollDeg), Is.EqualTo(90f), "기본 다음은 손목만 비튼 후보(9)이고 기울이기 15도보다 앞이다");
+            Assert.That(ranked[1].PitchDeg, Is.EqualTo(0f));
+            Assert.That(ranked[1].YawDeg, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void WithWeightOne_RollIsCountedLikeTilt()
+        {
+            OrientationCandidate rollOnly = FindCandidate(Ranked(1f), pitch: 0f, yaw: 0f, roll: 90f);
+
+            Assert.That(rollOnly.DeviationDeg, Is.EqualTo(90f).Within(1e-3f));
+        }
+
+        [Test]
+        public void WithWeightZero_RollIsFree()
+        {
+            OrientationCandidate rollOnly = FindCandidate(Ranked(0f), pitch: 0f, yaw: 0f, roll: 90f);
+
+            Assert.That(rollOnly.DeviationDeg, Is.EqualTo(0f).Within(1e-4f));
+        }
+
+        [Test]
+        public void TiltAndYaw_AreNotReducedByTheRollWeight()
+        {
+            OrientationCandidate tilt = FindCandidate(Ranked(0.1f), pitch: 30f, yaw: 0f, roll: 0f);
+            OrientationCandidate yaw = FindCandidate(Ranked(0.1f), pitch: 0f, yaw: 30f, roll: 0f);
+
+            Assert.That(tilt.DeviationDeg, Is.EqualTo(30f).Within(1e-3f));
+            Assert.That(yaw.DeviationDeg, Is.EqualTo(30f).Within(1e-3f));
+        }
+
+        [Test]
+        public void AMixedCandidate_CombinesTheAxesBySumOfSquares()
+        {
+            OrientationCandidate mixed = FindCandidate(Ranked(0.1f), pitch: 30f, yaw: 0f, roll: 90f);
+
+            Assert.That(mixed.DeviationDeg, Is.EqualTo(Mathf.Sqrt(30f * 30f + 9f * 9f)).Within(1e-3f));
+        }
+
+        [Test]
+        public void EachCandidateKeepsTheAnglesItWasMadeWith()
+        {
+            IReadOnlyList<OrientationCandidate> ranked =
+                OrientationCandidates.GenerateRanked(Nominal, new OrientationSearchSettings(30f, 0f, 30f, 0f, 0f, 0f, 0f));
+
+            Assert.That(ranked.Count, Is.EqualTo(2));
+            Assert.That(ranked[1].PitchDeg, Is.EqualTo(30f));
+            Assert.That(ranked[1].YawDeg, Is.EqualTo(0f));
+            Assert.That(ranked[1].RollDeg, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void ARolledCandidate_TurnsTheToolAroundItsApproachAxisByTheRollAngle()
+        {
+            OrientationCandidate rollOnly = FindCandidate(Ranked(0.1f), pitch: 0f, yaw: 0f, roll: 90f);
+
+            Assert.That(Vector3.Angle(rollOnly.Rotation * Vector3.forward, Vector3.forward), Is.LessThan(1e-2f));
+            Assert.That(Quaternion.Angle(Nominal, rollOnly.Rotation), Is.EqualTo(90f).Within(0.1f), "실제 회전은 90도지만 점수에서는 9도로 센다");
+        }
+
+        [Test]
+        public void GenerateRanked_NullSettings_Throws()
+        {
+            Assert.Throws<ArgumentNullException>(() => OrientationCandidates.GenerateRanked(Nominal, null));
+        }
+
+        private static OrientationCandidate FindCandidate(IReadOnlyList<OrientationCandidate> ranked, float pitch, float yaw, float roll)
+        {
+            foreach (OrientationCandidate candidate in ranked)
+            {
+                if (Mathf.Approximately(candidate.PitchDeg, pitch)
+                    && Mathf.Approximately(candidate.YawDeg, yaw)
+                    && Mathf.Approximately(candidate.RollDeg, roll))
+                {
+                    return candidate;
+                }
+            }
+
+            Assert.Fail($"기울이기 {pitch}, 좌우 {yaw}, 비틀기 {roll} 후보가 없다.");
+            return default;
+        }
     }
 }

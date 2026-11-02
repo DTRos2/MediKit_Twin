@@ -33,7 +33,26 @@ namespace MediKitTwin.ArmA
         /// <summary>단계마다 허용 오차를 다르게 줄 때 쓴다. 경유 동작은 느슨하게, 쥐고 놓는 동작은 엄격하게 하기 위해서다.</summary>
         public IEnumerator MoveTo(Pose target, float positionToleranceM, float rotationToleranceDeg, Action<bool> done)
         {
-            _tool.SetToolTarget(target);
+            return MoveTo(target, positionToleranceM, rotationToleranceDeg, 0f, 0f, done);
+        }
+
+        /// <summary>
+        /// 닿았다고 보는 오차(positionToleranceM, rotationToleranceDeg)와 별도로, IK 풀이를 받아들이는 오차도 정한다.
+        /// 지나가는 자리에서 "닿았다"는 몇 cm인데 "풀렸다"는 2mm이면, 닿을 수 있는 자리를 풀이가 아슬아슬하게 못 맞춰 멈추기 때문이다.
+        /// solve 오차가 0이거나 도구가 이 기준을 받지 못하면 엄격한 기준(수렴해야 한다)으로 간다.
+        /// </summary>
+        public IEnumerator MoveTo(
+            Pose target, float positionToleranceM, float rotationToleranceDeg,
+            float solvePositionToleranceM, float solveRotationToleranceDeg, Action<bool> done)
+        {
+            if (_tool is IToolSolveToleranceTarget looseTarget)
+            {
+                looseTarget.SetToolTarget(target, solvePositionToleranceM, solveRotationToleranceDeg);
+            }
+            else
+            {
+                _tool.SetToolTarget(target);
+            }
 
             float elapsed = 0f;
             while (elapsed < _timeoutSeconds)

@@ -12,6 +12,9 @@ namespace MediKitTwin.ArmA
     /// maxJointTravelRad가 0보다 크면 현재 자세에서 어느 관절이든 그 각도보다 더 돌아야 하는 해는 쓰지 않는다.
     /// 팔이 뒤집힌 먼 자세로 가다가 선반에 걸리거나 시간 안에 닿지 못하는 것을 막기 위해서다. 이때는 현재 자세에 가까운
     /// 시작점부터 차례로 멀어지며 풀고, 수렴한 해 중 가장 덜 움직이는 것을 고른다.
+    /// 수렴한 해가 없으면 제한 안에서 오차가 가장 작은 미수렴 풀이를 돌려준다(Converged=false). 오차를 느슨하게 받아 주는 쪽
+    /// (IkSolveAcceptance)이 쓸 수 있게 하려는 것이다. 제한 안의 풀이가 하나도 없으면 먼 풀이가 결과 배열에 남으므로,
+    /// 미수렴 풀이를 쓰는 쪽은 관절 이동량(JointTravel)을 반드시 확인해야 한다.
     /// </summary>
     public sealed class MultiStartInverseKinematics : IInverseKinematics
     {
@@ -51,6 +54,11 @@ namespace MediKitTwin.ArmA
             float nearestTravel = float.MaxValue;
             IkResult nearest = best;
 
+            // 수렴하지는 못했지만 관절 이동 제한 안에 있는 풀이 가운데 오차가 가장 작은 것. 오차 허용을 느슨하게 받는 쪽이
+            // 쓸 수 있도록 남긴다. 제한을 넘는 풀이는 오차가 작아도 뒤집힌 자세이므로 여기에 넣지 않는다.
+            bool hasApproximate = IsTravelLimited && !best.Converged && IsWithinTravel(seedRad, resultRad);
+            IkResult approximate = best;
+
             for (int attempt = 0; attempt < _restarts; attempt++)
             {
                 FillStartPose(random, seedRad, attempt, _candidateSeed);
@@ -71,10 +79,12 @@ namespace MediKitTwin.ArmA
                     continue;
                 }
 
+                float travel = JointTravel.Largest(seedRad, _candidate);
+                bool isWithinTravel = travel <= _maxJointTravelRad;
+
                 if (candidate.Converged)
                 {
-                    float travel = LargestTravel(seedRad, _candidate);
-                    if (travel <= _maxJointTravelRad && travel < nearestTravel)
+                    if (isWithinTravel && travel < nearestTravel)
                     {
                         Array.Copy(_candidate, resultRad, _candidate.Length);
                         nearestTravel = travel;
@@ -82,8 +92,15 @@ namespace MediKitTwin.ArmA
                         hasNearSolution = true;
                     }
                 }
-                else if (!hasNearSolution && !best.Converged && IsCloser(candidate, best))
+                else if (isWithinTravel && !hasNearSolution && (!hasApproximate || IsCloser(candidate, approximate)))
                 {
+                    Array.Copy(_candidate, resultRad, _candidate.Length);
+                    approximate = candidate;
+                    hasApproximate = true;
+                }
+                else if (!isWithinTravel && !hasNearSolution && !hasApproximate && !best.Converged && IsCloser(candidate, best))
+                {
+                    // 쓸 수 있는 풀이가 하나도 없을 때 실패 원인을 설명하려고, 가장 가까웠던 먼 풀이의 오차를 남긴다.
                     Array.Copy(_candidate, resultRad, _candidate.Length);
                     best = candidate;
                 }
@@ -95,9 +112,13 @@ namespace MediKitTwin.ArmA
             }
 
             // 먼 해만 있으면 수렴하지 못한 것으로 돌려준다. 먼 해를 쓰면 팔이 뒤집히기 때문이다.
-            return hasNearSolution
-                ? nearest
-                : new IkResult(false, best.PositionError, best.RotationErrorDeg, best.Iterations);
+            if (hasNearSolution)
+            {
+                return nearest;
+            }
+
+            IkResult closest = hasApproximate ? approximate : best;
+            return new IkResult(false, closest.PositionError, closest.RotationErrorDeg, closest.Iterations);
         }
 
         // 제한이 없으면 관절 한계 안의 무작위 자세, 있으면 현재 자세에서 시작해 시도마다 무작위 자세 쪽으로 조금씩 멀어진다.
@@ -115,18 +136,7 @@ namespace MediKitTwin.ArmA
 
         private bool IsWithinTravel(float[] seedRad, float[] solutionRad)
         {
-            return !IsTravelLimited || LargestTravel(seedRad, solutionRad) <= _maxJointTravelRad;
-        }
-
-        private static float LargestTravel(float[] fromRad, float[] toRad)
-        {
-            float largest = 0f;
-            for (int i = 0; i < fromRad.Length; i++)
-            {
-                largest = Mathf.Max(largest, Mathf.Abs(toRad[i] - fromRad[i]));
-            }
-
-            return largest;
+            return !IsTravelLimited || JointTravel.Largest(seedRad, solutionRad) <= _maxJointTravelRad;
         }
 
         // 수렴하지 못했을 때는 위치 오차가 더 작은 쪽을 가까운 해로 본다.

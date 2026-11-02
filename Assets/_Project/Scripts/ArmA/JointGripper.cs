@@ -11,7 +11,7 @@ namespace MediKitTwin.ArmA
     /// 프로필에 관절별 닫힘 값(multiplier를 곱한 값)을 적어 이 클래스가 대신 구동한다.
     /// 닫은 뒤 손가락 사이에 Graspable이 있으면 GraspAttachment로 붙여서 쥔 것으로 처리한다.
     /// </summary>
-    public class JointGripper : MonoBehaviour, IGripper
+    public class JointGripper : MonoBehaviour, IGripper, IGripContact
     {
         [Tooltip("그리퍼가 붙은 로봇(IGripperHost 구현체, 보통 ArmController).")]
         [SerializeField] private MonoBehaviour _arm;
@@ -27,9 +27,17 @@ namespace MediKitTwin.ArmA
 
         [SerializeField] private LayerMask _graspMask = ~0;
 
+        [Tooltip("손가락이 열린 값에서 닫힌 값까지 이 비율 이상 닫혔으면 끝까지 닫힌 것으로 본다. 이보다 덜 닫힌 채 멈췄으면 손가락 사이에 물체가 걸린 것이다.")]
+        [SerializeField, Range(0.5f, 0.99f)] private float _fullyClosedRatio = 0.85f;
+
         private IGripperHost _host;
         private ArticulationBody[] _joints;
         private IReadOnlyList<ArmProfileSO.GripperJointEntry> _entries;
+        private float[] _positions;
+        private float[] _openValues;
+        private float[] _closedValues;
+        private Collider[] _fingerColliders = Array.Empty<Collider>();
+        private GripClosureJudge _closureJudge;
         private readonly GraspAttachment _attachment = new GraspAttachment();
         private float _opening = 1f;
         private float _targetOpening = 1f;
@@ -42,6 +50,31 @@ namespace MediKitTwin.ArmA
         public float Opening => _opening;
         public bool IsHolding => _attachment.IsAttached;
         public Graspable HeldObject => _attachment.Held;
+
+        public IReadOnlyList<Collider> FingerColliders => _fingerColliders;
+
+        public Vector3 GraspCenter => _host != null ? _host.ToolPose.position : transform.position;
+
+        public float GraspRadius => _graspRadius;
+
+        /// <summary>손가락이 열린 값에서 닫힌 값까지 충분히 닫히지 못하고 멈췄으면 true. 닫는 명령을 내리고 기다린 뒤에 읽는다.</summary>
+        public bool IsBlockedByObject
+        {
+            get
+            {
+                if (!_ready)
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < _joints.Length; i++)
+                {
+                    _positions[i] = _joints[i].jointPosition[0];
+                }
+
+                return _closureJudge.IsBlocked(_positions, _openValues, _closedValues);
+            }
+        }
 
         private void Start()
         {
@@ -67,8 +100,28 @@ namespace MediKitTwin.ArmA
                 }
             }
 
+            CacheFingerState();
             ApplyOpening();
             _ready = true;
+        }
+
+        // 손가락 판정에 쓰는 값(열린·닫힌 값)과 손가락 충돌체를 한 번만 모아 둔다.
+        private void CacheFingerState()
+        {
+            _positions = new float[_joints.Length];
+            _openValues = new float[_joints.Length];
+            _closedValues = new float[_joints.Length];
+            var colliders = new List<Collider>();
+
+            for (int i = 0; i < _joints.Length; i++)
+            {
+                _openValues[i] = _entries[i].OpenValue;
+                _closedValues[i] = _entries[i].ClosedValue;
+                colliders.AddRange(_joints[i].GetComponentsInChildren<Collider>());
+            }
+
+            _fingerColliders = colliders.ToArray();
+            _closureJudge = new GripClosureJudge(_fullyClosedRatio);
         }
 
         private void FixedUpdate()

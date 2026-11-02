@@ -6,6 +6,7 @@ namespace MediKitTwin.ArmA
     /// 선반 물건 원본을 물리로 쥘 수 있는 복제본으로 만든다. 선반의 원본에는 콜라이더와 리지드바디가 없으므로
     /// 복제본에 메시 크기에 맞는 BoxCollider, Rigidbody, Graspable을 붙인다.
     /// 쥐기 전에는 중력을 꺼서 제자리에 있게 하고, 쥔 뒤에 켠다.
+    /// startKinematic이면 고정된 채로 만들어, 손가락이 닫힐 때 밀려나지 않고 손가락을 막아 세운다(Graspable.EnablePhysics로 푼다).
     /// </summary>
     public sealed class GraspableItemFactory
     {
@@ -16,7 +17,7 @@ namespace MediKitTwin.ArmA
             _massKg = massKg;
         }
 
-        public Graspable Create(GameObject prototype, Pose pose)
+        public Graspable Create(GameObject prototype, Pose pose, bool startKinematic = false)
         {
             GameObject clone = Object.Instantiate(prototype, pose.position, pose.rotation);
             clone.SetActive(true);
@@ -40,7 +41,8 @@ namespace MediKitTwin.ArmA
             body.mass = _massKg;
             body.useGravity = false;
             body.interpolation = RigidbodyInterpolation.Interpolate;
-            body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            body.isKinematic = startKinematic;
+            body.collisionDetectionMode = startKinematic ? CollisionDetectionMode.Discrete : CollisionDetectionMode.ContinuousDynamic;
 
             return clone.AddComponent<Graspable>();
         }

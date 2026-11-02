@@ -89,6 +89,53 @@ namespace MediKitTwin.ArmA.Tests
             Assert.That(frames, Is.GreaterThanOrEqualTo(4), "후보마다 한 프레임씩 양보해 화면이 멈추지 않게 한다");
         }
 
+        // 손목을 옆으로 90도 비틀어야만 닿는 팔, 또는 도구 끝을 아래로 30도 이상 기울여야 닿는 팔을 흉내 낸다.
+        private static Func<Pose, bool> NeedsRollOrTilt()
+        {
+            return pose =>
+            {
+                Vector3 up = pose.rotation * Vector3.up;
+                bool isRolledSideways = Mathf.Abs(up.x) > 0.9f;
+                return isRolledSideways || NeedsTipDownAtLeast(30f)(pose);
+            };
+        }
+
+        [Test]
+        public void WhenRollingTheWristReaches_RollsInsteadOfTilting()
+        {
+            var settings = new OrientationSearchSettings(45f, 15f, 15f, 30f, 15f, 90f, 90f);
+
+            OrientationSearchResult result = Search(NeedsRollOrTilt(), settings);
+
+            Assert.That(result.IsFound, Is.True);
+            Assert.That(Mathf.Abs(result.RollDeg), Is.EqualTo(90f), "비틀기는 접근 방향을 안 바꾸므로 기울이기보다 먼저 쓴다");
+            Assert.That(result.PitchDeg, Is.EqualTo(0f));
+            Assert.That(result.YawDeg, Is.EqualTo(0f));
+            Assert.That(result.DeviationDeg, Is.EqualTo(9f).Within(0.1f));
+        }
+
+        [Test]
+        public void WithRollCostWeightOne_TiltsInsteadOfRolling()
+        {
+            var settings = new OrientationSearchSettings(45f, 15f, 15f, 30f, 15f, 90f, 90f, 1f);
+
+            OrientationSearchResult result = Search(NeedsRollOrTilt(), settings);
+
+            Assert.That(result.IsFound, Is.True);
+            Assert.That(result.PitchDeg, Is.EqualTo(30f), "비틀기를 기울이기와 똑같이 세면 30도 기울이는 쪽이 더 덜 무리하다");
+            Assert.That(result.RollDeg, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void TheFoundCandidate_KeepsItsAxisAngles()
+        {
+            OrientationSearchResult result = Search(NeedsTipDownAtLeast(30f), TiltOnly(45f));
+
+            Assert.That(result.PitchDeg, Is.EqualTo(30f));
+            Assert.That(result.YawDeg, Is.EqualTo(0f));
+            Assert.That(result.RollDeg, Is.EqualTo(0f));
+        }
+
         [Test]
         public void Constructor_NullProbe_Throws()
         {

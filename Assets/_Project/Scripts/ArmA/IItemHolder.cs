@@ -19,6 +19,9 @@ namespace MediKitTwin.ArmA
         /// </summary>
         IEnumerator Grasp(ShelfPickItem item, Action<bool> done);
 
+        /// <summary>마지막 Grasp가 실패한 이유를 사람이 읽는 문장으로 돌려준다. 성공했거나 아직 쥐지 않았으면 빈 글자다.</summary>
+        string LastFailureReason { get; }
+
         /// <summary>쥔 물건을 박스 슬롯 자리에 내려놓는다. 내려놓은 물건은 박스의 자식이 된다.</summary>
         IEnumerator Release(ItemPlaceRequest request);
 
