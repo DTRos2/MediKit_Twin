@@ -111,6 +111,11 @@ namespace MediKitTwin.ArmA
         [Tooltip("켜면 박스에 놓는 동안 쥔 물건이 도구에서 떨어진 거리, 가늠한 도구 자리와 실제로 가는 도구 자리의 차이(IK 결과 포함), " +
                  "놓기 직전 물건의 미끄러짐과 어긋남을 로그로 남긴다. 슬롯마다 두세 줄이 늘어난다.")]
         [SerializeField] private bool _logPlaceDiagnostics = true;
+        [Tooltip("켜면 박스로 가며 팔 베이스를 옮길 때마다 물리 스텝마다 베이스의 속도와 쥔 물건의 밀림을 재서, 이동 한 번마다 요약 한두 줄을 로그로 남긴다. " +
+                 "물건이 베이스가 움직이는 중에 밀리는지 멈춘 뒤에 밀리는지 가리는 데 쓴다. 위 박스 진단이 켜져 있어야 한다. 이동이 되풀이될수록 줄이 늘어난다.")]
+        [SerializeField] private bool _logBaseMotion = true;
+        [Tooltip("이동 중 쥔 물건이 이만큼(cm) 밀리면 '밀리기 시작했다'고 보고, 그때 베이스가 움직이는 중이었는지와 속도를 로그에 남긴다.")]
+        [SerializeField, Min(0.1f)] private float _baseMotionSlipOnsetCm = 2f;
 
         private IItemHolder _itemHolder;
         private TaughtPoseFinder _taughtFinder;
@@ -249,11 +254,38 @@ namespace MediKitTwin.ArmA
                 message => Debug.Log($"{name}: {message}", this),
                 CreateBaseClearance(policy),
                 _logPlaceDiagnostics ? new BoxPlaceDiagnostics(tool.Probe) : null,
-                _positioner as IArmPhaseSource);
+                _positioner as IArmPhaseSource,
+                CreateBaseMotionProbe());
 
             _taughtFinder = new TaughtPoseFinder(
                 _useTaughtPoses ? new TaughtPickPoseRepository(FilePickPoseStorage.CreateDefault()) : null,
                 message => Debug.LogError($"{name}: {message}", this));
+        }
+
+        // 베이스를 옮기는 동안 물리 스텝마다 재는 데 필요한 것. 끄거나 진단을 껐거나 굴러가는 베이스를 알 수 없으면 만들지 않는다.
+        // 스텝 알림은 FixedUpdate에서 나오므로 이 오브젝트에 알림 컴포넌트를 하나 단다.
+        private BaseMotionProbe CreateBaseMotionProbe()
+        {
+            if (!_logPlaceDiagnostics || !_logBaseMotion)
+            {
+                return null;
+            }
+
+            IMobileBase mobile = (_positioner as ArmBasePositionerBehaviour)?.MobileBase;
+            if (mobile == null)
+            {
+                return null;
+            }
+
+            PhysicsStepTicker ticker = GetComponent<PhysicsStepTicker>();
+            if (ticker == null)
+            {
+                ticker = gameObject.AddComponent<PhysicsStepTicker>();
+            }
+
+            // 시작과 끝은 코루틴(Update 쪽)에서, 그 사이는 FixedUpdate에서 재므로 둘에서 같은 뜻을 가진 fixedTime(마지막 물리 스텝의 시각)을 쓴다.
+            // Time.time은 Update에서 프레임 시각이라 FixedUpdate의 스텝 시각보다 앞설 수 있어 시간이 거꾸로 가 보인다.
+            return new BaseMotionProbe(ticker, mobile, () => Time.fixedTime, _baseMotionSlipOnsetCm / 100f);
         }
 
         // 박스 곁에 서는 자리에서 팔 베이스가 레일 같은 장애물에 파고들지 않게 하는 쪽. 베이스를 못 옮기는 팔이거나 끄면 만들지 않는다.

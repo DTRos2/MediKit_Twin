@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using MediKitTwin.Common;
 using UnityEngine;
 
@@ -6,16 +7,23 @@ namespace MediKitTwin.ArmA
 {
     /// <summary>
     /// 박스에 놓는 동안 "미리 가늠한 것과 실제로 하는 것이 같은가"를 가리는 글을 만든다. 읽기만 하고 아무것도 움직이지 않으며,
-    /// 언제 부를지는 BoxPlaceRoutine이 정한다. 세 가지를 따진다.
+    /// 언제 부를지는 BoxPlaceRoutine이 정한다. 네 가지를 따진다.
     ///  1. 쥔 물건 중심이 도구에서 얼마나 떨어져 있는가: 멀수록 도구 방향이 달라질 때 도구 자리가 많이 달라진다.
     ///  2. 가늠에 쓴 도구 자리(기본 방향 기준)와 찾은 방향으로 다시 계산한 도구 자리의 차이, 그리고 두 자리 각각의 IK 결과.
     ///  3. 물건이 손에서 미끄러졌는지(지점마다 재서 어느 구간인지), 놓기 직전 물건 중심이 놓으려던 자리에서 얼마나 벗어났는지.
+    ///  4. 팔 베이스를 옮기는 동안 물건이 언제 밀리기 시작했는지(스텝마다 잰 요약과 추이): 베이스가 움직이는 중인지, 멈춘 뒤인지, 그때 속도는 얼마인지.
     /// IK 질의는 주입받으므로 씬 없이 시험한다.
     /// </summary>
     public sealed class BoxPlaceDiagnostics
     {
         private const float MetersToCm = 100f;
         private const float MetersToMm = 1000f;
+
+        // 추이 줄에 적는 스텝의 최대 개수. 넘으면 일정한 간격으로 줄인다.
+        private const int MaxTraceEntries = 100;
+
+        // 이만큼 이상 돌았을 때만 추이에 회전 속도를 적는다. 돌지 않은 이동의 회전 속도는 전부 0이라 줄만 길어진다.
+        private const float MinYawTravelToTraceDeg = 0.5f;
 
         // PlacePath.Positions의 순서와 같다.
         private static readonly string[] PointNames = { "슬롯 위", "슬롯", "들어올림" };
@@ -85,6 +93,91 @@ namespace MediKitTwin.ArmA
             }
 
             return string.Join(", ", parts);
+        }
+
+        /// <summary>
+        /// 팔 베이스를 한 번 옮기는 동안의 요약: 베이스가 얼마나 어떻게 움직였는지, 쥔 물건이 얼마나 밀렸는지, 기준 거리를 처음 넘은 때가
+        /// 베이스가 움직이는 중이었는지 멈춘 뒤였는지. arrived가 false이면 도착하기 전에 끝난 이동이다(실패, 중단).
+        /// </summary>
+        public string DescribeBaseMotion(string label, BaseMotionSummary summary, bool arrived, float onsetSlipM)
+        {
+            string ending = arrived ? "도착" : "도착하지 못하고 끝남";
+            string motion = summary.HasMotion
+                ? $"{Cm(summary.DistanceM)}cm 이동 {summary.YawTravelDeg:0}도 회전(최고 {summary.MaxSpeedMps:0.00}m/s, {summary.MaxYawRateDegPerSec:0}도/초)"
+                : $"베이스는 움직이지 않았다({Cm(summary.DistanceM)}cm, {summary.YawTravelDeg:0.0}도)";
+
+            Vector3 end = summary.SlipAtEndInTool;
+            string slip = $"쥔 물건 밀림 최대 {Cm(summary.MaxSlipM)}cm, 끝 {Cm(summary.SlipAtEndM)}cm " +
+                          $"도구 기준 ({Cm(end.x)}, {Cm(end.y)}, {Cm(end.z)})cm {summary.SlipAtEndDeg:0.0}도";
+            if (summary.HasMotion)
+            {
+                slip += $", 베이스가 마지막으로 움직인 때 {Cm(summary.SlipAtLastMotionM)}cm";
+            }
+
+            return $"베이스 이동 [{label}] {ending}, {summary.DurationSeconds:0.00}초 동안 {motion}. {slip}. " +
+                   $"{DescribeSlipOnset(summary, onsetSlipM)}";
+        }
+
+        /// <summary>
+        /// 같은 이동의 스텝별 추이: 베이스 속도, (돌았으면) 회전 속도, 쥔 물건 밀림. 스텝이 많으면 일정한 간격으로 줄여 적는다.
+        /// 속도가 오르내리는 모양과 밀림이 커지는 시점을 나란히 볼 수 있다.
+        /// </summary>
+        public string DescribeBaseMotionTrace(string label, BaseMotionSummary summary)
+        {
+            int stride = Mathf.Max(1, Mathf.CeilToInt(summary.SampleCount / (float)MaxTraceEntries));
+            string interval = stride > 1 ? $", {stride}스텝마다" : string.Empty;
+            string text = $"베이스 이동 [{label}] 추이({summary.SampleCount}스텝, 간격 {summary.StepSeconds:0.000}초{interval}) " +
+                          $"속도(m/s) [{Series(summary.SpeedsMps, stride, "0.00", 1f)}]";
+
+            if (summary.YawTravelDeg >= MinYawTravelToTraceDeg)
+            {
+                text += $", 회전(도/초) [{Series(summary.YawRatesDegPerSec, stride, "0", 1f)}]";
+            }
+
+            return text + $", 밀림(cm) [{Series(summary.SlipsM, stride, "0.0", MetersToCm)}]";
+        }
+
+        private static string DescribeSlipOnset(BaseMotionSummary summary, float onsetSlipM)
+        {
+            if (!summary.HasOnset)
+            {
+                return $"밀림이 {Cm(onsetSlipM)}cm를 넘지 않았다.";
+            }
+
+            string when;
+            if (summary.OnsetStepsSinceMotion < 0)
+            {
+                when = "베이스가 움직이기 전";
+            }
+            else if (summary.OnsetWhileMoving)
+            {
+                when = "베이스가 움직이는 중";
+            }
+            else
+            {
+                when = $"베이스가 멈추고 {summary.OnsetStepsSinceMotion}스텝 뒤";
+            }
+
+            return $"밀림이 {Cm(onsetSlipM)}cm를 처음 넘은 때는 이동 시작 {summary.OnsetSeconds:0.00}초 뒤, {when}" +
+                   $"(속도 {summary.OnsetSpeedMps:0.00}m/s, 회전 {summary.OnsetYawRateDegPerSec:0}도/초, 그때까지 {Cm(summary.OnsetDistanceM)}cm 이동).";
+        }
+
+        // stride 간격으로 값을 뽑아 적는다. 마지막 값은 간격과 상관없이 넣는다(끝에서 어떻게 됐는지가 중요하다).
+        private static string Series(IReadOnlyList<float> values, int stride, string format, float scale)
+        {
+            var parts = new List<string>();
+            for (int i = 0; i < values.Count; i += stride)
+            {
+                parts.Add((values[i] * scale).ToString(format));
+            }
+
+            int last = values.Count - 1;
+            if (last >= 0 && last % stride != 0)
+            {
+                parts.Add((values[last] * scale).ToString(format));
+            }
+
+            return string.Join(" ", parts);
         }
 
         private static string Cm(float meters)

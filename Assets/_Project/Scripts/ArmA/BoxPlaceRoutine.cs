@@ -37,20 +37,23 @@ namespace MediKitTwin.ArmA
         private readonly BaseStandClearance _baseClearance;
         private readonly BoxPlaceDiagnostics _diagnostics;
         private readonly IArmPhaseSource _phases;
+        private readonly BaseMotionProbe _motionProbe;
 
         /// <param name="toolPose">도구 끝점의 지금 월드 자세. 팔이 준비되지 않았으면 null을 돌려준다. 없으면 쥔 자세를 재지 못한다.</param>
         /// <param name="log">진행을 알리는 쪽. 필요 없으면 null.</param>
         /// <param name="baseClearance">서는 자리에서 팔 베이스가 박스 옆 레일 같은 장애물에 파고들면 뒤로 물려 주는 쪽. 없으면 정해진 자리에 그대로 선다.</param>
         /// <param name="diagnostics">가늠한 것과 실제로 하는 것의 차이, 물건의 미끄러짐을 로그로 남기는 쪽. 없으면 남기지 않는다.</param>
         /// <param name="phases">팔 베이스를 옮기는 동안 접은 뒤, 도착한 뒤를 알려 주는 쪽. 있으면 그 지점에서도 미끄러짐을 잰다. 없으면 재지 않는다.</param>
+        /// <param name="motionProbe">팔 베이스를 옮기는 동안 물리 스텝마다 재는 데 필요한 것. 있고 phases도 있으면 이동마다 베이스의 움직임과 물건의 밀림을 스텝별로 잰다.</param>
         public BoxPlaceRoutine(
             StandPolicy policy, StandSearchRoutine standSearch, ArmMotionSteps steps, IItemHolder holder, BoxPlaceSettings settings,
             Func<Pose?> toolPose = null, Action<string> log = null, BaseStandClearance baseClearance = null,
-            BoxPlaceDiagnostics diagnostics = null, IArmPhaseSource phases = null)
+            BoxPlaceDiagnostics diagnostics = null, IArmPhaseSource phases = null, BaseMotionProbe motionProbe = null)
         {
             _baseClearance = baseClearance;
             _diagnostics = diagnostics;
             _phases = phases;
+            _motionProbe = motionProbe;
             _policy = policy ?? throw new ArgumentNullException(nameof(policy));
             _standSearch = standSearch ?? throw new ArgumentNullException(nameof(standSearch));
             _steps = steps ?? throw new ArgumentNullException(nameof(steps));
@@ -74,7 +77,9 @@ namespace MediKitTwin.ArmA
             HeldSlipTrail slipTrail = frame.HasValue && _diagnostics != null ? new HeldSlipTrail(frame.Value) : null;
 
             // 베이스를 옮기는 동안의 접은 뒤, 도착한 뒤에도 잰다. 놓는 순서가 끝나면(실패해도) 반드시 알림을 끊어야 다음 물건에 섞이지 않는다.
-            Action<ArmMotionPhase> onPhase = SubscribeToArmPhases(slipTrail);
+            // 이동 한 번을 스텝마다 재는 기록도 같은 알림으로 열고 닫는다. 끝나지 않은 기록은 도착하지 못한 것으로 닫아 스텝 알림을 끊는다.
+            BaseMotionRecorder recorder = CreateMotionRecorder(frame);
+            Action<ArmMotionPhase> onPhase = SubscribeToArmPhases(slipTrail, recorder);
             try
             {
                 yield return PlaceWithTrail(request, result, frame, restingRotation, slipTrail);
@@ -85,6 +90,8 @@ namespace MediKitTwin.ArmA
                 {
                     _phases.PhaseReached -= onPhase;
                 }
+
+                recorder?.End(arrived: false);
             }
         }
 
@@ -225,10 +232,11 @@ namespace MediKitTwin.ArmA
         }
 
         // 팔 베이스를 옮기는 단계(접은 뒤, 도착한 뒤)마다 미끄러짐을 잰다. 같은 단계가 되풀이되면 몇 번째인지 이름에 붙인다.
+        // 접은 뒤는 베이스를 옮기기 시작하는 때이고 도착한 뒤는 옮기기를 끝내는 때이므로, 스텝별 기록도 여기서 열고 닫는다.
         // 알림을 받지 않으면(진단을 껐거나 알려 주는 쪽이 없음) null을 돌려준다.
-        private Action<ArmMotionPhase> SubscribeToArmPhases(HeldSlipTrail trail)
+        private Action<ArmMotionPhase> SubscribeToArmPhases(HeldSlipTrail trail, BaseMotionRecorder recorder)
         {
-            if (trail == null || _phases == null)
+            if ((trail == null && recorder == null) || _phases == null)
             {
                 return null;
             }
@@ -238,11 +246,40 @@ namespace MediKitTwin.ArmA
             {
                 counts.TryGetValue(phase, out int seen);
                 counts[phase] = ++seen;
-                MarkSlip(trail, SlipPoints.Label(SlipPoints.For(phase), seen));
+
+                if (trail != null)
+                {
+                    MarkSlip(trail, SlipPoints.Label(SlipPoints.For(phase), seen));
+                }
+
+                if (phase == ArmMotionPhase.Stowed)
+                {
+                    recorder?.Begin();
+                }
+                else
+                {
+                    recorder?.End(arrived: true);
+                }
             };
 
             _phases.PhaseReached += onPhase;
             return onPhase;
+        }
+
+        // 베이스를 옮기는 동안 스텝마다 재는 기록. 재는 데 필요한 것이 없거나 진단을 껐거나 쥔 자세를 알 수 없으면 만들지 않는다.
+        private BaseMotionRecorder CreateMotionRecorder(HeldItemFrame? frame)
+        {
+            if (_motionProbe == null || _diagnostics == null || _log == null || !frame.HasValue)
+            {
+                return null;
+            }
+
+            return new BaseMotionRecorder(_motionProbe, MeasureHeldFrame, _diagnostics, _log);
+        }
+
+        private HeldItemFrame? MeasureHeldFrame()
+        {
+            return TryMeasureHeldItem(out HeldItemFrame frame, out _) ? frame : (HeldItemFrame?)null;
         }
 
         // 한 지점에서 쥔 자세를 재서 직전 지점·처음 지점과 견준 미끄러짐을 남긴다. 재지 못하면(진단을 껐거나 쥔 자세를 알 수 없음) 아무것도 하지 않는다.
