@@ -2550,7 +2550,7 @@ MonoBehaviour:
   _rotationToleranceDeg: 5
   _travelPositionToleranceM: 0.03
   _travelRotationToleranceDeg: 10
-  _jointToleranceDeg: 1.5
+  _jointToleranceDeg: 3
   _travelJointToleranceDeg: 4
   _stepTimeoutSeconds: 10
 --- !u!114 &670708485
