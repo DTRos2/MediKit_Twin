@@ -11,7 +11,7 @@ namespace MediKitTwin.Mobile
     /// 월드 위치 변화량으로 궤도를 돌리므로, 이 루트를 움직이면 바퀴와 궤도가 따라서 돈다.
     /// 시간은 Time.deltaTime이라 SimClock 배속이 그대로 적용된다.
     /// </summary>
-    public class MobileBaseDriver : MonoBehaviour, IMobileBase
+    public class MobileBaseDriver : MonoBehaviour, IMobileBase, IManualPlacement
     {
         [Tooltip("전진 속도(m/s).")]
         [SerializeField, Min(0.05f)] private float _moveSpeed = 1.2f;
@@ -56,6 +56,15 @@ namespace MediKitTwin.Mobile
         public void Stop()
         {
             _hasTarget = false;
+        }
+
+        // 진행 중이던 이동은 취소하고(도착을 알리지 않는다) 곧바로 이 자리와 방향에 놓는다. 높이는 그대로 둔다.
+        public void PlaceAt(Vector3 worldPosition, float yawDeg)
+        {
+            _hasTarget = false;
+            transform.SetPositionAndRotation(
+                new Vector3(worldPosition.x, transform.position.y, worldPosition.z),
+                Quaternion.Euler(0f, yawDeg, 0f));
         }
 
         private void Update()
