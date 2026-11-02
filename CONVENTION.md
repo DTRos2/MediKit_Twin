@@ -144,6 +144,14 @@ git push -u origin feature/<이니셜>-<기능>
 - 태그 비교는 `CompareTag`를 쓴다.
 - 1배속 평균 30 FPS 이상(NFR-01)을 지킨다. 4배속에서 FPS가 20 미만이면 경고를 표시한다.
 
+### 6-6. 물리·충돌 규칙
+
+- 움직이는 베이스 위에 얹는 팔은 **밑동 콜라이더와 베이스 콜라이더 사이를 2cm 이상** 띄운다. 겹치거나 맞닿으면 팔이 선반 쪽으로 뻗을 때 Unity가 PhysX 계산에서 네이티브 크래시(Bug Reporter)로 꺼진다. 접촉은 두 콜라이더의 접촉 거리 합(기본 `defaultContactOffset` 0.01m × 2)부터 생긴다.
+- 간격은 눈에 보이는 메시를 건드리지 않고 **콜라이더만 줄여서** 만든다. (`ArmA.prefab`의 `Base` 콜라이더 윗면을 약 5cm 낮췄다.)
+- 팔이나 베이스의 높이, 위치, 크기를 바꾸면 이 간격을 다시 확인한다.
+- 팔과 받침대의 충돌을 `Physics.IgnoreCollision`으로 끄기보다 간격을 만드는 쪽을 기본으로 한다. 장애물 회피 계산(`ArmPerceptionBuilder.FindMounts`)은 베이스 가까이의 콜라이더를 이미 장애물에서 빼므로, 간격을 만들면 계산과 물리가 같은 전제가 된다.
+- 크래시 로그 보는 법, 원인, 조사 경위는 [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)에 있다.
+
 ---
 
 ## 7. ML 파이프라인 규칙
@@ -182,7 +190,7 @@ Assets/
 └─ (서드파티 에셋은 _Project 밖에 둔다)
 ml/                    # 파이썬 학습 코드 (데이터셋은 커밋하지 않음)
 medikit_ws/           # ROS 2 워크스페이스 (colcon)
-docs/                  # SRS, 기획표, WBS, 공정 흐름도
+docs/                  # SRS, 기획표, WBS, 공정 흐름도, 트러블슈팅
 ```
 
 | Scripts 폴더 | 내용 | 요구사항 |
