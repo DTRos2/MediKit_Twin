@@ -27,6 +27,11 @@ namespace MediKitTwin.ArmA
         [SerializeField, Min(0f)] private float _maxRollDeg = 90f;
         [Tooltip("손목 비틀기를 바꾸는 간격. 0이면 비틀지 않는다.")]
         [SerializeField, Min(0f)] private float _rollStepDeg = 90f;
+        [Tooltip("비틀기 1도를 기울이기·좌우 몇 도로 칠지. 비틀기는 칸으로 들어가는 방향을 바꾸지 않아 칸 틀에 걸릴 위험이 거의 없으므로 작게 둔다. 1이면 똑같이 센다.")]
+        [SerializeField, Range(0f, 1f)] private float _rollCostWeight = DefaultRollCostWeight;
+
+        /// <summary>비틀기를 기울이기·좌우의 1/10로 센다.</summary>
+        public const float DefaultRollCostWeight = 0.1f;
 
         public OrientationSearchSettings()
         {
@@ -35,7 +40,8 @@ namespace MediKitTwin.ArmA
         public OrientationSearchSettings(
             float maxPitchDownDeg, float maxPitchUpDeg, float pitchStepDeg,
             float maxYawDeg, float yawStepDeg,
-            float maxRollDeg, float rollStepDeg)
+            float maxRollDeg, float rollStepDeg,
+            float rollCostWeight = DefaultRollCostWeight)
         {
             _maxPitchDownDeg = maxPitchDownDeg;
             _maxPitchUpDeg = maxPitchUpDeg;
@@ -44,6 +50,14 @@ namespace MediKitTwin.ArmA
             _yawStepDeg = yawStepDeg;
             _maxRollDeg = maxRollDeg;
             _rollStepDeg = rollStepDeg;
+            _rollCostWeight = rollCostWeight;
+        }
+
+        /// <summary>손목 비틀기 범위만 바꾼 복사본. 나머지(기울이기, 좌우 돌리기, 비틀기 비중)는 그대로다.</summary>
+        public OrientationSearchSettings WithRoll(float maxRollDeg, float rollStepDeg)
+        {
+            return new OrientationSearchSettings(
+                _maxPitchDownDeg, _maxPitchUpDeg, _pitchStepDeg, _maxYawDeg, _yawStepDeg, maxRollDeg, rollStepDeg, _rollCostWeight);
         }
 
         public float MaxPitchDownDeg => _maxPitchDownDeg;
@@ -59,5 +73,7 @@ namespace MediKitTwin.ArmA
         public float MaxRollDeg => _maxRollDeg;
 
         public float RollStepDeg => _rollStepDeg;
+
+        public float RollCostWeight => _rollCostWeight;
     }
 }

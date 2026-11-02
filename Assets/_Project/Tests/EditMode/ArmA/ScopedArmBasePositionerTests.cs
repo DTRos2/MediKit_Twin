@@ -10,6 +10,13 @@ namespace MediKitTwin.ArmA.Tests
     {
         private readonly List<string> _calls = new List<string>();
 
+        // NUnit은 한 클래스의 테스트들이 같은 인스턴스를 쓰므로, 앞 테스트가 남긴 호출 기록을 비워야 한다.
+        [SetUp]
+        public void ClearCalls()
+        {
+            _calls.Clear();
+        }
+
         private sealed class RecordingScope : IMotionScope
         {
             private readonly List<string> _calls;

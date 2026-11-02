@@ -10,6 +10,13 @@ namespace MediKitTwin.ArmA.Tests
     {
         private readonly List<string> _calls = new List<string>();
 
+        // NUnit은 한 클래스의 테스트들이 같은 인스턴스를 쓰므로, 앞 테스트가 남긴 호출 기록을 비워야 한다.
+        [SetUp]
+        public void ClearCalls()
+        {
+            _calls.Clear();
+        }
+
         private sealed class FakeStower : IArmStower
         {
             private readonly List<string> _calls;
@@ -34,6 +41,7 @@ namespace MediKitTwin.ArmA.Tests
             private readonly List<string> _calls;
 
             internal Vector3 Target;
+            internal bool Arrives = true;
 
             internal FakeInner(List<string> calls) => _calls = calls;
 
@@ -45,7 +53,7 @@ namespace MediKitTwin.ArmA.Tests
             {
                 _calls.Add("move");
                 Target = worldPosition;
-                done(true);
+                done(Arrives);
                 yield break;
             }
 
@@ -114,6 +122,64 @@ namespace MediKitTwin.ArmA.Tests
             var passing = new StowingArmBasePositioner(inner, new FakeStower(_calls, true));
             CoroutineRunner.Drain(passing.MoveArmBaseTo(Vector3.zero, _ => { }), null);
             Assert.That(passing.LastFailureReason, Is.EqualTo("안쪽 이유"));
+        }
+
+        [Test]
+        public void ReportsStowedThenBaseArrived_InThatOrder_WhenTheMoveSucceeds()
+        {
+            var phases = new List<ArmMotionPhase>();
+            var positioner = new StowingArmBasePositioner(new FakeInner(_calls), new FakeStower(_calls, true));
+            positioner.PhaseReached += phases.Add;
+
+            CoroutineRunner.Drain(positioner.MoveArmBaseTo(Vector3.one, _ => { }), null);
+
+            Assert.That(phases, Is.EqualTo(new[] { ArmMotionPhase.Stowed, ArmMotionPhase.BaseArrived }));
+        }
+
+        [Test]
+        public void ReportsNothing_WhenStowingFails()
+        {
+            var phases = new List<ArmMotionPhase>();
+            var positioner = new StowingArmBasePositioner(new FakeInner(_calls), new FakeStower(_calls, false));
+            positioner.PhaseReached += phases.Add;
+
+            CoroutineRunner.Drain(positioner.MoveArmBaseTo(Vector3.one, _ => { }), null);
+
+            Assert.That(phases, Is.Empty);
+        }
+
+        [Test]
+        public void ReportsStowedButNotBaseArrived_WhenTheBaseDoesNotArrive()
+        {
+            var phases = new List<ArmMotionPhase>();
+            bool result = true;
+            var positioner = new StowingArmBasePositioner(new FakeInner(_calls) { Arrives = false }, new FakeStower(_calls, true));
+            positioner.PhaseReached += phases.Add;
+
+            CoroutineRunner.Drain(positioner.MoveArmBaseTo(Vector3.one, done => result = done), null);
+
+            Assert.That(result, Is.False);
+            Assert.That(phases, Is.EqualTo(new[] { ArmMotionPhase.Stowed }));
+        }
+
+        [Test]
+        public void TheFacingOverloadReportsTheSamePhases()
+        {
+            var phases = new List<ArmMotionPhase>();
+            var positioner = new StowingArmBasePositioner(new FakeInner(_calls), new FakeStower(_calls, true));
+            positioner.PhaseReached += phases.Add;
+
+            CoroutineRunner.Drain(positioner.MoveArmBaseTo(Vector3.one, 90f, _ => { }), null);
+
+            Assert.That(phases, Is.EqualTo(new[] { ArmMotionPhase.Stowed, ArmMotionPhase.BaseArrived }));
+        }
+
+        [Test]
+        public void MovingWithoutAnyListener_StillWorks()
+        {
+            bool result = Move(new FakeStower(_calls, true), new FakeInner(_calls), Vector3.one);
+
+            Assert.That(result, Is.True);
         }
 
         [Test]

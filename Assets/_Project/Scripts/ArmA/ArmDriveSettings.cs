@@ -32,12 +32,21 @@ namespace MediKitTwin.ArmA
         [SerializeField, Min(1)] private int _solverIterations = 64;
         [SerializeField, Min(1)] private int _solverVelocityIterations = 16;
 
+        [Header("충돌 시 폭주 방지")]
+        [Tooltip("관절이 낼 수 있는 최대 속도(회전 관절은 rad/s, 직선 관절은 m/s). 선반에 부딪혀 튕길 때 팔이 날뛰는 속도를 막는다. " +
+                 "정상 동작 속도(프로필의 최대 관절 속도)와 로봇의 실제 최대 속도보다 크게 둔다. FR5는 약 3.15 rad/s.")]
+        [SerializeField, Min(0.1f)] private float _maxJointVelocity = 4f;
+        [Tooltip("겹친 물체에서 밀려 나오는 최대 속도(m/s). 크면 선반에 파고든 링크가 튕겨 나온다.")]
+        [SerializeField, Min(0.01f)] private float _maxDepenetrationVelocity = 1f;
+
         public void Apply(ArticulationBody[] bodies)
         {
             foreach (ArticulationBody body in bodies)
             {
                 body.solverIterations = _solverIterations;
                 body.solverVelocityIterations = _solverVelocityIterations;
+                body.maxJointVelocity = _maxJointVelocity;
+                body.maxDepenetrationVelocity = _maxDepenetrationVelocity;
 
                 if (body.isRoot)
                 {
