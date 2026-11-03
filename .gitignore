@@ -83,6 +83,7 @@ venv/
 
 # 검사 카메라 촬영 확인용 저장 폴더 (InspectionStation의 Save Captures)
 /InspectionCaptures/
+/InspectionBenchmark/
 
 # 학습 결과와 Python 환경 (MLTraining)
 /MLTraining/runs/
