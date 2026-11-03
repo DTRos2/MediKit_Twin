@@ -285,7 +285,7 @@ Transform:
   m_GameObject: {fileID: 51735615}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
-  m_LocalPosition: {x: -0.773, y: 0.01, z: 7.27}
+  m_LocalPosition: {x: -0.595, y: 0.01, z: 7.27}
   m_LocalScale: {x: 0.4, y: 0.02, z: 2.8000002}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1447,7 +1447,7 @@ Transform:
   m_GameObject: {fileID: 310180624}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.43, y: 0, z: 5.06}
+  m_LocalPosition: {x: 8.283, y: 0, z: 5.06}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3495,8 +3495,8 @@ Transform:
   m_GameObject: {fileID: 926208663}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 3.8508, y: 0.01, z: 8.47}
-  m_LocalScale: {x: 0.4, y: 0.02, z: 8.401527}
+  m_LocalPosition: {x: 3.8253, y: 0.01, z: 8.47}
+  m_LocalScale: {x: 0.4, y: 0.02, z: 8.453216}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 256370161}
@@ -3876,7 +3876,7 @@ Transform:
   m_GameObject: {fileID: 1132142009}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.46, y: 0, z: 8.65}
+  m_LocalPosition: {x: 8.283, y: 0, z: 8.453}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4416,7 +4416,7 @@ Transform:
   m_GameObject: {fileID: 1380634411}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.32, y: 0, z: 8.61}
+  m_LocalPosition: {x: -0.566, y: 0, z: 8.427}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5663,11 +5663,89 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1532805317444398899, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2022638571}
+    - targetCorrespondingSourceObject: {fileID: 239434000841453820, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2022638570}
   m_SourcePrefab: {fileID: 100100000, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
 --- !u!4 &2022638566 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5328460617645786399, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
+  m_PrefabInstance: {fileID: 2022638565}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &2022638567 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 239434000841453820, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
+  m_PrefabInstance: {fileID: 2022638565}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2022638568 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6153598708591423824, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
+  m_PrefabInstance: {fileID: 2022638565}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2022638567}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 365b9e21d8afb0f49aa58da124ad8490, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!1 &2022638569 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1532805317444398899, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
+  m_PrefabInstance: {fileID: 2022638565}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2022638570
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2022638567}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f0ba38c5158792418829b4de9868d0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Mobile::MediKitTwin.Mobile.MobileBaseDriver
+  _moveSpeed: 1.2
+  _turnSpeedDegPerSec: 180
+  _arriveToleranceM: 0.02
+  _alignToleranceDeg: 3
+  _moveAccelerationMps2: 2
+  _turnAccelerationDegPerSec2: 720
+  _finalYawToleranceDeg: 0.5
+  _stopMarginRatio: 0.9
+--- !u!114 &2022638571
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2022638569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65d75cca529a4f68bae699ec1d6cd980, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Unloader::MediKitTwin.Unloader.AgvUnloadSequence
+  _interactor: {fileID: 2022638568}
+  _mobileBase: {fileID: 2022638570}
+  _pickPlatform: {fileID: 2057151797}
+  _pickZone: {fileID: 893114731}
+  _dock: {fileID: 1141389209}
+  _path: {fileID: 256370161}
+  _stagingDistanceM: 0.5
+  _driveTimeoutSeconds: 60
+  _interactTimeoutSeconds: 10
+  _waypointNamePrefix: AGV_WP
+  _footprint: {fileID: 2022638576}
+  _clearanceMarginM: 0.03
+  _clearanceSampleStepM: 0.15
+  _ignoreBelowM: 0.05
+--- !u!65 &2022638576 stripped
+BoxCollider:
+  m_CorrespondingSourceObject: {fileID: 6874364769193812862, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
   m_PrefabInstance: {fileID: 2022638565}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &2056660425
@@ -5695,7 +5773,7 @@ Transform:
   m_GameObject: {fileID: 2056660425}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.34, y: 0, z: 6.04}
+  m_LocalPosition: {x: -0.593, y: 0, z: 6.04}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
