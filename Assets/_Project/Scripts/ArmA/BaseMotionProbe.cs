@@ -13,12 +13,22 @@ namespace MediKitTwin.ArmA
         /// <param name="mobile">굴러가는 베이스. 자리와 방향을 읽는다.</param>
         /// <param name="now">지금 시각(초). 스텝 사이의 속도를 구하는 데 쓰므로 스텝마다 달라져야 한다.</param>
         /// <param name="onsetSlipM">쥔 물건이 이만큼(m) 밀리면 "밀리기 시작했다"고 보고 그때의 속도를 남긴다.</param>
-        public BaseMotionProbe(IPhysicsStepSource steps, IMobileBase mobile, Func<float> now, float onsetSlipM)
+        /// <param name="stillSpeedMps">이 속도(m/s)를 넘으면 베이스가 움직이는 것으로 본다.</param>
+        /// <param name="stillYawRateDegPerSec">이 회전 속도(도/초)를 넘으면 베이스가 도는 것으로 본다.</param>
+        public BaseMotionProbe(
+            IPhysicsStepSource steps,
+            IMobileBase mobile,
+            Func<float> now,
+            float onsetSlipM,
+            float stillSpeedMps = BaseMotionTrace.DefaultStillSpeedMps,
+            float stillYawRateDegPerSec = BaseMotionTrace.DefaultStillYawRateDegPerSec)
         {
             Steps = steps ?? throw new ArgumentNullException(nameof(steps));
             Mobile = mobile ?? throw new ArgumentNullException(nameof(mobile));
             Now = now ?? throw new ArgumentNullException(nameof(now));
             OnsetSlipM = onsetSlipM;
+            StillSpeedMps = stillSpeedMps;
+            StillYawRateDegPerSec = stillYawRateDegPerSec;
         }
 
         public IPhysicsStepSource Steps { get; }
@@ -28,5 +38,9 @@ namespace MediKitTwin.ArmA
         public Func<float> Now { get; }
 
         public float OnsetSlipM { get; }
+
+        public float StillSpeedMps { get; }
+
+        public float StillYawRateDegPerSec { get; }
     }
 }

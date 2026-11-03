@@ -159,5 +159,33 @@ namespace MediKitTwin.ArmA.Tests
             string slipList = text.Substring(text.IndexOf("밀림(cm) [") + "밀림(cm) [".Length);
             Assert.That(slipList.Split(' ').Length, Is.LessThanOrEqualTo(101));
         }
+
+        [Test]
+        public void TheMaxTraceEntries_AreTakenFromTheConstructor()
+        {
+            var steps = new (float, float, float)[40];
+            for (int i = 0; i < steps.Length; i++)
+            {
+                steps[i] = (i * 0.001f, 0f, 0f);
+            }
+
+            BaseMotionSummary summary = Summary(0.02f, steps);
+            var diagnostics = new BoxPlaceDiagnostics(pose => new IkResult(true, 0f, 0f, 1), maxTraceEntries: 10);
+
+            string text = diagnostics.DescribeBaseMotionTrace("1번째", summary);
+
+            Assert.That(text, Does.Contain("4스텝마다"), "40스텝을 10개로 줄이면 4스텝마다 적는다");
+        }
+
+        [Test]
+        public void TheMinYawTravelToTrace_AreTakenFromTheConstructor()
+        {
+            BaseMotionSummary summary = Summary(0.02f, (0f, 0f, 0f), (0f, 3.6f, 0f), (0f, 7.2f, 0f));
+            var diagnostics = new BoxPlaceDiagnostics(pose => new IkResult(true, 0f, 0f, 1), minYawTravelToTraceDeg: 10f);
+
+            string text = diagnostics.DescribeBaseMotionTrace("1번째", summary);
+
+            Assert.That(text, Does.Not.Contain("회전"), "7.2도만 돌았으면 10도 기준에는 못 미쳐 회전 속도를 적지 않는다");
+        }
     }
 }

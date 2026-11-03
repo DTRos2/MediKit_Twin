@@ -257,5 +257,37 @@ namespace MediKitTwin.ArmA.Tests
             Assert.That(summary.SlipAtEndM, Is.EqualTo(0f).Within(1e-6f));
             Assert.That(summary.SlipAtEndDeg, Is.EqualTo(20f).Within(1e-3f));
         }
+
+        [Test]
+        public void AHigherStillSpeed_TreatsASlowDriftAsStanding()
+        {
+            // 스텝마다 0.96mm: 0.048m/s. 기본 기준(0.02m/s)이면 움직임이고 0.5m/s 기준이면 서 있는 것이다.
+            var slow = new BaseMotionTrace(0.02f, stillSpeedMps: 0.5f);
+            var normal = new BaseMotionTrace(0.02f);
+            for (int i = 0; i < 4; i++)
+            {
+                slow.Add(Sample(i, i * 0.00096f, 0f, null));
+                normal.Add(Sample(i, i * 0.00096f, 0f, null));
+            }
+
+            Assert.That(normal.Summarize().HasMotion, Is.True);
+            Assert.That(slow.Summarize().HasMotion, Is.False);
+        }
+
+        [Test]
+        public void AHigherStillYawRate_TreatsASlowTurnAsStanding()
+        {
+            // 스텝마다 0.2도: 10도/초. 기본 기준(2도/초)이면 도는 것이고 20도/초 기준이면 서 있는 것이다.
+            var slow = new BaseMotionTrace(0.02f, stillYawRateDegPerSec: 20f);
+            var normal = new BaseMotionTrace(0.02f);
+            for (int i = 0; i < 4; i++)
+            {
+                slow.Add(Sample(i, 0f, i * 0.2f, null));
+                normal.Add(Sample(i, 0f, i * 0.2f, null));
+            }
+
+            Assert.That(normal.Summarize().HasMotion, Is.True);
+            Assert.That(slow.Summarize().HasMotion, Is.False);
+        }
     }
 }

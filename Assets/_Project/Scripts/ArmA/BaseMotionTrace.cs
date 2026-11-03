@@ -11,19 +11,25 @@ namespace MediKitTwin.ArmA
     /// </summary>
     public sealed class BaseMotionTrace
     {
-        /// <summary>이 속도(m/s)를 넘으면 베이스가 움직이는 것으로 본다.</summary>
-        public const float StillSpeedMps = 0.02f;
+        /// <summary>정하지 않았을 때 쓰는 값: 이 속도(m/s)를 넘으면 베이스가 움직이는 것으로 본다.</summary>
+        public const float DefaultStillSpeedMps = 0.02f;
 
-        /// <summary>이 회전 속도(도/초)를 넘으면 베이스가 도는 것으로 본다.</summary>
-        public const float StillYawRateDegPerSec = 2f;
+        /// <summary>정하지 않았을 때 쓰는 값: 이 회전 속도(도/초)를 넘으면 베이스가 도는 것으로 본다.</summary>
+        public const float DefaultStillYawRateDegPerSec = 2f;
 
         private readonly List<BaseMotionSample> _samples = new List<BaseMotionSample>();
         private readonly float _onsetSlipM;
+        private readonly float _stillSpeedMps;
+        private readonly float _stillYawRateDegPerSec;
 
         /// <param name="onsetSlipM">쥔 물건이 이만큼(m) 밀리면 "밀리기 시작했다"고 본다.</param>
-        public BaseMotionTrace(float onsetSlipM)
+        /// <param name="stillSpeedMps">이 속도(m/s)를 넘으면 베이스가 움직이는 것으로 본다.</param>
+        /// <param name="stillYawRateDegPerSec">이 회전 속도(도/초)를 넘으면 베이스가 도는 것으로 본다.</param>
+        public BaseMotionTrace(float onsetSlipM, float stillSpeedMps = DefaultStillSpeedMps, float stillYawRateDegPerSec = DefaultStillYawRateDegPerSec)
         {
             _onsetSlipM = onsetSlipM;
+            _stillSpeedMps = stillSpeedMps;
+            _stillYawRateDegPerSec = stillYawRateDegPerSec;
         }
 
         public int Count => _samples.Count;
@@ -71,7 +77,7 @@ namespace MediKitTwin.ArmA
                     summary.DistanceM += stepDistance;
                     summary.YawTravelDeg += stepYaw;
                     distanceAtIndex = summary.DistanceM;
-                    moving[i] = speeds[i] > StillSpeedMps || yawRates[i] > StillYawRateDegPerSec;
+                    moving[i] = speeds[i] > _stillSpeedMps || yawRates[i] > _stillYawRateDegPerSec;
                 }
 
                 distances[i] = distanceAtIndex;
