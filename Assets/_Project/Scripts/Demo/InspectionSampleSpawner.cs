@@ -47,6 +47,14 @@ namespace MediKitTwin.Demo
         [Tooltip("박스 중심에서 안쪽 바닥면까지의 로컬 높이(m). 박스 높이의 절반에서 벽 두께를 뺀 값이다.")]
         [SerializeField] private float _boxFloorLocalY = -0.04f;
 
+        [Header("위치 흔들림 (실제 키팅 편차 흉내)")]
+        [Tooltip("학습 랜덤화 범위에 곱하는 배율. 0이면 흔들림 없음, 1이면 학습 범위(박스 ±1cm/±5도, 구성품 ±6mm/±20도) 끝까지, 2면 두 배.")]
+        [SerializeField, Min(0f)] private float _jitterScale;
+        [SerializeField, Min(0f)] private float _boxOffsetMeters = 0.01f;
+        [SerializeField, Min(0f)] private float _boxYawJitterDegrees = 5f;
+        [SerializeField, Min(0f)] private float _itemOffsetMeters = 0.006f;
+        [SerializeField, Min(0f)] private float _itemYawJitterDegrees = 20f;
+
         private readonly Dictionary<string, Material> _materials = new Dictionary<string, Material>();
         private GameObject _template;
         private GameObject _sample;
@@ -112,6 +120,9 @@ namespace MediKitTwin.Demo
         /// <summary>false이면 결과 로그를 남기지 않는다. 자동 측정(InspectionBenchmark)이 대량으로 돌릴 때 끈다.</summary>
         public bool LogResults { get; set; } = true;
 
+        /// <summary>위치 흔들림 배율. 자동 측정이 단계별로 바꿔 가며 쓴다.</summary>
+        public float JitterScale { get => _jitterScale; set => _jitterScale = Mathf.Max(0f, value); }
+
         private void Spawn(SampleVariant variant) => TrySpawn(variant, _kitCode, _targetSlot, out _, out _);
 
         /// <summary>
@@ -146,7 +157,7 @@ namespace MediKitTwin.Demo
                 Destroy(_sample);
             }
 
-            _sample = BuildBox(recipe, contents);
+            _sample = BuildBox(recipe, contents, rng);
             if (variant == SampleVariant.SensorFailure)
             {
                 foreach (SlotSensor sensor in _sample.GetComponentsInChildren<SlotSensor>())
@@ -172,10 +183,11 @@ namespace MediKitTwin.Demo
             return true;
         }
 
-        private GameObject BuildBox(RecipeSO recipe, string[] contents)
+        private GameObject BuildBox(RecipeSO recipe, string[] contents, Random rng)
         {
-            Vector3 position = _spawnPoint.position + Vector3.up * _boxCenterOffsetY;
-            GameObject box = Instantiate(_template, position, Quaternion.Euler(0f, _boxYawDegrees, 0f), transform);
+            Vector3 position = _spawnPoint.position + Vector3.up * _boxCenterOffsetY
+                + new Vector3(Jitter(rng, _boxOffsetMeters), 0f, Jitter(rng, _boxOffsetMeters));
+            GameObject box = Instantiate(_template, position, Quaternion.Euler(0f, _boxYawDegrees + Jitter(rng, _boxYawJitterDegrees), 0f), transform);
             box.name = BoxName + "Sample";
             box.SetActive(true);
 
@@ -184,14 +196,14 @@ namespace MediKitTwin.Demo
                 string componentId = contents[item.SlotNumber - 1];
                 if (componentId != null)
                 {
-                    AddItem(box.transform, componentId, item.SlotLocalPosition);
+                    AddItem(box.transform, componentId, item.SlotLocalPosition, rng);
                 }
             }
 
             return box;
         }
 
-        private void AddItem(Transform box, string componentId, Vector3 slotLocal)
+        private void AddItem(Transform box, string componentId, Vector3 slotLocal, Random rng)
         {
             ShelfItemLook look = _looks.GetLook(componentId, out _);
             float scale = _graspLimit.ScaleFor(look.Size.x, look.Size.y, look.Size.z);
@@ -203,12 +215,20 @@ namespace MediKitTwin.Demo
             Destroy(item.GetComponent<Collider>());
 
             item.transform.SetParent(box, false);
-            item.transform.localPosition = new Vector3(slotLocal.x, _boxFloorLocalY + size.y * 0.5f, slotLocal.z);
+            item.transform.localPosition = new Vector3(
+                slotLocal.x + Jitter(rng, _itemOffsetMeters), _boxFloorLocalY + size.y * 0.5f, slotLocal.z + Jitter(rng, _itemOffsetMeters));
+            item.transform.localRotation = Quaternion.Euler(0f, Jitter(rng, _itemYawJitterDegrees), 0f);
 
             // 원기둥 프리미티브는 높이가 scale.y의 2배이다.
             item.transform.localScale = primitive == PrimitiveType.Cylinder ? new Vector3(size.x, size.y * 0.5f, size.z) : size;
             item.GetComponent<Renderer>().sharedMaterial = MaterialFor(componentId, look.Color);
             item.AddComponent<KitItemLabel>().Configure(componentId);
+        }
+
+        // -range*scale ~ +range*scale 균등 분포. 배율 0이면 난수를 쓰지 않아 기존 박스와 같다.
+        private float Jitter(Random rng, float range)
+        {
+            return _jitterScale <= 0f ? 0f : (float)(rng.NextDouble() * 2.0 - 1.0) * range * _jitterScale;
         }
 
         private Material MaterialFor(string componentId, Color color)

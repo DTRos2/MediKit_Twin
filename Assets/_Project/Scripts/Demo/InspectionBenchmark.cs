@@ -33,6 +33,9 @@ namespace MediKitTwin.Demo
         [Tooltip("학습 데이터의 시드(20261102)와 다른 값을 쓴다. 같은 값이면 같은 박스 순서가 나온다. (NFR-06)")]
         [SerializeField] private int _seed = 20261103;
 
+        [Tooltip("위치 흔들림 배율. 0=없음, 1=학습 범위 끝까지, 2=두 배. 배율을 바꿔 여러 번 돌려 어디서 무너지는지 본다.")]
+        [SerializeField, Min(0f)] private float _jitterScale;
+
         [Tooltip("박스 하나의 결과를 기다리는 최대 시간(초, 실제 시간). 넘으면 측정을 멈춘다.")]
         [SerializeField, Min(1f)] private float _timeoutSeconds = 10f;
 
@@ -91,6 +94,8 @@ namespace MediKitTwin.Demo
         {
             _running = true;
             _spawner.LogResults = false;
+            float previousJitter = _spawner.JitterScale;
+            _spawner.JitterScale = _jitterScale;
 
             var overall = new BenchmarkTally();
             var byVariant = new Dictionary<SampleVariant, BenchmarkTally>
@@ -104,7 +109,7 @@ namespace MediKitTwin.Demo
             int ruleFallbacks = 0;
             int done = 0;
 
-            Debug.Log($"[Benchmark] 시작: 박스 {_boxCount}개, 불량 비율 {_defectRatio:F2}, 시드 {_seed}", this);
+            Debug.Log($"[Benchmark] 시작: 박스 {_boxCount}개, 불량 비율 {_defectRatio:F2}, 시드 {_seed}, 흔들림 배율 {_jitterScale:F1}", this);
 
             for (int i = 0; i < _boxCount; i++)
             {
@@ -158,6 +163,7 @@ namespace MediKitTwin.Demo
 
             _waitingKit = null;
             _spawner.LogResults = true;
+            _spawner.JitterScale = previousJitter;
             _running = false;
 
             if (done == 0)
@@ -165,8 +171,8 @@ namespace MediKitTwin.Demo
                 yield break;
             }
 
-            string path = WriteCsv(csv.ToString());
-            Debug.Log($"[Benchmark] 결과 ({done}/{_boxCount}) — {overall.Summary()}", this);
+            string path = WriteCsv(csv.ToString(), _jitterScale);
+            Debug.Log($"[Benchmark] 결과 ({done}/{_boxCount}, 흔들림 {_jitterScale:F1}배) — {overall.Summary()}", this);
             Debug.Log($"[Benchmark] 정상 박스: 오경보율 {byVariant[SampleVariant.Normal].FalseAlarmRate:F3} / " +
                       $"누락: 재현율 {byVariant[SampleVariant.Missing].DefectRecall:F3}, 위치 일치 {byVariant[SampleVariant.Missing].SlotLocalization:F3} / " +
                       $"오구성: 재현율 {byVariant[SampleVariant.WrongItem].DefectRecall:F3}, 위치 일치 {byVariant[SampleVariant.WrongItem].SlotLocalization:F3} / " +
@@ -185,11 +191,11 @@ namespace MediKitTwin.Demo
             return random.Next(2) == 0 ? SampleVariant.Missing : SampleVariant.WrongItem;
         }
 
-        private static string WriteCsv(string content)
+        private static string WriteCsv(string content, float jitter)
         {
             string folder = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "InspectionBenchmark");
             Directory.CreateDirectory(folder);
-            string path = Path.Combine(folder, DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".csv");
+            string path = Path.Combine(folder, DateTime.Now.ToString("yyyyMMdd-HHmmss") + $"-j{jitter:0.0}.csv");
             File.WriteAllText(path, content, new UTF8Encoding(false));
             return path;
         }
