@@ -15,9 +15,10 @@ namespace MediKitTwin.Demo
         private const float OrdersHeight = 360f;
         private const float ShelfHeight = 400f;
         private const float CameraHeight = 264f;
-        private const float StatusHeight = 360f;
+        // 공정 현황은 키트 단계, 설비 칩 3줄, 숫자 칸 4개가 들어가 한 설비 패널일 때보다 40px 높다. 오른쪽 열 아래 끝을 맞추려고 관절 제어를 그만큼 줄였다.
+        private const float StatusHeight = 400f;
         private const float ConveyorHeight = 152f;
-        private const float JointsHeight = 512f;
+        private const float JointsHeight = 472f;
         private const float LogWidth = 760f;
         private const float LogHeight = 232f;
 
