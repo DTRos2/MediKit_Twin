@@ -17,6 +17,9 @@ namespace MediKitTwin.ArmB
     [DisallowMultipleComponent]
     public sealed class LidCoverTask : MonoBehaviour
     {
+        // 실패했을 때 팔 곁에 붙은 충돌체로 적을 거리(m). 물리 접촉이 닿기 직전부터 잡히도록 여유를 조금 둔다.
+        private const float BlockerMarginM = 0.01f;
+
         // 목표에 닿았다고 보는 기준. Normal은 목표와의 거리 하나로 본다.
         // Grasp는 손가락이 닫히는 방향(뚜껑 폭 방향)만 엄격하게 보고(여유가 한쪽 5mm뿐이다), 나머지 방향은 Loose 오차까지 허용한다.
         // Cover는 뚜껑과 박스 사이 틈이 사방 5mm이므로 가로 두 방향을 엄격하게 보고, 높이는 Loose 오차까지 허용한다.
@@ -42,8 +45,8 @@ namespace MediKitTwin.ArmB
         [SerializeField, Min(0.005f)] private float linearStepM = 0.01f;
         [Tooltip("쥐거나 덮기 전에 물체 위에서 멈추는 높이(m).")]
         [SerializeField, Min(0.02f)] private float approachHeight = 0.10f;
-        [Tooltip("뚜껑을 쥔 뒤 들어 올리는 높이(m). 뚜껑 박스 벽이 뚜껑보다 낮으므로 이 정도면 걸리지 않는다.")]
-        [SerializeField, Min(0.02f)] private float liftHeight = 0.10f;
+        [Tooltip("뚜껑을 쥔 뒤 들어 올리는 높이(m). 공급대 벽을 넘을 만큼이면 되지만, 박스 쪽으로 돌 때 뚜껑이 컨베이어 위를 스치지 않을 만큼도 올라야 한다. 박스가 벨트에 얹혀 낮아지면(0.06m) 덮을 자리도 낮아져서 0.10m로는 돌다가 컨베이어 모서리에 걸려 어깨가 멈췄다.")]
+        [SerializeField, Min(0.02f)] private float liftHeight = 0.16f;
 
         [Header("판정")]
         [Tooltip("경유 지점에서 허용하는 위치 오차(m).")]
@@ -89,6 +92,7 @@ namespace MediKitTwin.ArmB
         private Coroutine _running;
         private bool _stepReached;
         private string _stepNote = string.Empty;
+        private Transform _heldLid;
 
         public bool IsRunning => _running != null;
 
@@ -227,6 +231,8 @@ namespace MediKitTwin.ArmB
                 Fail("뚜껑을 쥐지 못했습니다. 뚜껑에 Graspable이 있는지 확인하세요.");
                 yield break;
             }
+
+            _heldLid = lid;
 
             // 들어 올리기는 목표 높이가 아니라 실제 끝점에서 시작한다. 쥐는 동안 끝점이 목표와 어긋나 있으면
             // 공칭 위치 기준 첫 걸음이 현재보다 아래가 되어 팔이 내려가려다 막힌다.
@@ -463,7 +469,30 @@ namespace MediKitTwin.ArmB
 
             Pose actual = _state.ToolPose;
             Vector3 diff = actual.position - target.position;
-            return $" 실제 끝점 {actual.position}, 목표와의 차이 x {diff.x * 1000f:0}mm y {diff.y * 1000f:0}mm z {diff.z * 1000f:0}mm (거리 {diff.magnitude * 1000f:0}mm), 회전 차이 {Quaternion.Angle(actual.rotation, target.rotation):0.0}도(수평 방향 {LidCoverPlanner.YawErrorDeg(actual.rotation, target.rotation):0.0}도, 기울기 {LidCoverPlanner.TiltErrorDeg(actual.rotation, target.rotation):0.0}도){JointNote()}";
+            return $" 실제 끝점 {actual.position}, 목표와의 차이 x {diff.x * 1000f:0}mm y {diff.y * 1000f:0}mm z {diff.z * 1000f:0}mm (거리 {diff.magnitude * 1000f:0}mm), 회전 차이 {Quaternion.Angle(actual.rotation, target.rotation):0.0}도(수평 방향 {LidCoverPlanner.YawErrorDeg(actual.rotation, target.rotation):0.0}도, 기울기 {LidCoverPlanner.TiltErrorDeg(actual.rotation, target.rotation):0.0}도){JointNote()}{BlockerNote()}";
+        }
+
+        // 팔이 멈춘 자리에서 팔(과 쥔 뚜껑) 곁에 붙은 다른 충돌체. 관절이 목표로 안 가고 서 있을 때 무엇에 걸렸는지 보려는 것이다.
+        private string BlockerNote()
+        {
+            // 이 컴포넌트는 팔의 관절 몸체보다 위에 있으므로 아래로 내려가며 팔의 충돌체를 모은다.
+            var movers = new List<Collider>(toolTarget.GetComponentsInChildren<Collider>());
+            if (movers.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var ignore = new HashSet<Collider>(movers);
+            if (_heldLid != null)
+            {
+                foreach (Collider held in _heldLid.GetComponentsInChildren<Collider>())
+                {
+                    movers.Add(held);
+                    ignore.Add(held);
+                }
+            }
+
+            return ContactBlockerFinder.Describe(movers, ignore, BlockerMarginM);
         }
 
         // 손가락 패드와 맨 위 뚜껑 옆면 사이 간격(닫히는 방향, mm). 음수면 겹쳐 있다. 어느 쪽 패드가 뚜껑에 붙었는지 가린다.
@@ -677,6 +706,7 @@ namespace MediKitTwin.ArmB
             string detail = string.IsNullOrEmpty(_stepNote) ? string.Empty : $" [{_stepNote}]";
             Debug.LogWarning($"[LidCoverTask] 뚜껑 덮기 실패: {reason}{detail}", this);
             _stepNote = string.Empty;
+            _heldLid = null;
             _tool.ClearToolTarget();
             _station.Set(StationState.Fault);
             _running = null;
@@ -686,6 +716,7 @@ namespace MediKitTwin.ArmB
         private void Finish(bool success)
         {
             _station.Set(StationState.Idle);
+            _heldLid = null;
             _running = null;
             Finished?.Invoke(success);
         }
