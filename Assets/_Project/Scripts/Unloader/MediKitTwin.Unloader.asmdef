@@ -2,7 +2,8 @@
     "name": "MediKitTwin.Unloader",
     "rootNamespace": "MediKitTwin.Unloader",
     "references": [
-        "MediKitTwin.Common"
+        "MediKitTwin.Common",
+        "Warcool.WarehouseRobot"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

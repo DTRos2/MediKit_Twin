@@ -216,6 +216,7 @@ docs/                  # SRS, 기획표, WBS, 공정 흐름도, 트러블슈팅
 | `Common` | `CellEvents`, `SimClock`, 공통 인터페이스 | - |
 
 - 각 Scripts 폴더에는 같은 이름의 asmdef(`MediKitTwin.<폴더명>`)가 있다. `Recipes`, `Common`, `CameraRig`를 뺀 나머지는 `Common`만 참조한다. `CameraRig`는 `Unity.InputSystem`만 참조한다. (6-1)
+- 예외로 `Unloader`는 `Common`에 더해 서드파티 에셋 어셈블리 `Warcool.WarehouseRobot`(`Assets/Warehouse_Robot_Controller/Scripts`의 asmdef)도 참조한다. 하역 로봇의 집기·내리기 동작을 에셋 코드가 맡기 때문이다.
 - ROS 2 노드는 `medikit_ws/`, Unity 쪽 ROS 코드는 `Assets/_Project/Scripts/Ros/`에 둔다.
 
 | 에셋 | 접두사 | 예시 |
