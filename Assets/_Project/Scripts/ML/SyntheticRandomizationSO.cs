@@ -28,6 +28,9 @@ namespace MediKitTwin.ML
         [SerializeField, Range(0f, 90f)] private float _lightYawDegrees = 25f;
         [SerializeField, Range(0f, 45f)] private float _lightPitchDegrees = 10f;
 
+        [Tooltip("조명 색의 따뜻함 편차. 0이 씬의 조명 색, -1이 흰색, +1이 씬보다 두 배 따뜻한 색. 1이면 흰색부터 아주 따뜻한 색까지 흔든다.")]
+        [SerializeField, Range(0f, 1.5f)] private float _lightWarmthDeviation = 1f;
+
         [Header("색")]
         [Tooltip("색조(Hue) 이동의 최대 폭(0~1 단위).")]
         [SerializeField, Range(0f, 0.5f)] private float _hueShift = 0.03f;
@@ -46,7 +49,8 @@ namespace MediKitTwin.ML
                 _lightPitchDegrees,
                 _hueShift,
                 _saturationDeviation,
-                _valueDeviation);
+                _valueDeviation,
+                _lightWarmthDeviation);
         }
     }
 }

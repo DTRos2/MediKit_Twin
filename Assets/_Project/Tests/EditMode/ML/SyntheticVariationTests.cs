@@ -89,6 +89,27 @@ namespace MediKitTwin.ML.Tests
         }
 
         [Test]
+        public void LightWarmth_StaysInRange_AndDoesNotShiftOtherValues()
+        {
+            RandomizationRanges full = Ranges();
+            var withWarmth = new RandomizationRanges(
+                full.ItemOffsetMeters, full.ItemYawDegrees, full.BoxOffsetMeters, full.BoxYawDegrees,
+                full.LightIntensityDeviation, full.LightYawDegrees, full.LightPitchDegrees,
+                full.HueShift, full.SaturationDeviation, full.ValueDeviation, lightWarmthDeviation: 1f);
+
+            for (int seed = 0; seed < 200; seed++)
+            {
+                var a = SyntheticVariation.Create(seed, full, 4);
+                var b = SyntheticVariation.Create(seed, withWarmth, 4);
+
+                Assert.AreEqual(0f, a.LightWarmth);
+                Assert.That(b.LightWarmth, Is.InRange(-1f - 1e-5f, 1f + 1e-5f));
+                Assert.AreEqual(a.LightIntensityScale, b.LightIntensityScale);
+                Assert.AreEqual(a.GetItemYawDegrees(4), b.GetItemYawDegrees(4));
+            }
+        }
+
+        [Test]
         public void ZeroSlotCount_Throws()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => SyntheticVariation.Create(1, Ranges(), 0));

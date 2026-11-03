@@ -16,7 +16,8 @@ namespace MediKitTwin.ML
             float lightPitchDegrees,
             float hueShift,
             float saturationDeviation,
-            float valueDeviation)
+            float valueDeviation,
+            float lightWarmthDeviation = 0f)
         {
             ItemOffsetMeters = itemOffsetMeters;
             ItemYawDegrees = itemYawDegrees;
@@ -28,6 +29,7 @@ namespace MediKitTwin.ML
             HueShift = hueShift;
             SaturationDeviation = saturationDeviation;
             ValueDeviation = valueDeviation;
+            LightWarmthDeviation = lightWarmthDeviation;
         }
 
         /// <summary>구성품이 슬롯 중심에서 벗어나는 최대 거리(m, X와 Z 각각).</summary>
@@ -59,5 +61,11 @@ namespace MediKitTwin.ML
 
         /// <summary>명도 배율의 기준 1에서 벗어나는 최대 편차.</summary>
         public float ValueDeviation { get; }
+
+        /// <summary>
+        /// 조명 색의 따뜻함 편차. 0이 씬의 조명 색, -1이 흰색, +1이 씬보다 두 배 따뜻한 색이다.
+        /// 실제 씬은 따뜻한 조명이라 흰 조명으로만 학습하면 색이 달라져 오분류하기 때문이다.
+        /// </summary>
+        public float LightWarmthDeviation { get; }
     }
 }

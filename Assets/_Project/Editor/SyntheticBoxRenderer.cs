@@ -19,6 +19,8 @@ public sealed class SyntheticBoxRenderer : IDisposable
     // 고정 조명의 기준값. 랜덤화는 이 값에 배율과 각도 오차를 더한다.
     private const float KeyLightIntensity = 1.4f;
     private const float FillLightIntensity = 0.5f;
+    // 실제 씬(Scene_Cell)의 Directional Light 색. 학습 이미지가 이 색을 포함해야 씬에서 찍은 크롭을 맞힌다.
+    private static readonly Color SceneLightColor = new Color(1f, 0.95686275f, 0.8392157f);
     private const float KeyLightPitch = 65f;
     private const float KeyLightYaw = 30f;
     private static readonly Color Background = new Color(0.45f, 0.47f, 0.50f);
@@ -32,6 +34,8 @@ public sealed class SyntheticBoxRenderer : IDisposable
     private readonly Dictionary<string, RecipeSO> _recipesByKit;
     private readonly GameObject _boxTemplate;
     private readonly float _boxFloorLocalY;
+    private Color? _keyBaseColor;
+    private Color? _fillBaseColor;
     private readonly Dictionary<string, Material> _materials = new Dictionary<string, Material>();
 
     public SyntheticBoxRenderer(
@@ -121,7 +125,13 @@ public sealed class SyntheticBoxRenderer : IDisposable
         GameObject box = UnityEngine.Object.Instantiate(_boxTemplate);
         box.name = BoxName;
         box.hideFlags = HideFlags.HideAndDontSave;
-        foreach (Collider collider in box.GetComponentsInChildren<Collider>())
+        // 촬영에는 모양만 필요하다. SlotSensor처럼 콜라이더를 요구하는 스크립트가 있으면 콜라이더를 못 지우므로 스크립트부터 지운다.
+        foreach (MonoBehaviour script in box.GetComponentsInChildren<MonoBehaviour>(true))
+        {
+            UnityEngine.Object.DestroyImmediate(script);
+        }
+
+        foreach (Collider collider in box.GetComponentsInChildren<Collider>(true))
         {
             UnityEngine.Object.DestroyImmediate(collider);
         }
@@ -197,10 +207,17 @@ public sealed class SyntheticBoxRenderer : IDisposable
     private void ApplyLights(SyntheticVariation variation)
     {
         Light key = _util.lights[0];
+        // 흰색(따뜻함 -1)에서 씬 색(0), 그보다 따뜻한 색(+1)까지.
+        Color tint = Color.LerpUnclamped(Color.white, SceneLightColor, 1f + variation.LightWarmth);
+        // 미리보기 조명의 기본 색은 순백이 아니라 회색이다. 덮어쓰면 밝기가 달라지므로 기본 색에 틴트를 곱한다.
+        _keyBaseColor ??= key.color;
+        key.color = _keyBaseColor.Value * tint;
         key.intensity = KeyLightIntensity * variation.LightIntensityScale;
         key.transform.rotation = Quaternion.Euler(KeyLightPitch + variation.LightPitchOffsetDegrees, KeyLightYaw + variation.LightYawOffsetDegrees, 0f);
 
         Light fill = _util.lights[1];
+        _fillBaseColor ??= fill.color;
+        fill.color = _fillBaseColor.Value * tint;
         fill.intensity = FillLightIntensity * variation.LightIntensityScale;
         fill.transform.rotation = Quaternion.Euler(40f, KeyLightYaw + 180f, 0f);
     }

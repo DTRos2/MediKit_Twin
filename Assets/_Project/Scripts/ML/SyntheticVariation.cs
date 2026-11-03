@@ -31,6 +31,9 @@ namespace MediKitTwin.ML
 
         public float LightPitchOffsetDegrees { get; private set; }
 
+        /// <summary>조명 색의 따뜻함. 0이 씬의 조명 색, -1이 흰색, +1이 씬보다 두 배 따뜻한 색이다.</summary>
+        public float LightWarmth { get; private set; }
+
         public float HueShift { get; private set; }
 
         public float SaturationScale { get; private set; }
@@ -69,6 +72,9 @@ namespace MediKitTwin.ML
                 variation._itemOffsets[i] = new Vector2(Symmetric(random, ranges.ItemOffsetMeters), Symmetric(random, ranges.ItemOffsetMeters));
                 variation._itemYawDegrees[i] = Symmetric(random, ranges.ItemYawDegrees);
             }
+
+            // 맨 마지막에 뽑아서, 이 값을 추가하기 전의 시드가 만들던 다른 값들이 바뀌지 않게 한다.
+            variation.LightWarmth = Symmetric(random, ranges.LightWarmthDeviation);
 
             return variation;
         }
