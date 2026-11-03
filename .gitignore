@@ -77,3 +77,14 @@ venv/
 /docs/강사님 피드백.txt
 
 *.slnx
+
+# 합성 데이터셋(Tools/MediKit/Synthetic Dataset 출력)
+/Datasets/
+
+# 검사 카메라 촬영 확인용 저장 폴더 (InspectionStation의 Save Captures)
+/InspectionCaptures/
+
+# 학습 결과와 Python 환경 (MLTraining)
+/MLTraining/runs/
+/MLTraining/.venv/
+__pycache__/

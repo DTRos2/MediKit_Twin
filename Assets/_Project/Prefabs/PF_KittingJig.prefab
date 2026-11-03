@@ -368,10 +368,6 @@ Transform:
   m_Children:
   - {fileID: 2065579203465295466}
   - {fileID: 8464528030440862450}
-  - {fileID: 7196432705865767854}
-  - {fileID: 1687270775476168949}
-  - {fileID: 938419502766960631}
-  - {fileID: 4696290120654640077}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8168188965355772001
@@ -402,6 +398,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7196432705865767854}
   - component: {fileID: 7420501366252877667}
+  - component: {fileID: 6045908299678221342}
   m_Layer: 0
   m_Name: Sensor_Slot1
   m_TagString: Untagged
@@ -417,12 +414,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2108268042079272663}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.96999997, z: 0.082}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.082}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4799894571927456816}
+  m_Father: {fileID: 8464528030440862450}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!65 &7420501366252877667
 BoxCollider:
@@ -443,8 +440,22 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.06, y: 0.06, z: 0.05}
+  m_Size: {x: 0.09, y: 0.1, z: 0.05}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &6045908299678221342
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2108268042079272663}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8844370e04adfa64b8b8ace65b5f2d89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Inspection::MediKitTwin.Inspection.SlotSensor
+  _slotNumber: 1
+  _isResponsive: 1
 --- !u!1 &2352464585114025355
 GameObject:
   m_ObjectHideFlags: 0
@@ -567,6 +578,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1687270775476168949}
   - component: {fileID: 561709435935445103}
+  - component: {fileID: 7376771124606254464}
   m_Layer: 0
   m_Name: Sensor_Slot2
   m_TagString: Untagged
@@ -582,12 +594,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4894574269812726309}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.96999997, z: 0.0273}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.0273}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4799894571927456816}
+  m_Father: {fileID: 8464528030440862450}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!65 &561709435935445103
 BoxCollider:
@@ -608,8 +620,22 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.06, y: 0.06, z: 0.05}
+  m_Size: {x: 0.09, y: 0.1, z: 0.05}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &7376771124606254464
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4894574269812726309}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8844370e04adfa64b8b8ace65b5f2d89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Inspection::MediKitTwin.Inspection.SlotSensor
+  _slotNumber: 2
+  _isResponsive: 1
 --- !u!1 &5141552791556923163
 GameObject:
   m_ObjectHideFlags: 0
@@ -620,6 +646,7 @@ GameObject:
   m_Component:
   - component: {fileID: 938419502766960631}
   - component: {fileID: 5534793902274516223}
+  - component: {fileID: 8169707985385188427}
   m_Layer: 0
   m_Name: Sensor_Slot3
   m_TagString: Untagged
@@ -635,12 +662,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5141552791556923163}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.96999997, z: -0.0273}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -0.0273}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4799894571927456816}
+  m_Father: {fileID: 8464528030440862450}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!65 &5534793902274516223
 BoxCollider:
@@ -661,8 +688,22 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.06, y: 0.06, z: 0.05}
+  m_Size: {x: 0.09, y: 0.1, z: 0.05}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8169707985385188427
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5141552791556923163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8844370e04adfa64b8b8ace65b5f2d89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Inspection::MediKitTwin.Inspection.SlotSensor
+  _slotNumber: 3
+  _isResponsive: 1
 --- !u!1 &5851362619059851165
 GameObject:
   m_ObjectHideFlags: 0
@@ -672,6 +713,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8464528030440862450}
+  - component: {fileID: 4095203427681507203}
   m_Layer: 0
   m_Name: KitBox
   m_TagString: Untagged
@@ -697,8 +739,24 @@ Transform:
   - {fileID: 954904374169545402}
   - {fileID: 4494736034822765634}
   - {fileID: 8331720197528498866}
+  - {fileID: 7196432705865767854}
+  - {fileID: 1687270775476168949}
+  - {fileID: 938419502766960631}
+  - {fileID: 4696290120654640077}
   m_Father: {fileID: 4799894571927456816}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4095203427681507203
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5851362619059851165}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79a2aba3e4d54c24a9c527f04d006242, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Inspection::MediKitTwin.Inspection.SlotSensorArray
 --- !u!1 &6938105575764809515
 GameObject:
   m_ObjectHideFlags: 0
@@ -709,6 +767,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4696290120654640077}
   - component: {fileID: 4321292886677946279}
+  - component: {fileID: 5643698611016562904}
   m_Layer: 0
   m_Name: Sensor_Slot4
   m_TagString: Untagged
@@ -724,12 +783,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6938105575764809515}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.96999997, z: -0.082}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -0.082}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4799894571927456816}
+  m_Father: {fileID: 8464528030440862450}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!65 &4321292886677946279
 BoxCollider:
@@ -750,8 +809,22 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.06, y: 0.06, z: 0.05}
+  m_Size: {x: 0.09, y: 0.1, z: 0.05}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5643698611016562904
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6938105575764809515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8844370e04adfa64b8b8ace65b5f2d89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Inspection::MediKitTwin.Inspection.SlotSensor
+  _slotNumber: 4
+  _isResponsive: 1
 --- !u!1 &8739388264763977577
 GameObject:
   m_ObjectHideFlags: 0

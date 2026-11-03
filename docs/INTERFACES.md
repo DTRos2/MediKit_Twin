@@ -93,11 +93,12 @@
 | 필드 | 설명 |
 |---|---|
 | `IsPass` | 정상이면 true, 누락이면 false |
-| `MissingSlots` | 비어 있던 슬롯 번호 목록. 규칙 판정만 채운다. 위치를 알 수 없으면 `null`이다. CNN은 2클래스 분류라 위치를 모르고, 규칙 판정도 슬롯 센서가 응답하지 않으면(FR-06 예외) `IsPass=false`, `MissingSlots=null`로 보낸다. 빈 목록은 "누락 슬롯 없음"이며 `IsPass`가 true일 때만 쓴다. 생성할 때 복사해 두므로 넘긴 리스트를 나중에 바꿔도 영향이 없다 |
+| `MissingSlots` | 레시피와 맞지 않는 슬롯 번호 목록(비어 있거나 다른 구성품이 든 슬롯). 필드 이름은 그대로 두며, 규칙 판정과 CNN 판정(슬롯별 분류) 모두 채운다. 슬롯별로 판정할 수 없으면 `null`이다. 규칙 판정에서 슬롯 센서가 응답하지 않을 때(FR-06 예외)와 CNN이 슬롯 크롭을 만들지 못할 때가 그렇다. 이때는 `IsPass=false`, `MissingSlots=null`로 보낸다. 빈 목록은 "불일치 슬롯 없음"이며 `IsPass`가 true일 때만 쓴다. 생성할 때 복사해 두므로 넘긴 리스트를 나중에 바꿔도 영향이 없다 |
 | `Confidence` | 0~1. 규칙 판정은 항상 1 |
 | `Method` | `JudgeMethod.Rule` 또는 `JudgeMethod.Cnn`. 대시보드의 판정 방식 표시와 생산 로그에 쓴다 |
 
 - 로그에서 정답과 비교할 때는 `IsPass`를 먼저 비교하고, `MissingSlots`가 있으면 정답 슬롯 번호가 그 안에 있는지도 비교한다. 정답은 슬롯 번호 하나라 구성품 ID로 바꿀 필요가 없다.
+- 지금 `KitData`의 정답은 누락(슬롯 번호)만 기록한다. 다른 구성품이 들어간 박스(오구성)를 공정에서 만드는 규칙은 키팅 쪽 작업이며 8장에 적어 둔다.
 - 규칙 판정은 레시피의 각 항목에 대해 `DetectedComponentIds[SlotNumber - 1]`이 `ComponentId`와 다르면 그 슬롯을 누락으로 본다. 빈 슬롯과 다른 구성품이 들어간 슬롯을 같은 방식으로 잡는다.
 - `default` 값이 "규칙 판정 불합격"으로 읽히므로 판정 전 상태는 `KitData.Verdict == null`로 나타낸다.
 
@@ -188,6 +189,20 @@
 - 판정기는 `KitData.Verdict`를 채우지 않는다. 호출하는 쪽이 채운 뒤 `InspectionResult`를 발행한다.
 - 판정기는 `GetMissingAnswerForEvaluation()`을 호출하지 않는다.
 
+**검사 대상:** 누락뿐 아니라 레시피와 다른 구성품이 든 경우(오구성)도 불량이다. 두 경우 모두 해당 슬롯 번호를 `MissingSlots`에 넣는다.
+
+**판정 방식 (FR-06, FR-07)**
+
+| 판정기 | `Method` | 슬롯 내용을 아는 방법 | 역할 |
+|---|---|---|---|
+| 규칙 판정 | `Rule` | 슬롯 감지 센서가 만든 `KitData.DetectedComponentIds` | 비전 실패 시 대체 경로 |
+| CNN 판정 | `Cnn` | 검사 카메라 이미지에서 슬롯 위치를 잘라 낸 크롭을 CNN이 분류 | 주 경로(Should) |
+
+- **CNN 슬롯 크롭 분류.** 검사 카메라는 고정 시점이고 구성품은 정해진 슬롯 위치에 놓이므로, 레시피의 `SlotLocalPosition`을 카메라 이미지 좌표로 투영해 슬롯마다 크롭을 만든다. CNN은 크롭 하나를 "빈 슬롯"과 구성품 종류 전체 중 하나로 분류한다. 키트 종류가 늘어도 구성품 종류만 늘면 되고, 모델을 다시 학습할 필요가 없다.
+- 판정은 규칙 판정과 같은 비교를 한다. 슬롯의 분류 결과가 레시피 항목의 `ComponentId`와 다르면 그 슬롯을 `MissingSlots`에 넣는다. `Confidence`는 슬롯별 분류 신뢰도 중 가장 낮은 값을 쓴다.
+- 카메라 이미지나 모델을 쓸 수 없으면 `TryJudge`가 `false`이고, 호출하는 쪽이 규칙 판정기로 대체한다.
+- 구현: `CnnSlotJudge`(비교 로직, Sentis에 의존하지 않아 EditMode 테스트 가능)와 `CnnInspector`(`MonoBehaviour`, Sentis 모델 로드)이다. 모델과 `classes.json`은 `Assets/_Project/Models/Inspection/`에 둔다. 입력 전처리(`SlotTensorizer`)는 학습의 PIL BILINEAR 축소와 같은 필터를 쓴다. 슬롯이 불일치로 판정되면 기대 구성품, 예측 라벨, 신뢰도를 로그로 남긴다.
+
 ### 7-5. 생산 로그 (`IProductionLog`)
 
 - 열은 시각, 이벤트명, 로트번호, 설비 ID, 판정 방식, 비고이다. 실행마다 CSV 1개를 새로 만들고 덮어쓰지 않는다.
@@ -247,7 +262,7 @@
 | 로거 | `IProductionLog` 구현 | - | 대부분의 신호(`StationAlive` 제외) |
 | 합성 데이터 생성기 | `RecipeSO` 사용 (`CellEvents` 미사용) | - | - |
 
-- 합성 데이터 생성기(FR-08)는 공정과 같은 조건으로 박스를 채워 이미지와 정답 라벨(키트 코드, 정상·누락)을 저장하는 별도 도구이다. 공정 설비와 신호를 주고받지 않는다.
+- 합성 데이터 생성기(FR-08)는 공정과 같은 조건으로 박스를 채워 슬롯 크롭 이미지와 정답 라벨(슬롯의 구성품 ID, 빈 슬롯은 `empty`)을 저장하는 별도 도구이다. 정상, 누락(구성품 1개 제거), 오구성(구성품 1개를 다른 것으로 교체) 박스를 모두 만든다. 공정 설비와 신호를 주고받지 않는다.
 
 ### 7-10. 키팅 흐름 (FR-03, FR-04)
 
@@ -284,8 +299,22 @@
 - 주문은 `OrderSession`이 받는다. 주문 파일을 실행 중에 바꿔도 `IKitSource`, `IOrderStatus` 참조를 다시 잡지 않아도 된다. 로트번호는 이어서 붙이고 `KitSequence`는 파일마다 1부터 센다.
 - 박스 크기(L, M)별 모델은 아직 반영하지 않는다(템플릿이 하나). 컨베이어를 구현하기 전까지는 `ConveyorHandoffStub`이 `KitReady` 뒤에 박스를 치운다.
 
+### 7-11. 검사 구역과 슬롯 감지 센서 (FR-06)
+
+- `InspectionStation`이 `AtInspection`을 받으면 판정 순서(`KitInspection`)를 실행해 `KitData.Verdict`를 채우고 `InspectionResult`를 발행한다. 주 판정기(CNN)가 연결되어 있으면 먼저 시도하고, `TryJudge`가 `false`이면 `INSPECTION_FALLBACK` 경고를 남기고 규칙 판정으로 대체한다.
+- 규칙 판정은 슬롯 센서(`SlotSensor`, 슬롯마다 트리거 콜라이더)를 읽어 `KitData.DetectedComponentIds`를 채운 뒤 `RuleInspector`로 레시피와 비교한다. 센서는 박스 프리팹의 `SlotSensorArray` 아래에 둔다.
+- 구성품 오브젝트에는 `KitItemLabel`(구성품 ID)를 붙인다. 선반 물건의 복제본은 콜라이더가 없어 물리 트리거 이벤트가 오지 않으므로, 센서는 읽을 때 구성품의 위치가 트리거 콜라이더 부피 안인지 직접 확인한다.
+- 센서가 없거나 응답하지 않으면(`SLOT_SENSOR_NO_RESPONSE` 경고) 불량이고 `MissingSlots`는 `null`이다. 레시피를 찾지 못해도(`INSPECTION_RECIPE_MISSING`) 불량으로 본다.
+- `InspectionSampleSpawner`(Demo)는 키팅과 컨베이어를 구현하기 전까지 단독 확인용이다. 레시피대로 채운 샘플 박스(정상, 누락, 오구성, 센서 무응답)를 `Sensor_Inspection` 자리에 만들고 `AtInspection`을 보낸다. 구현하면 지운다.
+- 검사 카메라(`InspectionCameraRig`)는 구역 위에 고정되어 박스 중심 위 `InspectionCameraSettings`의 높이에서 아래를 보며 찍고, `SlotCropper`가 학습 데이터 생성기와 같은 계산으로 슬롯별 크롭을 자른다. 카메라에서만 그림자를 끄고, 설정 위치와 어긋나면 경고한다. `Save Captures`를 켜면 `InspectionCaptures/<시각>/<로트번호>/`에 PNG로 저장한다. CNN 판정(4단계)은 이 크롭을 입력으로 쓴다.
+- CNN 판정기는 박스를 찍는 방법과 레시피 조회를 `IStationBoundInspector.Bind`로 `InspectionStation`에서 받는다(Awake에서 한 번). `PF_InspectionStation`의 Primary Inspector에 `CnnInspector`가 연결되어 있으며, Model과 Classes가 비었거나 모델을 읽지 못하면 오류를 남기고 규칙 판정으로 대체한다.
+- 학습 이미지의 조명 색은 흰색부터 씬의 따뜻한 조명(`Scene_Cell`의 Directional Light 색)까지 흔든다(`SyntheticRandomization`의 `Light Warmth Deviation`). 씬의 조명 색이나 세기를 크게 바꾸면 크롭 색이 학습 범위를 벗어나 오분류하므로, 바꿨다면 데이터셋을 다시 만들고 재학습한다.
+- 검사 대상 박스는 `InspectionStation`에서 수평 거리가 `Box Search Radius` 안인 가장 가까운 `SlotSensorArray`이다. 높이는 따지지 않는다.
+
 ## 8. 확정이 필요한 항목
 
 - [x] 로봇암 A의 URDF 관절 이름은 FR5 URDF(`fr5_gripper.urdf`)의 `j1` ~ `j6`(6개)이다. `arm_a_poses.yaml`, `RosArmTarget`, ROS 쪽 URDF를 이 이름에 맞췄다
 - [ ] 보류 주문의 부족한 칸과 보충 남은 시간을 대시보드에 전달하는 방식(7-2의 임시안을 구현하면서 조정)
 - [ ] 로봇암 B의 `IArmTarget` 사용 여부(MVP는 자동 처리라 보류)
+- [ ] 오구성 박스를 공정에서 만드는 규칙(키팅 쪽, `IMissingRule`과 별개). 시연에 오구성을 보여 주려면 필요하며, `KitData`에 오구성 정답을 기록하는 방법도 함께 정한다
+- [ ] SRS(docx) 갱신: FR-07 "정상·누락 2클래스"를 슬롯별 분류로, FR-08 라벨을 슬롯별 구성품 ID로, NFR-04 지표를 누락·오구성 모두 포함하도록 바꾼다. 90% 기준은 다시 정한다

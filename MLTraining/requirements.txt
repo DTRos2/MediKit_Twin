@@ -1,0 +1,5 @@
+# PyTorch는 장치에 맞는 빌드를 README의 안내대로 먼저 설치한다.
+numpy
+pillow
+onnx
+onnxruntime

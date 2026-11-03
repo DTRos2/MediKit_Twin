@@ -4,6 +4,7 @@
     "references": [
         "MediKitTwin.Common",
         "MediKitTwin.ArmA",
+        "MediKitTwin.Inspection",
         "MediKitTwin.Inventory",
         "MediKitTwin.Orders",
         "MediKitTwin.Recipes",

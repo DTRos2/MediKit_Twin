@@ -1,0 +1,19 @@
+{
+    "name": "MediKitTwin.Inspection.Cnn",
+    "rootNamespace": "MediKitTwin.Inspection.Cnn",
+    "references": [
+        "MediKitTwin.Common",
+        "MediKitTwin.Recipes",
+        "MediKitTwin.Inspection",
+        "Unity.InferenceEngine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

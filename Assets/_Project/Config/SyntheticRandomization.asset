@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d94a5a9ec3508b469ef6e523041a211, type: 3}
+  m_Name: SyntheticRandomization
+  m_EditorClassIdentifier: MediKitTwin.ML::MediKitTwin.ML.SyntheticRandomizationSO
+  _itemOffsetMeters: 0.006
+  _itemYawDegrees: 20
+  _boxOffsetMeters: 0.01
+  _boxYawDegrees: 5
+  _lightIntensityDeviation: 0.3
+  _lightYawDegrees: 25
+  _lightPitchDegrees: 10
+  _hueShift: 0.03
+  _saturationDeviation: 0.15
+  _valueDeviation: 0.15

@@ -1,0 +1,26 @@
+{
+    "name": "MediKitTwin.Inspection.Tests",
+    "rootNamespace": "MediKitTwin.Inspection.Tests",
+    "references": [
+        "MediKitTwin.Inspection",
+        "MediKitTwin.Common",
+        "MediKitTwin.Recipes",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
