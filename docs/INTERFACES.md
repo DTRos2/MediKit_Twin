@@ -201,6 +201,7 @@
 - **CNN 슬롯 크롭 분류.** 검사 카메라는 고정 시점이고 구성품은 정해진 슬롯 위치에 놓이므로, 레시피의 `SlotLocalPosition`을 카메라 이미지 좌표로 투영해 슬롯마다 크롭을 만든다. CNN은 크롭 하나를 "빈 슬롯"과 구성품 종류 전체 중 하나로 분류한다. 키트 종류가 늘어도 구성품 종류만 늘면 되고, 모델을 다시 학습할 필요가 없다.
 - 판정은 규칙 판정과 같은 비교를 한다. 슬롯의 분류 결과가 레시피 항목의 `ComponentId`와 다르면 그 슬롯을 `MissingSlots`에 넣는다. `Confidence`는 슬롯별 분류 신뢰도 중 가장 낮은 값을 쓴다.
 - 카메라 이미지나 모델을 쓸 수 없으면 `TryJudge`가 `false`이고, 호출하는 쪽이 규칙 판정기로 대체한다.
+- 구현: `CnnSlotJudge`(비교 로직, Sentis에 의존하지 않아 EditMode 테스트 가능)와 `CnnInspector`(`MonoBehaviour`, Sentis 모델 로드)이다. 모델과 `classes.json`은 `Assets/_Project/Models/Inspection/`에 둔다. 입력 전처리(`SlotTensorizer`)는 학습의 PIL BILINEAR 축소와 같은 필터를 쓴다. 슬롯이 불일치로 판정되면 기대 구성품, 예측 라벨, 신뢰도를 로그로 남긴다.
 
 ### 7-5. 생산 로그 (`IProductionLog`)
 
@@ -306,6 +307,8 @@
 - 센서가 없거나 응답하지 않으면(`SLOT_SENSOR_NO_RESPONSE` 경고) 불량이고 `MissingSlots`는 `null`이다. 레시피를 찾지 못해도(`INSPECTION_RECIPE_MISSING`) 불량으로 본다.
 - `InspectionSampleSpawner`(Demo)는 키팅과 컨베이어를 구현하기 전까지 단독 확인용이다. 레시피대로 채운 샘플 박스(정상, 누락, 오구성, 센서 무응답)를 `Sensor_Inspection` 자리에 만들고 `AtInspection`을 보낸다. 구현하면 지운다.
 - 검사 카메라(`InspectionCameraRig`)는 구역 위에 고정되어 박스 중심 위 `InspectionCameraSettings`의 높이에서 아래를 보며 찍고, `SlotCropper`가 학습 데이터 생성기와 같은 계산으로 슬롯별 크롭을 자른다. 카메라에서만 그림자를 끄고, 설정 위치와 어긋나면 경고한다. `Save Captures`를 켜면 `InspectionCaptures/<시각>/<로트번호>/`에 PNG로 저장한다. CNN 판정(4단계)은 이 크롭을 입력으로 쓴다.
+- CNN 판정기는 박스를 찍는 방법과 레시피 조회를 `IStationBoundInspector.Bind`로 `InspectionStation`에서 받는다(Awake에서 한 번). `PF_InspectionStation`의 Primary Inspector에 `CnnInspector`가 연결되어 있으며, Model과 Classes가 비었거나 모델을 읽지 못하면 오류를 남기고 규칙 판정으로 대체한다.
+- 학습 이미지의 조명 색은 흰색부터 씬의 따뜻한 조명(`Scene_Cell`의 Directional Light 색)까지 흔든다(`SyntheticRandomization`의 `Light Warmth Deviation`). 씬의 조명 색이나 세기를 크게 바꾸면 크롭 색이 학습 범위를 벗어나 오분류하므로, 바꿨다면 데이터셋을 다시 만들고 재학습한다.
 - 검사 대상 박스는 `InspectionStation`에서 수평 거리가 `Box Search Radius` 안인 가장 가까운 `SlotSensorArray`이다. 높이는 따지지 않는다.
 
 ## 8. 확정이 필요한 항목

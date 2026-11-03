@@ -1,0 +1,24 @@
+{
+  "classes": [
+    "alcohol_pad",
+    "antiseptic",
+    "bandage",
+    "blood_tube",
+    "buffer_vial",
+    "empty",
+    "gauze",
+    "gloves",
+    "needle",
+    "sample_bag",
+    "swab",
+    "test_cassette",
+    "tourniquet"
+  ],
+  "input": {
+    "width": 128,
+    "height": 72,
+    "channels": 3,
+    "layout": "NCHW",
+    "range": "0..1 RGB"
+  }
+}

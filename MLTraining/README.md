@@ -20,6 +20,7 @@ Unity Sentis(`com.unity.ai.inference`)가 읽을 ONNX로 내보낸다. 이 폴�
 ## 2. 데이터셋
 Unity 메뉴 `Tools > MediKit > Synthetic Dataset (Inspection)`으로 만든다. 출력은 프로젝트 루트의 `Datasets/<실행 폴더>/`이며
 `labels.csv`와 `train/`, `validation/`, `test/` 크롭 PNG가 들어 있다. 기본값(학습 800, 검증 100, 테스트 200 박스)은 크롭 약 4,400장이다.
+조명 색은 흰색부터 씬의 따뜻한 조명까지 흔든다. 씬의 조명이 바뀌면 데이터셋을 다시 만들어 재학습한다. 학습 결과의 NFR-04는 합성 테스트 세트의 값이므로, 실제 씬(`InspectionCaptures`)에서도 맞는지는 따로 확인한다.
 
 ## 3. 학습
 ```
@@ -30,7 +31,7 @@ python train.py --dataset ..\Datasets\<실행 폴더>
 - 결과는 `runs/<시각>/`에 저장한다: `slot_cnn.onnx`, `classes.json`, `metrics.json`, `best.pt`.
 
 ## 4. Unity에 넣기
-`runs/<시각>/`의 `slot_cnn.onnx`와 `classes.json`을 `Assets/_Project/Models/`로 복사한다. (`CnnInspector`가 사용, 4-3단계)
+`runs/<시각>/`의 `slot_cnn.onnx`와 `classes.json`을 `Assets/_Project/Models/Inspection/`로 복사한다. `PF_InspectionStation`의 `CnnInspector`가 이 두 파일을 참조한다(Model, Classes). 같은 학습 결과의 두 파일을 함께 바꾼다.
 
 ## 입력 규격 (Unity와 같아야 한다)
 - 입력 `input`: `N x 3 x 72 x 128`, RGB, 0~1 실수. 정규화는 모델 안에서 한다.

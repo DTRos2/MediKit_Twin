@@ -37,6 +37,7 @@ namespace MediKitTwin.Inspection
         private IStationStateReporter _reporter;
         private KitInspection _inspection;
         private readonly string _captureSession = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        private StationCropSource _cropSource;
         private bool _busy;
 
         private void Awake()
@@ -63,6 +64,9 @@ namespace MediKitTwin.Inspection
             {
                 _cameraRig = GetComponentInChildren<InspectionCameraRig>();
             }
+
+            _cropSource = new StationCropSource(() => _cameraRig);
+            (_primaryInspector as IStationBoundInspector)?.Bind(FindRecipe, _cropSource);
 
             _reporter = new StationStateReporter(StationId.Inspection);
             _inspection = new KitInspection(FindRecipe, primary, CellEvents.RaiseWarning);
@@ -112,7 +116,9 @@ namespace MediKitTwin.Inspection
                 SaveCaptures(kit, box);
             }
 
+            _cropSource.Box = box != null ? box.transform : null;
             kit.Verdict = _inspection.Run(kit, box);
+            _cropSource.Box = null;
             CellEvents.RaiseInspectionResult(kit);
 
             _reporter.Set(StationState.Idle);
@@ -156,6 +162,37 @@ namespace MediKitTwin.Inspection
             Debug.Log($"[Inspection] 촬영 이미지를 저장했다: {folder}", this);
             crops.Dispose();
             Destroy(full);
+        }
+
+        // 주 판정기(CNN)에 지금 검사 중인 박스의 슬롯 크롭을 건넨다. 박스나 카메라가 없으면 크롭을 만들 수 없다(false).
+        private sealed class StationCropSource : ISlotCropSource
+        {
+            private readonly Func<InspectionCameraRig> _rig;
+
+            public StationCropSource(Func<InspectionCameraRig> rig)
+            {
+                _rig = rig;
+            }
+
+            public Transform Box { get; set; }
+
+            public bool TryGetCrops(KitData kit, RecipeSO recipe, out SlotCropSet crops)
+            {
+                crops = null;
+                InspectionCameraRig rig = _rig();
+                if (rig == null || Box == null)
+                {
+                    return false;
+                }
+
+                bool ok = rig.TryCaptureCrops(Box, recipe, out crops, out Texture2D full);
+                if (full != null)
+                {
+                    UnityEngine.Object.Destroy(full);
+                }
+
+                return ok;
+            }
         }
 
         // 구역 가까이에 있는 박스의 센서 묶음. 없으면 null이며, 규칙 판정에서는 센서 무응답으로 본다.
