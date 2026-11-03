@@ -75,7 +75,7 @@ namespace MediKitTwin.ArmA
 
             onPlacing?.Invoke();
             var place = new TransferResult();
-            yield return _transfer.Place(new ItemPlaceRequest(target.WorldPose, target.Parent), place);
+            yield return _transfer.Place(new ItemPlaceRequest(target.WorldPose, target.Parent, shelfSlotId), place);
             if (!place.Succeeded)
             {
                 result.Fail(FillFailure.PlaceFailed, $"슬롯 {request.SlotNumber}에 놓지 못했다. {place.Detail}");

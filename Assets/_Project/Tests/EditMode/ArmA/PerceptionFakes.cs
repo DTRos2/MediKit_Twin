@@ -42,7 +42,11 @@ namespace MediKitTwin.ArmA.Tests
     // 도구 자세의 x 좌표를 첫 관절 각도로 삼아 푸는 가짜 풀이. 풀이 요청 횟수와 마지막 시드를 남긴다.
     internal sealed class FakeSeededSolver : ISeededToolSolver
     {
+        // 도구 방향이 기본(회전 없음)에서 이만큼(도)보다 더 돌아가 있으면 풀지 못한다고 답한다. 숙인 자세만 못 푸는 경우를 흉내 낸다.
+        private const float UntiltedToleranceDeg = 0.5f;
+
         internal bool Solves = true;
+        internal bool RefusesTilted;
         internal int Calls;
         internal IReadOnlyList<float> LastSeed;
 
@@ -51,6 +55,11 @@ namespace MediKitTwin.ArmA.Tests
             Calls++;
             LastSeed = seedRad;
             if (!Solves)
+            {
+                return false;
+            }
+
+            if (RefusesTilted && Quaternion.Angle(worldPose.rotation, Quaternion.identity) > UntiltedToleranceDeg)
             {
                 return false;
             }
