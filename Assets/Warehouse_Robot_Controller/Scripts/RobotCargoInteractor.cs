@@ -66,13 +66,28 @@ namespace Warcool.WarehouseRobot
             UpdateAnimatorHasBox();
         }
 
+        // MediKit Twin 수정(에셋 원본에서 바뀐 부분 2곳): 이 프로젝트는 새 Input System만 쓴다(activeInputHandler: 1).
+        // 그 설정에서는 UnityEngine.Input을 부르면 매 프레임 예외가 나므로, E키 입력은 옛 Input이 켜졌을 때만 컴파일한다.
         private void Update()
         {
+#if ENABLE_LEGACY_INPUT_MANAGER
             if (isBusy)
                 return;
 
             if (Input.GetKeyDown(interactKey))
                 TryInteract();
+#endif
+        }
+
+        // MediKit Twin 수정(2/2): 자동 시퀀스가 키 입력 없이 집기/내리기를 시작하도록 공개한 진입점이다.
+        // 집기나 내리기가 실제로 시작되면 true. 이미 동작 중이거나 구역·정렬·칸 조건이 맞지 않으면 false.
+        public bool RequestInteract()
+        {
+            if (isBusy)
+                return false;
+
+            TryInteract();
+            return isBusy;
         }
 
         private void SetupCarryRoot()
