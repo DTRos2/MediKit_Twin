@@ -34,7 +34,7 @@
 
 `KitRejected`, `OrderHeld`, `OrderResumed`, `StationStateChanged`, `StationAlive`, `WarningRaised`는 SRS 4.4의 원래 신호 10개에 없다. 컨베이어의 다음 박스 허용(FR-09), 보류 주문 수(FR-13), 설비 상태와 경고(FR-14) 표시에 필요해서 추가했고, SRS 4.4에는 반영했다.
 
-- **`KitRejected`**: 푸셔가 불량 박스를 밀어내 불량 박스에 넣은 직후, 푸셔가 `CompleteTime`을 채운 뒤에 보낸다. 컨베이어는 이 신호로 검사 구역이 비었음을 알고 다음 박스를 보낸다. 컨베이어의 구역 센서 10초 미감지 경고(FR-05)는 이와 별도의 안전장치이다. `RejectBinCleared`는 불량 박스가 정원에 차서 비워질 때만 나오는 신호로 용도가 다르다.
+- **`KitRejected`**: 푸셔가 불량 박스를 밀어내 불량 박스에 넣은 직후, 푸셔가 `CompleteTime`을 채운 뒤에 보낸다. 컨베이어는 이 신호로 검사 구역이 비었음을 알고 다음 박스를 보낸다. 컨베이어의 구역 센서 10초 미감지 경고(FR-05)는 이와 별도의 안전장치이다. `RejectBinCleared`는 불량 박스가 정원에 차서 비워질 때만 나오는 신호로 용도가 다르다. 밀려난 키트가 불량 박스 밖으로 떨어졌을 때도 컨베이어가 멈추지 않도록 `KitRejected`를 보낸다(7-12).
 - **`StockEmpty`와 `OrderHeld`**: 재고(`IStock`)가 꺼내기에 실패할 때마다 `StockEmpty`를 보내고, 주문 관리가 이를 받아 그 주문을 보류하며 `OrderHeld`를 보낸다. 보충되면 재고가 `StockRefilled`를 보내고, 주문 관리가 보류 주문을 대기열 맨 앞으로 옮기며 `OrderResumed`를 보낸다.
 - **`StationStateChanged`와 `StationAlive`**: 전자는 상태가 바뀔 때만, 후자는 상태가 같아도 1초마다 보낸다. 로거와 주문 관리(Fault이면 해당 주문 보류, FR-16)는 전자만 구독하므로 같은 값을 반복 처리하지 않는다. 대시보드는 후자가 끊긴 시간으로 "응답 없음"을 판단한다.
 - **`WarningRaised`**: 경고 코드와 메시지를 보낸다. 같은 주문이 3번 보류되면 주문 관리가 보낸다(FR-13).
@@ -310,6 +310,21 @@
 - CNN 판정기는 박스를 찍는 방법과 레시피 조회를 `IStationBoundInspector.Bind`로 `InspectionStation`에서 받는다(Awake에서 한 번). `PF_InspectionStation`의 Primary Inspector에 `CnnInspector`가 연결되어 있으며, Model과 Classes가 비었거나 모델을 읽지 못하면 오류를 남기고 규칙 판정으로 대체한다.
 - 학습 이미지의 조명 색은 흰색부터 씬의 따뜻한 조명(`Scene_Cell`의 Directional Light 색)까지 흔든다(`SyntheticRandomization`의 `Light Warmth Deviation`). 씬의 조명 색이나 세기를 크게 바꾸면 크롭 색이 학습 범위를 벗어나 오분류하므로, 바꿨다면 데이터셋을 다시 만들고 재학습한다.
 - 검사 대상 박스는 `InspectionStation`에서 수평 거리가 `Box Search Radius` 안인 가장 가까운 `SlotSensorArray`이다. 높이는 따지지 않는다.
+
+### 7-12. 푸셔와 불량 박스 (FR-09)
+
+- `Pusher`는 `InspectionResult`가 불량이면 박스가 푸셔 앞의 감지 영역에 오기를 기다렸다가(최대 30초, 넘으면 `PUSHER_BOX_NOT_FOUND` 경고 후 그 키트는 건너뜀) 헤드를 앞으로 밀었다가 되돌린다. 밀기 방향은 `Pusher` 오브젝트의 로컬 +X이다. 박스는 컨베이어를 가로질러 가장자리를 넘어 물리로 불량 박스에 떨어진다.
+- 박스는 감지 영역을 물리로 훑어 찾는다. 충돌체에서 위로 올라가며 이름이 `KitBox`로 시작하는 오브젝트를 박스로 본다. 감지 영역은 컨베이어 윗면과 레일에 닿지 않고 박스에만 닿도록 얇다(박스 중심 높이 ±4cm). 검사 구역, 샘플 생성기, 컨베이어를 직접 참조하지 않는다.
+- 밀기 직전에 박스에 `Rigidbody`(비키네마틱)와 `RejectedKit`(어느 `KitData`인지) 표시를 붙인다. `Rigidbody`가 이미 있으면 키네마틱을 끄고 쓴다. 컨베이어가 박스를 `MoveTowards`로 옮기는 방식(`Parcel`)을 쓰면 컨베이어 쪽 처리는 FR-05에서 한다.
+- `RejectBin`은 `LoadZone`(트리거 콜라이더)에 `RejectedKit`이 붙은 박스가 들어오면 `KitData.CompleteTime`을 채우고 `KitRejected`를 보낸다. 적재 수(`RejectBinTally`)가 정원(기본 5)에 차면 1초 뒤 박스를 모두 지우고 `RejectBinCleared`를 보낸다. 누적 불량 수는 비워도 유지된다.
+- 푸셔가 민 뒤 5초 안에 불량 박스에 들어오지 않으면 `PUSHER_KIT_OUTSIDE` 경고를 보내고 박스를 지운다. 누적 불량 수에는 포함하고 적재 수는 올리지 않으며, `KitRejected`는 보낸다(SRS FR-09 예외).
+- 헤드는 키네마틱 `Rigidbody`로 물리 스텝마다 움직인다. 기본값은 전진 1.05m, 미는 속도 1.0m/s, 복귀 1.2m/s이다. 이 값은 `Tools > MediKit > Measure Pusher Layout`으로 잰 배치(컨베이어 가장자리에서 불량 박스 안쪽 벽까지 수평 틈 0.149m, 컨베이어 윗면과 벽 윗면의 높이 차 약 0.40m, 가장자리에서 필요한 속도 약 0.69m/s)에서 정했다.
+- 헤드 바닥 높이는 컨베이어 본체 충돌체 윗면(0.85m)보다 1.5cm 위이다. 컨베이어 패키지의 `CenterPoint`(0.91m)는 실제 윗면보다 0.06m 높아서 기준으로 쓰지 않는다. `Conv_Inspection_04`의 가이드 레일 두 개는 푸시 길을 막지 않도록 컨베이어 윗면보다 낮춰 두었다(씬의 인스턴스 값).
+- 검사 구간 컨베이어(`Conv_Inspection_01 ~ 06`)는 `InspectionConveyorLine`(`PF_InspectionStation`에 붙임)이 움직인다. 박스(`KitBoxParcel` + 컨베이어 패키지의 `Parcel`)를 01 입구에 올리면 패키지가 02 중심으로 옮기고, 02 중심에서 멈춘 뒤 이 컴포넌트가 `AtInspection`을 보낸다. `InspectionResult`가 나오면 정상 박스는 03, 04를 지나 06 중심에서 `End Hold Seconds`(3초) 멈췄다가 지워지고, 불량 박스는 04 중심에서 멈춰 푸셔를 기다린다. 한 번에 박스 하나만 시험한다.
+- 멈추는 방식: 박스가 칸 중심에서 `Stop Radius`(8cm) 안에 들어오면 그 칸의 `Speed`를 0으로 하고 박스를 중심에 맞춘 뒤, 박스가 칸을 떠날 때(`ParcelExited`) `Speed`를 되돌린다. 이 방식은 컨베이어 패키지 코드를 고치지 않는다.
+- 푸셔는 박스가 자리 가까이(`Spot Tolerance` 6cm)에서 0.3초 움직이지 않을 때 밀기 시작한다. 밀기 직전에 박스의 `IBoxConveyorRelease.ReleaseToPhysics()`(`KitBoxParcel` 구현)를 불러 컨베이어에서 풀고 `Parcel`을 꺼서, 컨베이어 입구 영역에 닿은 박스를 패키지가 다시 붙잡지 않게 한다. 푸셔는 컨베이어 패키지를 참조하지 않는다.
+- `InspectionSampleSpawner`는 씬에 `InspectionConveyorLine`이 있으면 박스를 컨베이어에 올리고 `AtInspection`을 직접 보내지 않는다. 컨베이어가 없으면(또는 `Use Conveyor`를 끄면) 박스를 검사 자리에 바로 놓고 `AtInspection`을 보낸다. 이때 불량 판정 1초 뒤 박스를 푸셔 앞 자리(`Pusher.BoxSpotWorld`)로 옮긴다.
+- `PF_Pusher`와 `PF_RejectBin`은 다시 만들지 않고 `Tools > MediKit > Setup Pusher Prefab`, `Add Load Zone To RejectBin Prefab`으로 컴포넌트를 더한다. 빌더의 "Rebuild … Prefabs"는 `LoadZone`을 지우므로 다시 만든 뒤에는 이 메뉴를 한 번 더 실행한다.
 
 ## 8. 확정이 필요한 항목
 

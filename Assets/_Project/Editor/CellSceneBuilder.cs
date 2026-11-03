@@ -612,7 +612,13 @@ namespace MediKitTwin.EditorTools
         private static void BuildPusher(Transform root)
         {
             Prim("Body", root, new Vector3(0f, 0.35f, 0f), new Vector3(0.4f, 0.7f, 0.4f), ColorBlue, "M_Blue");
-            Prim("PushHead", root, new Vector3(0.35f, beltY + 0.1f, 0f), new Vector3(0.1f, 0.2f, 0.4f), ColorRed, "M_Red");
+            // 헤드 바닥은 컨베이어 본체 충돌체 윗면(CenterPoint보다 0.06m 낮다)보다 1.5cm 위이다. 박스 높이(0.10m)의 대부분을 밀기 위해서이다.
+            // 길이를 재서 정한 값이며 Tools > MediKit > Measure Pusher Layout으로 확인한다.
+            Prim("PushHead", root, new Vector3(0.35f, beltY + 0.05f, 0f), new Vector3(0.1f, 0.2f, 0.4f), ColorRed, "M_Red");
+
+            // 프리팹을 다시 만들 때는 루트에 이미 있으므로 없을 때만 붙인다.
+            if (root.GetComponent<MediKitTwin.Pusher.Pusher>() == null)
+                root.gameObject.AddComponent<MediKitTwin.Pusher.Pusher>();
         }
 
         private static void BuildRejectBin(Transform root)

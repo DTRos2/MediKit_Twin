@@ -5,9 +5,11 @@
         "MediKitTwin.Common",
         "MediKitTwin.Dashboard",
         "MediKitTwin.ArmA",
+        "MediKitTwin.Conveyor",
         "MediKitTwin.Inspection",
         "MediKitTwin.Inventory",
         "MediKitTwin.Orders",
+        "MediKitTwin.Pusher",
         "MediKitTwin.Recipes",
         "Unity.InputSystem"
     ],
