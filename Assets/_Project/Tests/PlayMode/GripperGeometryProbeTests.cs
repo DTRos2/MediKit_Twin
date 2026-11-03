@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using MediKitTwin.ArmA;
+using MediKitTwin.Common;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -16,9 +17,9 @@ namespace MediKitTwin.PlayMode.Tests
     /// </summary>
     public sealed class GripperGeometryProbeTests
     {
-        private const string ScenePath = "Assets/_Project/Scenes/Scene_Cell.unity";
         private const int CaptureFramerate = 50;
         private const float SettleSeconds = 2f;
+        private const float ModelReadyTimeoutSeconds = 20f;
         private static readonly float[] Openings = { 1f, 0.5f, 0f };
 
         [UnityTest, Timeout(300000)]
@@ -27,33 +28,22 @@ namespace MediKitTwin.PlayMode.Tests
             LogAssert.ignoreFailingMessages = true;
             Time.captureFramerate = CaptureFramerate;
 
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ProjectAssetPaths.CellScene, new LoadSceneParameters(LoadSceneMode.Single));
             yield return null;
             yield return null;
 
-            var arm = Object.FindAnyObjectByType<IkArmTarget>();
-            var gripper = Object.FindAnyObjectByType<JointGripper>();
-            Assert.That(arm, Is.Not.Null, "씬에서 IkArmTarget을 찾을 수 없다");
-            Assert.That(gripper, Is.Not.Null, "씬에서 JointGripper를 찾을 수 없다");
+            // 씬에는 팔이 둘이라 팔과 그리퍼를 따로 집으면 짝이 어긋난다. 물건을 박스에 놓는 팔 A(직선 손가락 2개)와 그 그리퍼를 한 묶음으로 얻는다.
+            StraightFingerArm armA = null;
+            yield return StraightFingerArm.WaitUntilFound(ModelReadyTimeoutSeconds, found => armA = found);
+            Assert.That(armA, Is.Not.Null, "직선 손가락 2개인 팔(과 그 그리퍼)을 찾을 수 없다");
 
-            IArmModel model = ((IArmModelSource)arm).Model;
-            float waited = 0f;
-            while ((model == null || !model.IsReady) && waited < 20f)
-            {
-                yield return null;
-                waited += Time.deltaTime;
-                model = ((IArmModelSource)arm).Model;
-            }
-
-            Assert.That(model != null && model.IsReady, Is.True, "팔 모델이 준비되지 않았다");
-            var host = (IGripperHost)model;
-            HashSet<Collider> fingers = new HashSet<Collider>(gripper.FingerColliders);
+            var fingers = new HashSet<Collider>(armA.Gripper.FingerColliders);
 
             foreach (float opening in Openings)
             {
-                gripper.SetOpening(opening);
+                armA.Gripper.SetOpening(opening);
                 yield return new WaitForSeconds(SettleSeconds);
-                Report(opening, host, fingers);
+                Report(opening, armA.Host, fingers);
             }
 
             Time.captureFramerate = 0;
