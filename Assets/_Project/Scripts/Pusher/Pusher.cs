@@ -31,6 +31,10 @@ namespace MediKitTwin.Pusher
         [SerializeField] private Vector3 _boxSpotLocal = new Vector3(0.9f, 0.905f, 0f);
         [Tooltip("감지 영역 절반 크기(m). 높이는 컨베이어 윗면과 레일에 닿지 않고 박스에만 닿도록 얇게 둔다.")]
         [SerializeField] private Vector3 _boxSpotHalfExtents = new Vector3(0.15f, 0.04f, 0.2f);
+        [Tooltip("박스가 이 거리 안(수평, m)에 오고 가만히 있어야 밀기 시작한다. 컨베이어로 오는 박스가 지나가는 중에 밀지 않기 위해서이다.")]
+        [SerializeField, Min(0.01f)] private float _spotTolerance = 0.06f;
+        [Tooltip("박스가 이 시간(초) 동안 움직이지 않아야 밀기 시작한다. 시뮬레이션 시간이다.")]
+        [SerializeField, Min(0f)] private float _settleSeconds = 0.3f;
         [Tooltip("키트 박스로 보는 오브젝트 이름의 앞부분. 감지된 충돌체에서 위로 올라가며 이 이름으로 시작하는 오브젝트를 박스로 본다.")]
         [SerializeField] private string _boxNamePrefix = "KitBox";
         [Tooltip("불량 키트가 푸셔 앞에 오기를 기다리는 최대 시간(초). 넘으면 경고를 남기고 그 키트는 건너뛴다. 시뮬레이션 시간이다.")]
@@ -50,6 +54,12 @@ namespace MediKitTwin.Pusher
         private Vector3 _headRestWorld;
         private Vector3 _pushDirection;
         private bool _running;
+        private Transform _trackedBox;
+        private Vector3 _trackedPosition;
+        private float _stillSince;
+
+        /// <summary>박스가 놓여야 하는 자리의 월드 좌표(박스 중심). 컨베이어나 시험용 장치가 박스를 이 자리로 가져온다.</summary>
+        public Vector3 BoxSpotWorld => transform.TransformPoint(_boxSpotLocal);
 
         private void Awake()
         {
@@ -127,8 +137,12 @@ namespace MediKitTwin.Pusher
                 float deadline = Time.time + _boxWaitSeconds;
                 while (box == null && Time.time < deadline)
                 {
-                    box = FindBox();
-                    if (box == null)
+                    Transform found = FindBox();
+                    if (found != null && IsSettled(found))
+                    {
+                        box = found;
+                    }
+                    else
                     {
                         yield return null;
                     }
@@ -195,10 +209,27 @@ namespace MediKitTwin.Pusher
             }
         }
 
+        // 박스가 자리 가까이에서 가만히 있는지 본다. 컨베이어로 오는 박스가 지나가는 중에는 false이다.
+        private bool IsSettled(Transform box)
+        {
+            Vector3 position = box.position;
+            Vector3 offset = position - BoxSpotWorld;
+            offset.y = 0f;
+            if (box != _trackedBox || (position - _trackedPosition).sqrMagnitude > 0.002f * 0.002f)
+            {
+                _trackedBox = box;
+                _trackedPosition = position;
+                _stillSince = Time.time;
+                return false;
+            }
+
+            return offset.magnitude <= _spotTolerance && Time.time - _stillSince >= _settleSeconds;
+        }
+
         // 감지 영역 안의 키트 박스. 이미 민 박스(RejectedKit)는 제외한다.
         private Transform FindBox()
         {
-            Vector3 center = transform.TransformPoint(_boxSpotLocal);
+            Vector3 center = BoxSpotWorld;
             int count = Physics.OverlapBoxNonAlloc(center, _boxSpotHalfExtents, _hits, transform.rotation, ~0, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < count; i++)
             {
@@ -228,6 +259,9 @@ namespace MediKitTwin.Pusher
         // 밀기 직전에 박스를 물리로 움직이게 하고 어느 키트인지 표시한다.
         private RejectedKit PrepareBox(Transform box, KitData kit)
         {
+            // 컨베이어에 실려 있으면 먼저 푸셔가 가져간다. 컨베이어가 박스를 더 붙잡지 않아야 물리로 밀 수 있다.
+            box.GetComponent<IBoxConveyorRelease>()?.ReleaseToPhysics();
+
             Rigidbody body = box.GetComponent<Rigidbody>();
             if (body == null)
             {
@@ -253,7 +287,7 @@ namespace MediKitTwin.Pusher
         private void OnDrawGizmosSelected()
         {
             Gizmos.color = new Color(1f, 0.5f, 0f, 0.8f);
-            Gizmos.matrix = Matrix4x4.TRS(transform.TransformPoint(_boxSpotLocal), transform.rotation, Vector3.one);
+            Gizmos.matrix = Matrix4x4.TRS(BoxSpotWorld, transform.rotation, Vector3.one);
             Gizmos.DrawWireCube(Vector3.zero, _boxSpotHalfExtents * 2f);
         }
     }
