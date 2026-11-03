@@ -36,12 +36,11 @@ namespace MediKitTwin.Mobile
                  "작을수록 마지막에 한 번에 틀어지는 각도가 작아 팔이 덜 튄다.")]
         [SerializeField, Min(0.05f)] private float _finalYawToleranceDeg = 0.5f;
 
-        // 허용 오차의 이 비율만큼 안쪽을 멈출 자리로 삼아 감속한다. 허용 오차 경계에서 속도가 0이 되면 경계에 닿기 전에
-        // 멈춰 서 버릴 수 있고, 경계에서 빠르면 도착 처리 때 속도가 한꺼번에 사라진다. 그 사이에서 천천히 들어가게 한 값이다.
-        private const float StopMargin = 0.9f;
+        [Tooltip("허용 오차의 이 비율만큼 안쪽을 멈출 자리로 삼아 감속한다. 허용 오차 경계에서 속도가 0이 되면 경계에 닿기 전에 멈춰 서 버릴 수 있고, " +
+                 "경계에서 빠르면 도착 처리 때 속도가 한꺼번에 사라진다. 1이면 경계에서 멈추고, 작을수록 안쪽에서 멈춘다.")]
+        [SerializeField, Range(0.1f, 1f)] private float _stopMarginRatio = 0.9f;
 
-        private SpeedRamp _moveRamp;
-        private SpeedRamp _turnRamp;
+        private DifferentialDrive _drive;
         private Vector3 _target;
         private bool _hasTarget;
         private float _finalYawDeg;
@@ -73,26 +72,29 @@ namespace MediKitTwin.Mobile
         public void Stop()
         {
             _hasTarget = false;
-            ResetRamps();
+            _drive?.Reset();
         }
 
         // 진행 중이던 이동은 취소하고(도착을 알리지 않는다) 곧바로 이 자리와 방향에 놓는다. 높이는 그대로 둔다.
         public void PlaceAt(Vector3 worldPosition, float yawDeg)
         {
             _hasTarget = false;
-            ResetRamps();
+            _drive?.Reset();
             transform.SetPositionAndRotation(
                 new Vector3(worldPosition.x, transform.position.y, worldPosition.z),
                 Quaternion.Euler(0f, yawDeg, 0f));
         }
 
-        // 인스펙터에서 바꾼 속도와 가속도로 만든다. 실행 중에 값을 바꿔도 다음 실행부터 반영된다.
+        // 인스펙터에서 바꾼 속도, 가속도, 허용 오차로 만든다. 실행 중에 값을 바꿔도 다음 실행부터 반영된다.
         private void Awake()
         {
-            _moveRamp = new SpeedRamp(_moveSpeed, _moveAccelerationMps2);
-            _turnRamp = new SpeedRamp(_turnSpeedDegPerSec, _turnAccelerationDegPerSec2);
+            _drive = new DifferentialDrive(
+                new SpeedRamp(_moveSpeed, _moveAccelerationMps2),
+                new SpeedRamp(_turnSpeedDegPerSec, _turnAccelerationDegPerSec2),
+                new DriveTolerances(_arriveToleranceM, _alignToleranceDeg, _finalYawToleranceDeg, _stopMarginRatio));
         }
 
+        // 무엇을 할지는 DifferentialDrive가 정하고, 이 컴포넌트는 정한 대로 Transform을 옮기고 도착을 알리기만 한다.
         private void Update()
         {
             if (!_hasTarget)
@@ -100,67 +102,32 @@ namespace MediKitTwin.Mobile
                 return;
             }
 
-            Vector3 toTarget = _target - transform.position;
-            toTarget.y = 0f;
-            float distance = toTarget.magnitude;
+            float? finalYaw = _hasFinalYaw ? _finalYawDeg : (float?)null;
+            DriveStep step = _drive.Step(transform.position, transform.eulerAngles.y, _target, finalYaw, Time.deltaTime);
 
-            if (distance <= _arriveToleranceM)
+            switch (step.Action)
             {
-                FinishAtTarget();
-                return;
+                case DriveAction.Turn:
+                    transform.rotation = Quaternion.Euler(0f, step.YawDeg, 0f);
+                    break;
+                case DriveAction.Move:
+                    transform.position += step.Translation;
+                    break;
+                case DriveAction.Arrive:
+                    FinishAtTarget(step);
+                    break;
             }
-
-            float currentYaw = transform.eulerAngles.y;
-            float desiredYaw = Mathf.Atan2(toTarget.x, toTarget.z) * Mathf.Rad2Deg;
-            float yawError = Mathf.DeltaAngle(currentYaw, desiredYaw);
-
-            if (Mathf.Abs(yawError) > _alignToleranceDeg)
-            {
-                TurnInPlace(currentYaw, yawError, _alignToleranceDeg);
-                return;
-            }
-
-            // 도착 허용 오차 안쪽에서 멈추도록 남은 거리를 잡는다. 서는 자리가 프레임 간격에 따라 달라지지 않는다.
-            _turnRamp.Reset();
-            float step = _moveRamp.Advance(distance - _arriveToleranceM * StopMargin, Time.deltaTime);
-            transform.position += toTarget / distance * step;
         }
 
-        // 위치에 닿았다. 최종 방향이 있으면 그 방향으로 돌아서고 정확히 맞춘 뒤에 도착을 알린다.
-        private void FinishAtTarget()
+        private void FinishAtTarget(DriveStep step)
         {
-            if (_hasFinalYaw)
+            if (step.SnapsYaw)
             {
-                float currentYaw = transform.eulerAngles.y;
-                float yawError = Mathf.DeltaAngle(currentYaw, _finalYawDeg);
-
-                if (Mathf.Abs(yawError) > _finalYawToleranceDeg)
-                {
-                    TurnInPlace(currentYaw, yawError, _finalYawToleranceDeg);
-                    return;
-                }
-
-                // 남은 각도만큼의 어긋남이 팔 베이스의 위치 오차가 되므로 정확한 방향으로 맞춘다.
-                transform.rotation = Quaternion.Euler(0f, _finalYawDeg, 0f);
+                transform.rotation = Quaternion.Euler(0f, step.YawDeg, 0f);
             }
 
             _hasTarget = false;
-            ResetRamps();
             Arrived?.Invoke();
-        }
-
-        // 허용 오차 안쪽에서 멈추도록 감속하며 돈다. 돌고 있는 동안에는 전진 속도를 0으로 둔다.
-        private void TurnInPlace(float currentYaw, float yawError, float toleranceDeg)
-        {
-            _moveRamp.Reset();
-            float turn = _turnRamp.Advance(Mathf.Abs(yawError) - toleranceDeg * StopMargin, Time.deltaTime);
-            transform.rotation = Quaternion.Euler(0f, currentYaw + Mathf.Sign(yawError) * turn, 0f);
-        }
-
-        private void ResetRamps()
-        {
-            _moveRamp?.Reset();
-            _turnRamp?.Reset();
         }
     }
 }
