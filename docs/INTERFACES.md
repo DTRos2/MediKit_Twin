@@ -297,7 +297,7 @@
 - 주문은 SRS FR-01에 따라 `StreamingAssets/Orders`의 CSV 파일로 읽는 것이 시나리오이다. 패널에서 CSV를 직접 넣는 기능은 시험용 편의이며 SRS의 화면(UI-01, UI-02)에는 없다.
 - 설비 상태 통지는 `StationStateReporter`가 맡는다. 상태가 바뀔 때만 `StationStateChanged`를, 1초마다 `StationAlive`를 보낸다.
 - 주문은 `OrderSession`이 받는다. 주문 파일을 실행 중에 바꿔도 `IKitSource`, `IOrderStatus` 참조를 다시 잡지 않아도 된다. 로트번호는 이어서 붙이고 `KitSequence`는 파일마다 1부터 센다.
-- 박스 크기(L, M)별 모델은 아직 반영하지 않는다(템플릿이 하나). 컨베이어를 구현하기 전까지는 `ConveyorHandoffStub`이 `KitReady` 뒤에 박스를 치운다.
+- 박스 크기(L, M)별 모델은 아직 반영하지 않는다(템플릿이 하나). 키팅이 끝나면(`KitReady`) `KitBoxDispatcher`가 `IBoxSupply.TakeBox()`로 지그의 박스를 떼어 컨베이어에 태운다. 박스는 `KitBoxCarrier`(피벗이 박스 바닥 중앙인 받침 + 컨베이어 에셋의 `Parcel`)에 얹혀 가고, `PackingStop`이 팩킹 구간에서 세운다(팔 B가 맞춰진 자리 `Sensor_Packing/PackingStopPoint`는 벨트 중심선보다 팔 쪽으로 약 26cm 치우쳐 있어서, 구간을 멈춘 뒤 박스를 그 자리로 옆으로 미끄러뜨린다). 선 뒤 `AtPacking`을 보내고 `LidClosed`를 받으면 출발시키며, `ConveyorEndNotifier`가 마지막 구간에서 `AtConveyorEnd`를 보낸다. 검사 구역(`AtInspection`~`InspectionResult`)은 아직 구현되지 않아 박스가 멈추지 않고 지나간다.
 
 ### 7-11. 검사 구역과 슬롯 감지 센서 (FR-06)
 

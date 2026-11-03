@@ -1,0 +1,27 @@
+{
+    "name": "MediKitTwin.Conveyor.Tests",
+    "rootNamespace": "MediKitTwin.Conveyor.Tests",
+    "references": [
+        "MediKitTwin.Conveyor",
+        "MediKitTwin.Common",
+        "MediKitTwin.Recipes",
+        "ConveyorSystem",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
