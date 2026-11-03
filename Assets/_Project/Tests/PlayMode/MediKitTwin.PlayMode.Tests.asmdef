@@ -3,9 +3,13 @@
     "rootNamespace": "MediKitTwin.PlayMode.Tests",
     "references": [
         "MediKitTwin.ArmA",
+        "MediKitTwin.ArmB",
         "MediKitTwin.Common",
+        "MediKitTwin.Conveyor",
+        "MediKitTwin.Demo",
         "MediKitTwin.Orders",
         "MediKitTwin.Recipes",
+        "ConveyorSystem",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using MediKitTwin.ArmA;
+using MediKitTwin.Common;
 using MediKitTwin.Orders;
 using MediKitTwin.Recipes;
 using NUnit.Framework;
@@ -22,7 +23,6 @@ namespace MediKitTwin.PlayMode.Tests
     /// </summary>
     public sealed class KittingEndToEndTests
     {
-        private const string ScenePath = "Assets/_Project/Scenes/Scene_Cell.unity";
         private const string RobotName = "fr5_robot";
         private const string WatchedCell = "Shelf_A-1";
         private const string BoxName = "KitBox";
@@ -243,7 +243,7 @@ namespace MediKitTwin.PlayMode.Tests
             int previousVSyncCount = QualitySettings.vSyncCount;
             ApplyFrameTiming(timing);
 
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ProjectAssetPaths.CellScene, new LoadSceneParameters(LoadSceneMode.Single));
             yield return null;
             yield return null;
 
