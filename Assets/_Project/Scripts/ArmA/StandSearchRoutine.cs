@@ -148,6 +148,7 @@ namespace MediKitTwin.ArmA
 
                 if (attempt.IsFound)
                 {
+                    attempt.Search.RecordStand(candidate.StandoffExtraM, candidate.LateralM);
                     LogChosenStand(plan, attempt.Search, candidate.ShiftM);
                     done(attempt.Search);
                     yield break;
@@ -171,10 +172,14 @@ namespace MediKitTwin.ArmA
         // 미리 가늠할 수 없을 때의 방식: 기본 자리에서 시작해 서는 거리를 계획의 보정값만큼 차례로 늘려 가며 서 본다.
         private IEnumerator StandAtEachOffset(ReachPlan plan, TransferResult result, Action<OrientationSearchResult> done)
         {
+            // 옆으로 비키는 자리는 미리 가늠할 때만 견주므로 여기서는 쓰지 않는다. 다만 비킬 자리가 하나뿐이면 그 자리가 정해진 서는 자리이므로
+            // (이미 알고 있는 자리에 다시 서 보는 경우) 그만큼 비켜 선다. 기본 자리만 보는 계획은 비킬 자리가 0 하나라 전과 같다.
+            float lateral = plan.LateralOffsets.Count == 1 ? plan.LateralOffsets[0] : 0f;
+
             foreach (float extra in plan.StandoffOffsets)
             {
                 var attempt = new StandAttempt();
-                yield return StandAndSearch(plan, extra, 0f, result, attempt);
+                yield return StandAndSearch(plan, extra, lateral, result, attempt);
 
                 if (attempt.IsBaseStuck)
                 {
@@ -184,6 +189,7 @@ namespace MediKitTwin.ArmA
 
                 if (attempt.IsFound)
                 {
+                    attempt.Search.RecordStand(extra, lateral);
                     LogChosenStand(plan, attempt.Search, Mathf.Abs(extra));
                     done(attempt.Search);
                     yield break;

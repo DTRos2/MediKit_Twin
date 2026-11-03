@@ -24,11 +24,11 @@ namespace MediKitTwin.ArmA.Tests
 
         private ObservationGraspRefiner Create(
             bool requireRecognition = false, float max = 0.03f, bool withRoutes = true, Func<GraspTargets, bool> isClear = null,
-            ShiftBackoff backoff = null, float fingerDrop = 0f)
+            ShiftBackoff backoff = null, float fingerDrop = 0f, float tiltDeg = 0f)
         {
             return new ObservationGraspRefiner(
                 _estimator,
-                PerceptionTestData.Recognition(requireRecognition, 0.004f, max, fingerDrop),
+                PerceptionTestData.Recognition(requireRecognition, 0.004f, max, fingerDrop, tiltDeg),
                 withRoutes ? new SeededRouteBuilder(_solver) : null,
                 isClear,
                 _log.Add,
@@ -182,6 +182,52 @@ namespace MediKitTwin.ArmA.Tests
             // 가짜 풀이는 도구 자세의 x를 첫 관절 각도로 삼는다. 쥐는 자리의 x가 0.01 늘었으니 관절 각도도 그만큼이다.
             Assert.That(refinement.Targets.Route.Grasp[0], Is.EqualTo(ItemAt.x + 0.01f).Within(1e-5f));
             Assert.That(_solver.LastSeed, Is.Not.Null);
+        }
+
+        [Test]
+        public void OnAJointRoute_WhenOnlyTheTiltedPoseCannotBeSolved_TheItemIsStillReachedWithoutTilting()
+        {
+            // 숙인 자세를 못 푼다고 옮기는 것까지 포기하면 손가락이 물건에 닿지 못한다. 숙이지 않고 옮겨야 한다.
+            GraspTargets planned = Planned();
+            TaughtJointRoute route = RouteSolvedBy(_solver, planned);
+            _solver.RefusesTilted = true;
+            Sees(ItemAt + new Vector3(0.01f, 0f, 0f));
+
+            GraspRefinement refinement = Create(tiltDeg: 15f).Refine(Request(), Planned(route));
+
+            Assert.That(refinement.IsCorrected, Is.True, "숙이지 않고라도 물건 쪽으로 옮겨야 한다");
+            Assert.That(refinement.Targets.Grasp.x, Is.EqualTo(ItemAt.x + 0.01f).Within(1e-5f));
+            Assert.That(Quaternion.Angle(refinement.Targets.Rotation, planned.Rotation), Is.LessThan(1e-3f), "숙이지 않았다면 도구 방향은 그대로다");
+            Assert.That(_log.Count, Is.EqualTo(1));
+            StringAssert.Contains("숙이지 않고", _log[0]);
+        }
+
+        [Test]
+        public void OnAJointRoute_WhenTheTiltedPoseIsSolved_TheTiltIsKept()
+        {
+            GraspTargets planned = Planned();
+            TaughtJointRoute route = RouteSolvedBy(_solver, planned);
+            Sees(ItemAt + new Vector3(0.01f, 0f, 0f));
+
+            GraspRefinement refinement = Create(tiltDeg: 15f).Refine(Request(), Planned(route));
+
+            Assert.That(refinement.IsCorrected, Is.True);
+            Assert.That(Quaternion.Angle(refinement.Targets.Rotation, planned.Rotation), Is.EqualTo(15f).Within(0.1f));
+            StringAssert.Contains("숙여", _log[0]);
+        }
+
+        [Test]
+        public void OnAJointRoute_WhenNothingCanBeSolvedEvenWithoutTilting_ThePlannedRouteIsKept()
+        {
+            GraspTargets planned = Planned();
+            TaughtJointRoute route = RouteSolvedBy(_solver, planned);
+            _solver.Solves = false;
+            Sees(ItemAt + new Vector3(0.01f, 0f, 0f));
+
+            GraspRefinement refinement = Create(tiltDeg: 15f).Refine(Request(), Planned(route));
+
+            Assert.That(refinement.IsCorrected, Is.False);
+            Assert.That(refinement.Targets.Route, Is.SameAs(route));
         }
 
         [Test]

@@ -22,6 +22,19 @@ namespace MediKitTwin.ArmA
         /// <summary>기본 방향에서 손목을 비튼 각도(도).</summary>
         public float RollDeg { get; private set; }
 
+        /// <summary>방향을 찾은 서는 자리가 기본 거리에서 더 물러난 거리(m). 서는 자리를 바꿔 가며 찾지 않았으면 0이다.</summary>
+        public float StandoffExtraM { get; private set; }
+
+        /// <summary>방향을 찾은 서는 자리가 옆으로 비킨 거리(m).</summary>
+        public float LateralM { get; private set; }
+
+        /// <summary>방향을 찾은 서는 자리를 남긴다. 같은 자리에 다시 서서 같은 방향을 곧바로 확인하려는 쪽(PlacementMemory)이 읽는다.</summary>
+        public void RecordStand(float standoffExtraM, float lateralM)
+        {
+            StandoffExtraM = standoffExtraM;
+            LateralM = lateralM;
+        }
+
         /// <summary>확인해 본 후보 수.</summary>
         public int TriedCount { get; private set; }
 

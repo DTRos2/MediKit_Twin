@@ -77,14 +77,18 @@ namespace MediKitTwin.ArmA
                 return Keep(planned, $"{seenText} — 쥐는 자리가 물건 위치와 거의 같아 자리를 고치지 않는다.");
             }
 
-            if (!TryShift(planned, shift, tiltDeg, out GraspTargets shifted, out float fraction, out string whyNot))
+            if (!TryShift(planned, shift, tiltDeg, out GraspTargets shifted, out float fraction, out float usedTiltDeg, out string whyNot))
             {
                 return Keep(planned, $"{seenText} — 쥐는 자리가 물건에서 {shift.magnitude * 100f:0.0}cm 벗어났지만 {whyNot} 계획한 자리 그대로 집는다.");
             }
 
+            bool tiltDropped = tiltDeg > 0f && usedTiltDeg <= 0f;
             string clampNote = isClamped ? $"(한 번에 고치는 한계 {_settings.MaxCorrectionM * 100f:0.0}cm까지만)" : string.Empty;
-            string backoffNote = fraction < 1f ? $" 다만 {whyNot} {fraction * 100f:0}%만 옮긴다" : string.Empty;
-            string tiltNote = tiltDeg > 0f ? $" 손가락 끝을 {tiltDeg:0}° 숙여 쥔다." : string.Empty;
+            // 숙이지 못해 숙임을 뺀 경우에는 whyNot이 그 이유이므로 줄여 옮긴다는 말과 섞지 않는다.
+            string backoffNote = fraction < 1f && !tiltDropped ? $" 다만 {whyNot} {fraction * 100f:0}%만 옮긴다" : string.Empty;
+            string tiltNote = usedTiltDeg > 0f
+                ? $" 손가락 끝을 {usedTiltDeg:0}° 숙여 쥔다."
+                : tiltDropped ? $" 손가락 끝은 숙이지 않고 옮기기만 한다({whyNot})." : string.Empty;
             string note = $"{seenText} — 쥐는 자리가 물건에서 ({-shift.x * 100f:+0.0;-0.0}, {-shift.y * 100f:+0.0;-0.0}, {-shift.z * 100f:+0.0;-0.0})cm 벗어나 물건 쪽으로 고친다{clampNote}{backoffNote}. 쥐는 자리 높이 {planned.Grasp.y:0.000}→{shifted.Grasp.y:0.000}m(물건 중심 {seen.EstimatedPose.position.y:0.000}m).{tiltNote}";
             _log?.Invoke(note);
             return GraspRefinement.Corrected(shifted, note);
@@ -118,7 +122,7 @@ namespace MediKitTwin.ArmA
                 return GraspRefinement.Keep(current, $"칸 {slotId}: 쥐는 자리 마무리 — 도구 끝점이 겨냥과 {(aim - actual).magnitude * 1000f:0.0}mm 차이라 그대로 쥔다.");
             }
 
-            if (!TryShift(current, error, 0f, out GraspTargets settled, out float fraction, out string whyNot))
+            if (!TryShift(current, error, 0f, out GraspTargets settled, out float fraction, out _, out string whyNot))
             {
                 return Keep(current, $"칸 {slotId}: 쥐는 자리 마무리 — 도구 끝점이 겨냥에서 {error.magnitude * 100f:0.0}cm 모자라지만 {whyNot} 그대로 쥔다.");
             }
@@ -157,32 +161,43 @@ namespace MediKitTwin.ArmA
         // 전부 옮기는 것부터 시작해 안 되면 양을 줄여 가며, 되는 첫 양으로 옮긴다. 줄여도 안 되면 이유와 함께 false.
         // whyNot에는 전부 옮기지 못한 이유를 남긴다(줄여서 옮겼다면 그 이유를 알려 주는 데 쓴다).
         // 선반 바닥판처럼 물건 바로 밑에 있는 장애물 때문에 전부는 못 내려가도, 쥘 수 있는 거리 안까지는 내려갈 수 있기 때문이다.
-        private bool TryShift(GraspTargets planned, Vector3 shift, float tiltDeg, out GraspTargets shifted, out float fraction, out string whyNot)
+        // 손끝을 숙이는 것은 얇은 물건을 위한 덤이다. 숙인 자세의 관절을 풀지 못해 옮기는 것까지 포기하면 손가락이 물건에 닿지 못하므로,
+        // 숙인 채로 어떤 양도 안 되면 숙이지 않고 옮기는 것을 한 번 더 해 본다. 어느 쪽으로 옮겼는지는 usedTiltDeg로 알린다.
+        private bool TryShift(GraspTargets planned, Vector3 shift, float tiltDeg, out GraspTargets shifted, out float fraction, out float usedTiltDeg, out string whyNot)
         {
             whyNot = string.Empty;
             shifted = planned;
             fraction = 0f;
+            usedTiltDeg = tiltDeg;
 
             // 계획한 자리가 이미 겹치면 옮겨서 더 나빠지는 것이 아니므로 겹침은 따지지 않는다.
             bool isPlannedClear = _isClear == null || _isClear(planned);
 
-            for (int i = 0; i < _backoff.Fractions.Count; i++)
+            bool canDropTilt = tiltDeg > 0f;
+            for (int attempt = 0; attempt < (canDropTilt ? 2 : 1); attempt++)
             {
-                float candidateFraction = _backoff.Fractions[i];
-                string why = TryBuild(planned, shift * candidateFraction, tiltDeg, isPlannedClear, out GraspTargets candidate);
-                if (why.Length == 0)
+                float candidateTilt = attempt == 0 ? tiltDeg : 0f;
+                for (int i = 0; i < _backoff.Fractions.Count; i++)
                 {
-                    shifted = candidate;
-                    fraction = candidateFraction;
-                    return true;
-                }
+                    float candidateFraction = _backoff.Fractions[i];
+                    string why = TryBuild(planned, shift * candidateFraction, candidateTilt, isPlannedClear, out GraspTargets candidate);
+                    if (why.Length == 0)
+                    {
+                        shifted = candidate;
+                        fraction = candidateFraction;
+                        usedTiltDeg = candidateTilt;
+                        return true;
+                    }
 
-                if (i == 0)
-                {
-                    whyNot = why;
+                    // 이유는 처음 시도(숙인 채, 전부 옮기기)가 안 된 까닭을 남긴다.
+                    if (attempt == 0 && i == 0)
+                    {
+                        whyNot = why;
+                    }
                 }
             }
 
+            usedTiltDeg = tiltDeg;
             return false;
         }
 
