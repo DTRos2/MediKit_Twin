@@ -20,10 +20,10 @@ namespace MediKitTwin.EditorTools
         private const string SlotName = "AgvPick_Slot";
         private const string DockPointName = "AgvPick_DockPoint";
         private const string ZoneName = "AgvPick_Zone";
-        private const string UnloaderRobotName = "UnloaderRobot";
+        internal const string UnloaderRobotName = "UnloaderRobot";
 
         // 로봇을 0.63배로 줄인 뒤 Measure AGV Pick Reach로 잰 값. 로봇 중심에서 박스를 잡는 지점까지의 앞쪽 거리(m).
-        private const float GripReachM = 0.394f;
+        internal const float GripReachM = 0.394f;
 
         // 가장 높은 레벨(Level 2)이 벨트 높이(0.91)에 닿는다. 팔 동작은 레벨별 애니메이션이라 칸 번호가 곧 팔 높이이다.
         private const int PickLevelIndex = 2;
@@ -32,7 +32,7 @@ namespace MediKitTwin.EditorTools
         private const float BoxHalfHeightM = 0.05f;
 
         // 로봇이 서 있는 자리를 둘러싸는 감지 구역 크기(m).
-        private static readonly Vector3 ZoneSize = new Vector3(0.4f, 0.4f, 0.4f);
+        internal static readonly Vector3 ZoneSize = new Vector3(0.4f, 0.4f, 0.4f);
 
         [MenuItem("Tools/MediKit/Setup AGV Pick Platform")]
         public static void Setup()
@@ -328,7 +328,7 @@ namespace MediKitTwin.EditorTools
             notifierData.ApplyModifiedProperties();
         }
 
-        private static Transform EnsureChild(Transform parent, string name)
+        internal static Transform EnsureChild(Transform parent, string name)
         {
             // 계층을 바꿔 정리해도 같은 오브젝트를 다시 맞추도록, 부모 아래만이 아니라 씬 전체에서 이름으로 찾는다.
             Transform child = FindInScene(name);
@@ -343,7 +343,7 @@ namespace MediKitTwin.EditorTools
             return go.transform;
         }
 
-        private static Transform FindInScene(string name)
+        internal static Transform FindInScene(string name)
         {
             Transform found = null;
             int count = 0;
@@ -364,6 +364,6 @@ namespace MediKitTwin.EditorTools
             return found;
         }
 
-        private static string Fmt(Vector3 v) => $"({v.x:F3}, {v.y:F3}, {v.z:F3})";
+        internal static string Fmt(Vector3 v) => $"({v.x:F3}, {v.y:F3}, {v.z:F3})";
     }
 }

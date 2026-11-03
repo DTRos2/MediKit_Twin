@@ -333,6 +333,10 @@
 - 칸 번호가 곧 로봇 팔 높이이다(에셋의 고정 애니메이션). 칸 2번이 `Load_Level_2`이며 벨트 윗면 높이에 닿는다.
 - `KitCargo`는 `IKitCarrier`를 구현한다. 받침이 사라진 뒤에도 박스가 받침대에 남아 있는지 컨베이어 끝(`ConveyorEndRunout`)이 알아보게 하려는 것이다(앞 박스가 있으면 뒤 박스는 구간 가운데에서 기다린다).
 - 받침대와 칸, 구역, 컴포넌트 연결은 `Tools/MediKit/Apply AGV Pick Layout`이 한다.
+- 하역장(`UnloadingDock`)에는 도크 바닥판 전체를 덮는 단(`DockPlace_Body`, 윗면 0.218m)이 있고, 로봇은 단 바깥 -x쪽 바닥에서 +x를 보고 서서 월드 -x면 가장자리에 박스를 내려놓는다. 칸은 `Unload_Level_0`(박스 원점 높이 0.268m)이다. 로봇 팔 높이가 칸 번호로 고정되어 바닥에는 놓을 수 없어서 단이 필요하다.
+- 키트 종류마다 구역(열)이 하나이다. 구역은 -x면 가장자리를 따라 z 방향으로 0.6m 간격으로 놓이고, 구역마다 칸(`DockPlace_Slot_n`), 로봇이 서야 할 자리(`DockPlace_DockPoint_n`: 칸에서 -x로 팔 도달 거리 0.394m), 감지 구역(`DockPlace_Zone_n`)이 있다. 박스 중심은 단 가장자리에서 0.18m 안쪽이고 로봇 중심은 가장자리에서 0.214m 바깥이다. 구역 번호와 키트 코드의 대응은 `UnloadingDockStock`의 `Kit Codes`(기본 EM, BL, DX) 순서이며 `ColumnFor(kitCode)`로 찾는다.
+- `UnloadingDockStock`은 가장자리 칸에 박스가 놓이면 `Shift Delay Seconds`(1초) 뒤 그 구역의 박스를 모두 +x로 `Pitch`(0.14m)만큼 밀어 가장자리 칸을 비운다. 밀려난 박스는 `DockPlace_Stock` 아래에 쌓이고, 구역마다 `Capacity Per Zone`(10)을 넘으면 가장 오래된(가장 먼) 박스를 치우고 `DOCK_ZONE_FULL` 경고를 보낸다.
+- 만들고 맞추기는 `Tools/MediKit/Setup Unloading Dock Platform`이 하며 `AGVPath`는 건드리지 않는다. 경로 끝을 구역의 `DockPoint`에 맞추는 것은 사람이 한다.
 
 ## 8. 확정이 필요한 항목
 
