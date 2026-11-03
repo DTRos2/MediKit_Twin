@@ -10,6 +10,7 @@ namespace MediKitTwin.Conveyor
     /// 에셋의 코드는 건드리지 않고 렌더러의 MaterialPropertyBlock에만 쓰므로 공유 재질은 바뀌지 않는다.
     /// 흐르는 방향과 반복 길이는 벨트 메시의 UV에서 직접 구한다(BeltUvFlow). 멈춘 구간(PauserConveyor가 꺼진 구간)은 무늬도 멈춘다.
     /// 코너 구간은 입구에서 가운데까지의 방향을 흐름으로 본다. 씬이 시작될 때 구간을 한 번 모으므로 구간을 나중에 더하면 다시 모아야 한다.
+    /// 벨트 텍스처는 한 축으로만 줄무늬가 있어서, 그 축이 아닌 쪽으로 흐르는 구간(코너)은 메시의 U와 V를 맞바꿔야 무늬가 움직이는 것이 보인다.
     /// </summary>
     public sealed class ConveyorBeltScroller : MonoBehaviour
     {
@@ -19,6 +20,10 @@ namespace MediKitTwin.Conveyor
 
         [Tooltip("벨트 윗면으로 칠 면의 법선과 위쪽 방향의 최소 내적. 1에 가까울수록 평평하게 위를 보는 면만 쓴다.")]
         [SerializeField, Range(0.5f, 1f)] private float _minTopDot = 0.9f;
+
+        [Tooltip("벨트 텍스처에서 줄무늬가 바뀌는 UV 축. 구간이 이 축이 아닌 쪽으로 흐르면 무늬를 밀어도 움직임이 보이지 않아, " +
+                 "그 구간 메시의 U와 V를 맞바꾼 복사본을 쓴다(코너 구간이 그렇다). 에셋의 BeltTread.png는 U 방향으로 줄무늬가 있다.")]
+        [SerializeField] private UvAxis _patternAxis = UvAxis.U;
 
         private readonly List<Belt> _belts = new List<Belt>();
         private MaterialPropertyBlock _block;
@@ -31,7 +36,7 @@ namespace MediKitTwin.Conveyor
 
             foreach (ConveyorBase conveyor in FindObjectsByType<ConveyorBase>())
             {
-                if (Belt.TryCreate(conveyor, TexturePropertyName, _minTopDot, out Belt belt))
+                if (Belt.TryCreate(conveyor, TexturePropertyName, _minTopDot, _patternAxis, out Belt belt))
                 {
                     _belts.Add(belt);
                 }
@@ -43,6 +48,24 @@ namespace MediKitTwin.Conveyor
                 enabled = false;
             }
         }
+
+        /// <summary>
+        /// 벨트 무늬를 흘리는 구간과 그 구간의 흐름(흐름 방향 1m당 UV가 바뀌는 양). Start가 구간을 모은 뒤에 채워진다.
+        /// 모든 구간의 흐름이 무늬 축을 따르는지 시험이 확인할 때 쓴다.
+        /// </summary>
+        public IEnumerable<KeyValuePair<ConveyorBase, Vector2>> Flows
+        {
+            get
+            {
+                foreach (Belt belt in _belts)
+                {
+                    yield return new KeyValuePair<ConveyorBase, Vector2>(belt.Conveyor, belt.UvPerMeter);
+                }
+            }
+        }
+
+        /// <summary>무늬가 바뀌는 UV 축. 구간의 흐름은 이 축을 따라야 무늬가 움직이는 것이 보인다.</summary>
+        public UvAxis PatternAxis => _patternAxis;
 
         private void Update()
         {
@@ -70,7 +93,11 @@ namespace MediKitTwin.Conveyor
                 _uvPerMeter = uvPerMeter;
             }
 
-            public static bool TryCreate(ConveyorBase conveyor, string textureProperty, float minTopDot, out Belt belt)
+            public ConveyorBase Conveyor => _conveyor;
+
+            public Vector2 UvPerMeter => _uvPerMeter;
+
+            public static bool TryCreate(ConveyorBase conveyor, string textureProperty, float minTopDot, UvAxis patternAxis, out Belt belt)
             {
                 belt = null;
                 var renderer = conveyor.GetComponent<MeshRenderer>();
@@ -93,6 +120,16 @@ namespace MediKitTwin.Conveyor
                 if (uvPerMeter == Vector2.zero)
                 {
                     return false;
+                }
+
+                // 무늬가 없는 축으로 흐르는 구간은 오프셋을 밀어도 눈에 보이는 변화가 없다. 이 구간만 U와 V를 맞바꾼 메시 복사본을 쓴다.
+                // 공유 메시(큐브)를 직접 고치면 다른 구간이 함께 바뀌므로, 복사본을 이 구간의 필터에만 건다.
+                if (BeltUvAxes.IsAcrossPattern(uvPerMeter, patternAxis))
+                {
+                    Mesh swapped = Object.Instantiate(mesh);
+                    swapped.uv = BeltUvAxes.Swapped(mesh.uv);
+                    filter.sharedMesh = swapped;
+                    uvPerMeter = BeltUvAxes.Swapped(uvPerMeter);
                 }
 
                 belt = new Belt(conveyor, renderer, renderer.sharedMaterial.GetTextureScale(textureProperty), uvPerMeter);
