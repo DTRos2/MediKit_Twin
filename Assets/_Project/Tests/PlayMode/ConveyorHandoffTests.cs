@@ -172,6 +172,16 @@ namespace MediKitTwin.PlayMode.Tests
 
         private static void AssertAtConveyorEnd(KitBoxCarrier carrier)
         {
+            // 끝에 받침대가 연결된 씬(ConveyorEndRunout)에서는 박스가 받침대의 자리에 앉아 있어야 한다. 알림은 앉은 뒤에 온다.
+            ConveyorEndRunout runout = Object.FindFirstObjectByType<ConveyorEndRunout>();
+            if (runout != null)
+            {
+                Vector3 offset = carrier.transform.position - runout.SeatPoint.position;
+                offset.y = 0f;
+                Assert.That(offset.magnitude, Is.LessThan(StopToleranceM), "박스가 받침대의 자리에 앉지 못했다");
+                return;
+            }
+
             ConveyorBase last = FindLastConveyor();
             Assert.That(last, Is.Not.Null, "이어진 구간이 없는 마지막 구간을 찾을 수 없다");
             Assert.That(Vector3.Distance(carrier.transform.position, last.CenterPoint.position), Is.LessThan(StopToleranceM));

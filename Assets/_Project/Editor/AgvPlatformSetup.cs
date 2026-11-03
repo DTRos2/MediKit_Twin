@@ -1,3 +1,5 @@
+using MediKitTwin.Conveyor;
+using MediKitTwin.Unloader;
 using UnityEditor;
 using UnityEngine;
 using Warcool.WarehouseRobot;
@@ -8,7 +10,8 @@ namespace MediKitTwin.EditorTools
     /// 컨베이어 끝 받침대에 UnloaderRobot(robot_boxy)이 박스를 집을 수 있는 칸을 붙인다.
     /// 받침대 오브젝트를 Hierarchy에서 선택하고 실행한다. 받침대에 ShelfStorage를 달고, 자식으로 칸(Slot),
     /// 로봇이 설 자리(DockPoint), 로봇이 들어오면 감지하는 구역(PickZone: 트리거 + ShelfInteractionZone)을 만든다.
-    /// 여러 번 실행해도 같은 오브젝트를 다시 맞출 뿐 늘어나지 않는다. 박스 등록과 이동은 이 도구가 하지 않는다.
+    /// 받침대에는 박스가 앉았을 때 칸에 등록하는 AgvPickPlatform도 붙인다.
+    /// 여러 번 실행해도 같은 오브젝트를 다시 맞출 뿐 늘어나지 않는다. 박스 등록과 이동은 이 도구가 하지 않고 실행 중에 컴포넌트가 한다.
     /// 씬은 열린 채로 고치며 저장하지 않는다(Ctrl+S는 사용자가 한다).
     /// </summary>
     public static class AgvPlatformSetup
@@ -128,6 +131,19 @@ namespace MediKitTwin.EditorTools
             levels[PickLevelIndex] = slot;
             Undo.RecordObject(storage, "ShelfStorage");
             storage.columns = new[] { new ShelfStorage.StorageColumn { levels = levels } };
+
+            // 박스가 받침대에 앉으면 칸에 등록하는 컴포넌트. 열은 구역이 보는 열(0)과 같다.
+            AgvPickPlatform pickPlatform = platform.GetComponent<AgvPickPlatform>();
+            if (pickPlatform == null)
+            {
+                pickPlatform = Undo.AddComponent<AgvPickPlatform>(platform);
+            }
+
+            var pickData = new SerializedObject(pickPlatform);
+            pickData.FindProperty("_storage").objectReferenceValue = storage;
+            pickData.FindProperty("_column").intValue = 0;
+            pickData.FindProperty("_level").intValue = PickLevelIndex;
+            pickData.ApplyModifiedProperties();
 
             Transform zoneTransform = EnsureChild(holder, ZoneName);
             Undo.RecordObject(zoneTransform, "PickZone");
@@ -251,12 +267,65 @@ namespace MediKitTwin.EditorTools
                 robotRoot.position = new Vector3(dock.position.x, robotRoot.position.y, dock.position.z);
             }
 
+            WireConveyorRunout(FindInScene(SlotName));
+            DisableGridSnap(robotRoot);
+
             Undo.CollapseUndoOperations(group);
             Debug.Log(
                 $"[AgvPlatformSetup] 배치를 적용했습니다 (저장은 직접 하세요).\n" +
                 $"  받침대 {Fmt(body.position)}, 크기 {Fmt(body.localScale)}\n" +
                 $"  정지 턱 {Fmt(stopper.position)}, 크기 {Fmt(stopper.localScale)}\n" +
                 $"  UnloaderRobot {Fmt(robotRoot.position)}");
+        }
+
+        // GridRobotController는 Start에서 로봇 위치를 gridPointStep(기본 0.25m) 격자에, 방향을 rotationStep(기본 45도)에 맞춘다.
+        // 하역 로봇은 정해진 정차 자리에 서야 하므로 Play 시작 때 위치가 밀리지 않게 두 값을 거의 0으로 줄인다(ArmAMobileBaseBuilder와 같은 방식).
+        // 위치는 0.5mm, 방향은 0.0005도 안에서만 바뀐다. 키보드 입력은 잠근다.
+        private const float EffectivelyNoSnap = 0.001f;
+
+        private static void DisableGridSnap(Transform robotRoot)
+        {
+            GridRobotController controller = robotRoot.GetComponentInChildren<GridRobotController>(true);
+            if (controller == null)
+            {
+                Debug.LogWarning($"[AgvPlatformSetup] '{robotRoot.name}' 아래에 GridRobotController가 없어 격자 정렬을 끄지 못했습니다.");
+                return;
+            }
+
+            var data = new SerializedObject(controller);
+            data.FindProperty("gridPointStep").floatValue = EffectivelyNoSnap;
+            data.FindProperty("rotationStep").floatValue = EffectivelyNoSnap;
+            data.FindProperty("controlsLocked").boolValue = true;
+            data.ApplyModifiedProperties();
+        }
+
+        // 컨베이어 끝 알림(ConveyorEndNotifier)이 있는 오브젝트에 끝 이송(ConveyorEndRunout)을 붙여 칸 위치로 보내도록 연결한다.
+        // 알림 컴포넌트가 없으면 연결하지 않는다(컨베이어 끝 설정은 ConveyorHandoffSetup이 한다).
+        private static void WireConveyorRunout(Transform slot)
+        {
+            ConveyorEndNotifier[] notifiers = Object.FindObjectsByType<ConveyorEndNotifier>(FindObjectsInactive.Include);
+            if (slot == null || notifiers.Length != 1)
+            {
+                Debug.LogWarning($"[AgvPlatformSetup] 컨베이어 끝 이송을 연결하지 못했습니다. Slot={(slot != null ? "있음" : "없음")}, ConveyorEndNotifier {notifiers.Length}개(1개여야 함).");
+                return;
+            }
+
+            ConveyorEndNotifier notifier = notifiers[0];
+            ConveyorEndRunout runout = notifier.GetComponent<ConveyorEndRunout>();
+            if (runout == null)
+            {
+                runout = Undo.AddComponent<ConveyorEndRunout>(notifier.gameObject);
+            }
+
+            var notifierData = new SerializedObject(notifier);
+            var runoutData = new SerializedObject(runout);
+
+            runoutData.FindProperty("_lastConveyor").objectReferenceValue = notifierData.FindProperty("_lastConveyor").objectReferenceValue;
+            runoutData.FindProperty("_seatPoint").objectReferenceValue = slot;
+            runoutData.ApplyModifiedProperties();
+
+            notifierData.FindProperty("_runout").objectReferenceValue = runout;
+            notifierData.ApplyModifiedProperties();
         }
 
         private static Transform EnsureChild(Transform parent, string name)

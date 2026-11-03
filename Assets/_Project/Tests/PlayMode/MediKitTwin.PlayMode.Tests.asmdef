@@ -11,6 +11,8 @@
         "MediKitTwin.Orders",
         "MediKitTwin.Pusher",
         "MediKitTwin.Recipes",
+        "MediKitTwin.Unloader",
+        "Warcool.WarehouseRobot",
         "ConveyorSystem",
         "UnityEngine.TestRunner"
     ],

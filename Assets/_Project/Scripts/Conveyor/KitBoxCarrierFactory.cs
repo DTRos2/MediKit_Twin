@@ -16,7 +16,7 @@ namespace MediKitTwin.Conveyor
         /// <param name="carrierRotation">받침의 월드 회전. 컨베이어의 진행 방향과 맞는 회전을 준다.</param>
         public KitBoxCarrier Create(Transform box, KitData kit, Quaternion carrierRotation)
         {
-            Vector3 pivot = BoxPivot.BottomCenter(box.position, MeasureBounds(box));
+            Vector3 pivot = BoxPivot.BottomCenter(box.position, BoxPivot.MeasureBounds(box));
 
             var carrierObject = new GameObject(KitBoxCarrier.ObjectName);
             carrierObject.transform.SetPositionAndRotation(pivot, carrierRotation);
@@ -37,18 +37,6 @@ namespace MediKitTwin.Conveyor
             }
 
             return carrier;
-        }
-
-        // 박스 아래 모든 렌더러를 감싼 범위. 렌더러가 없으면 박스 위치 한 점이다.
-        private static Bounds MeasureBounds(Transform box)
-        {
-            var bounds = new Bounds(box.position, Vector3.zero);
-            foreach (Renderer renderer in box.GetComponentsInChildren<Renderer>())
-            {
-                bounds.Encapsulate(renderer.bounds);
-            }
-
-            return bounds;
         }
     }
 }
