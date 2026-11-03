@@ -1,5 +1,6 @@
 using MediKitTwin.ArmA;
 using MediKitTwin.Common;
+using MediKitTwin.Dashboard;
 using UnityEngine;
 
 namespace MediKitTwin.Demo
@@ -16,8 +17,6 @@ namespace MediKitTwin.Demo
     /// </summary>
     public sealed class ArmJointDemoPanel : DemoPanel
     {
-        private const float RobotButtonWidth = 90f;
-
         [Tooltip("조작할 로봇(IArmState와 IArmDriver를 구현한 컴포넌트, 보통 ArmController). 지정하면 이 로봇만 조작하고 다른 로봇은 고르지 않는다. 비워 두면 씬에서 찾은 모든 로봇을 버튼으로 바꿔 가며 조작한다.")]
         [SerializeField] private MonoBehaviour _arm;
 
@@ -48,7 +47,7 @@ namespace MediKitTwin.Demo
         private bool _isManual;
 
         public ArmJointDemoPanel()
-            : base("Arm Joints", DemoPanelAnchor.BottomRight, new Vector2(10f, 10f), new Vector2(380f, 460f))
+            : base("관절 제어", "ARM JOINTS", DemoPanelSlots.Joints)
         {
         }
 
@@ -89,50 +88,56 @@ namespace MediKitTwin.Demo
             ReleaseManual();
         }
 
+        // 로봇이 여럿이면 이름 칩을 눌러 다음 로봇으로 바꾼다. 하나뿐이면 이름만 보여 준다.
+        protected override void DrawHeaderRight()
+        {
+            string robotName = _robots.Current.name;
+            if (_robots.HasChoice)
+            {
+                if (Chip.DrawClickable(robotName, ChipTone.Neutral, role: TextRole.Mono))
+                {
+                    // 로봇이 바뀌면 베이스·자세 구간이 있고 없고가 달라져 위젯 수가 바뀐다. 다음 레이아웃에서 바꾼다.
+                    RunAtNextLayout(() => SelectRobot(_robots.SelectNext()));
+                }
+
+                return;
+            }
+
+            Chip.Draw(robotName, ChipTone.Neutral, role: TextRole.Mono);
+        }
+
         protected override void DrawContents()
         {
-            DrawRobotSelector();
-
             if (!_state.IsReady)
             {
-                GUILayout.Label("로봇이 준비되는 중...");
+                DashboardText.Line("로봇이 준비되는 중...", TextRole.Body, DashboardPalette.Default.Muted);
                 return;
             }
 
             EnsureEditor();
             _state.GetJointPositions(_currentRad);
 
-            bool wantManual = GUILayout.Toggle(_isManual, "수동 제어 (켜면 자동 키팅이 멈추고 팔이 그 자리에 남는다)");
+            bool wantManual = SwitchRow.Draw(_isManual, "수동 제어", "켜면 자동 키팅이 멈추고 팔이 그 자리에 남음");
             if (wantManual != _isManual)
             {
-                SetManual(wantManual);
+                RunAtNextLayout(() => SetManual(wantManual));
             }
 
+            DashboardSpacing.Block();
             bool isEdited = DrawJointRows();
             if (isEdited)
             {
                 SendTargets();
             }
 
+            DashboardSpacing.Block();
             DrawShortcuts();
             _baseSection?.Draw();
             DrawToolPose();
             _taughtSection?.Draw();
         }
 
-        private void DrawRobotSelector()
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label($"로봇: {_robots.Current.name}");
-            if (_robots.HasChoice && GUILayout.Button("다음 로봇", GUILayout.Width(RobotButtonWidth)))
-            {
-                SelectRobot(_robots.SelectNext());
-            }
-
-            GUILayout.EndHorizontal();
-        }
-
-        // 관절 한 줄: 이름, -, 슬라이더, +, 값. 수동 제어가 꺼져 있으면 현재 각도만 보여 주고 만질 수 없다.
+        // 관절 한 줄: 이름, -, 슬라이더, +, 값(목표°). 수동 제어가 꺼져 있으면 현재 각도만 보여 주고 만질 수 없다.
         private bool DrawJointRows()
         {
             bool wasEnabled = GUI.enabled;
@@ -143,13 +148,15 @@ namespace MediKitTwin.Demo
             {
                 float currentDeg = _currentRad[i] * Mathf.Rad2Deg;
                 float shownDeg = _isManual ? _editor.TargetDeg(i) : currentDeg;
-                string valueText = $"{shownDeg:0.0}° ({currentDeg:0.0}°)";
+                string valueText = $"{shownDeg:0.0}°";
 
-                if (DemoSliderRow.Draw(_state.JointNames[i], shownDeg, _editor.LowerDeg(i), _editor.UpperDeg(i), _nudgeDeg, valueText, _isManual, out float editedDeg))
+                if (JointSliderRow.Draw(_state.JointNames[i], shownDeg, _editor.LowerDeg(i), _editor.UpperDeg(i), _nudgeDeg, valueText, _isManual, out float editedDeg))
                 {
                     _editor.SetTargetDeg(i, editedDeg);
                     isEdited = true;
                 }
+
+                DashboardSpacing.Row();
             }
 
             GUI.enabled = wasEnabled;
@@ -161,36 +168,41 @@ namespace MediKitTwin.Demo
             bool wasEnabled = GUI.enabled;
             GUI.enabled = wasEnabled && _isManual;
 
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("시작 자세로"))
+            using (DashboardRow.Begin())
             {
-                _editor.Reset(_driver.HomePoseRad);
-                SendTargets();
+                if (DashboardButton.Draw("시작 자세로"))
+                {
+                    _editor.Reset(_driver.HomePoseRad);
+                    SendTargets();
+                }
+
+                DashboardSpacing.Block();
+
+                // 슬라이더로 정한 목표를 버리고 목표를 지금 각도로 되돌린다. 슬라이더 값을 적용하는 버튼이 아니다.
+                if (DashboardButton.Draw("지금 자세에 맞춤"))
+                {
+                    _editor.Reset(_currentRad);
+                    SendTargets();
+                }
             }
 
-            // 슬라이더로 정한 목표를 버리고 목표를 지금 각도로 되돌린다. 슬라이더 값을 적용하는 버튼이 아니다.
-            if (GUILayout.Button("지금 자세에 맞춤"))
-            {
-                _editor.Reset(_currentRad);
-                SendTargets();
-            }
-
-            GUILayout.EndHorizontal();
             GUI.enabled = wasEnabled;
         }
 
         private void DrawToolPose()
         {
+            DashboardPalette palette = DashboardPalette.Default;
             Pose tool = _state.ToolPose;
             Vector3 position = tool.position;
-            GUILayout.Label($"도구 끝점(월드): x {position.x:0.00}  y {position.y:0.00}  z {position.z:0.00} m");
+
+            DashboardSpacing.Section();
+            DashboardText.Paragraph($"도구 끝점(월드): x {position.x:0.00}  y {position.y:0.00}  z {position.z:0.00} m", TextRole.Mono, palette.Muted);
 
             // 접근 방향(+Z)과 월드 오일러각. 칸 안으로 들어가는 방향이 얼마나 기울었는지, 손목을 얼마나 돌렸는지 읽는 데 쓴다.
             Vector3 approach = tool.rotation * Vector3.forward;
             Vector3 euler = tool.rotation.eulerAngles;
-            GUILayout.Label($"도구 접근 방향(+Z): x {approach.x:+0.00;-0.00}  y {approach.y:+0.00;-0.00}  z {approach.z:+0.00;-0.00}");
-            GUILayout.Label($"도구 방향(월드 각): x {Mathf.DeltaAngle(0f, euler.x):0}°  y {Mathf.DeltaAngle(0f, euler.y):0}°  z {Mathf.DeltaAngle(0f, euler.z):0}°");
-            GUILayout.Label("값: 목표° (현재°)");
+            DashboardText.Paragraph($"도구 접근 방향(+Z): x {approach.x:+0.00;-0.00}  y {approach.y:+0.00;-0.00}  z {approach.z:+0.00;-0.00}", TextRole.Mono, palette.Muted);
+            DashboardText.Paragraph($"도구 방향(월드 각): x {Mathf.DeltaAngle(0f, euler.x):0}°  y {Mathf.DeltaAngle(0f, euler.y):0}°  z {Mathf.DeltaAngle(0f, euler.z):0}°", TextRole.Mono, palette.Muted);
         }
 
         private void SelectRobot(MonoBehaviour robot)

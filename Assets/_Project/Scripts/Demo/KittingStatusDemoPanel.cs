@@ -1,24 +1,31 @@
 using MediKitTwin.ArmA;
 using MediKitTwin.Common;
+using MediKitTwin.Dashboard;
 using UnityEngine;
 
 namespace MediKitTwin.Demo
 {
     /// <summary>
-    /// 로봇암 A가 키트를 만드는 모습을 글로 보여 주는 패널(IMGUI). 설비 상태, 만드는 중인 키트(종류, 순번, 주문, 병원, 로트),
-    /// 구성품별 진행(대기, 집는 중, 옮기는 중, 완료, 누락), 마지막 결과와 횟수를 보여 준다.
+    /// 로봇암 A가 키트를 만드는 모습을 보여 주는 패널(IMGUI). 설비 상태(상태 고리와 큰 글자), 만드는 중인 키트,
+    /// 키트 슬롯 진행 막대, 마지막 결과, 완료·재고 부족·오류 횟수, 구성품별 진행(대기, 집는 중, 옮기는 중, 완료, 누락)을 보여 준다.
     /// 값은 키팅 설비(IKittingStation)가 알려 주는 현황(IKittingStatus)을 읽기만 하고, 키팅 순서와 로봇 동작과 구체 클래스는 모른다.
-    /// 화면 오른쪽에 붙어, 왼쪽의 주문과 선반 패널과 나뉜다.
+    /// 어떤 상태를 어떤 말과 색으로 보일지는 KittingStatusText와 KittingChipTones가 정한다.
     /// </summary>
     public sealed class KittingStatusDemoPanel : DemoPanel
     {
+        private const float RingDiameter = 96f;
+        private const string SlotProgressFormat = "{0} / {1}";
+
         [Tooltip("키팅 설비(IKittingStation을 구현한 컴포넌트, 보통 KittingController). 비워 두면 씬에서 찾는다.")]
         [SerializeField] private MonoBehaviour _station;
+
+        [Tooltip("만드는 키트가 없을 때도 진행 막대에 보여 줄 슬롯 칸 수. 키트를 만들기 시작하면 그 키트의 칸 수를 따른다.")]
+        [SerializeField, Min(1)] private int _defaultSlotCount = 4;
 
         private IKittingStation _kittingStation;
 
         public KittingStatusDemoPanel()
-            : base("Kitting (Arm A)", DemoPanelAnchor.TopRight, new Vector2(10f, 10f), new Vector2(360f, 380f))
+            : base("키팅 로봇암 A", "KITTING · ARM A", DemoPanelSlots.Status)
         {
         }
 
@@ -35,95 +42,107 @@ namespace MediKitTwin.Demo
         protected override void DrawContents()
         {
             IKittingStatus status = _kittingStation.Status;
+            DashboardPalette palette = DashboardPalette.Default;
 
-            GUILayout.Label($"설비 상태: {StateText(_kittingStation.State)}");
-
-            if (status.CurrentPlan != null)
-            {
-                DrawCurrentKit(status);
-            }
-            else
-            {
-                GUILayout.Label("지금 만드는 키트 없음");
-            }
-
-            GUILayout.Space(6f);
-            GUILayout.Label(LastResultText(status));
-            GUILayout.Label($"완료 {status.CompletedKitCount}개 · 재고 부족 {status.StockShortageCount}회 · 오류 {status.FaultCount}회");
+            DrawStateBlock(status);
+            DashboardSpacing.Block();
+            DrawSlotProgress(status);
+            DashboardSpacing.Block();
+            DrawLastResult(status, palette);
+            DashboardSpacing.Block();
+            DrawCounters(status, palette);
+            DrawComponents(status, palette);
         }
 
-        private static void DrawCurrentKit(IKittingStatus status)
+        // 왼쪽에 상태 고리, 오른쪽에 "설비 상태", 큰 상태 글자, 지금 만드는 키트 설명.
+        private void DrawStateBlock(IKittingStatus status)
+        {
+            DashboardPalette palette = DashboardPalette.Default;
+            StationState state = _kittingStation.State;
+            ChipColors.Resolve(KittingChipTones.Station(state), palette, out _, out Color stateColor);
+
+            using (DashboardRow.Begin())
+            {
+                StateRing.Draw(RingDiameter, KittingStatusText.StationRingLabel(state), stateColor);
+                GUILayout.Space(DashboardMetrics.SectionGap);
+
+                GUILayout.BeginVertical();
+                GUILayout.FlexibleSpace();
+                DashboardText.Line("설비 상태", TextRole.Small, palette.Muted);
+                DashboardText.Line(KittingStatusText.StationText(state), TextRole.State, stateColor);
+                DashboardText.Paragraph(KittingStatusText.KitSummary(status.CurrentPlan), TextRole.Small, palette.Muted);
+                GUILayout.FlexibleSpace();
+                GUILayout.EndVertical();
+            }
+        }
+
+        private void DrawSlotProgress(IKittingStatus status)
+        {
+            DashboardPalette palette = DashboardPalette.Default;
+            KittingPlan plan = status.CurrentPlan;
+            int toPlace = _defaultSlotCount;
+            int placed = 0;
+            if (plan != null)
+            {
+                KittingProgress progress = KittingProgress.From(plan.Items, status.ItemStates);
+                toPlace = progress.ToPlace;
+                placed = progress.Placed;
+            }
+
+            using (DashboardRow.Begin())
+            {
+                DashboardText.Line("현재 키트 슬롯", TextRole.Small, palette.Muted);
+                DashboardText.Line(string.Format(SlotProgressFormat, placed, toPlace), TextRole.Mono, palette.Muted, TextAnchor.MiddleRight);
+            }
+
+            DashboardSpacing.Row();
+            SegmentBar.Draw(KittingSegmentTones.From(status.ItemStates), _defaultSlotCount);
+        }
+
+        private static void DrawLastResult(IKittingStatus status, DashboardPalette palette)
+        {
+            LabeledValueRow.Draw("마지막 결과", KittingStatusText.LastResultSummary(status), palette.Ink);
+
+            // 실패했을 때만 이유를 따로 보여 준다. 줄 폭보다 길 수 있어서 줄바꿈한다.
+            string detail = KittingStatusText.LastResultDetail(status);
+            if (detail.Length > 0)
+            {
+                DashboardSpacing.Row();
+                DashboardText.Paragraph(detail, TextRole.Small, palette.Warning);
+            }
+        }
+
+        private static void DrawCounters(IKittingStatus status, DashboardPalette palette)
+        {
+            using (DashboardRow.Begin())
+            {
+                StatTile.Draw("완료", status.CompletedKitCount.ToString(), palette.Success);
+                DashboardSpacing.Block();
+                StatTile.Draw("재고 부족", status.StockShortageCount.ToString(), palette.Warning);
+                DashboardSpacing.Block();
+                StatTile.Draw("오류", status.FaultCount.ToString(), palette.Danger);
+            }
+        }
+
+        private static void DrawComponents(IKittingStatus status, DashboardPalette palette)
         {
             KittingPlan plan = status.CurrentPlan;
-            KitData kit = plan.Kit;
-
-            GUILayout.Label($"{kit.KitCode} 키트 #{kit.KitSequence} · 주문 #{kit.OrderSequence} · {kit.HospitalName}");
-            GUILayout.Label($"로트 {kit.LotNumber} · 박스 {plan.Recipe.BoxSize}");
-
-            int placed = 0;
-            int toPlace = 0;
-            for (int i = 0; i < plan.Items.Count; i++)
+            if (plan == null)
             {
-                if (plan.Items[i].IsSkipped)
-                {
-                    continue;
-                }
-
-                toPlace++;
-                if (status.ItemStates[i] == KittingItemState.Placed)
-                {
-                    placed++;
-                }
+                return;
             }
 
-            GUILayout.Label($"담은 구성품 {placed}/{toPlace}");
+            SectionHeading.Draw(KittingStatusText.KitDetail(plan));
+            DashboardSpacing.Row();
+            for (int i = 0; i < plan.Items.Count && i < status.ItemStates.Count; i++)
+            {
+                KitComponentRow.Draw(plan.Items[i], status.ItemStates[i]);
+            }
+
             if (plan.MissingSlot.HasValue)
             {
-                GUILayout.Label($"누락 예정 슬롯: {plan.MissingSlot.Value} (평가용 정답, 판정에는 쓰지 않는다)");
-            }
-
-            for (int i = 0; i < plan.Items.Count; i++)
-            {
-                KittingItem item = plan.Items[i];
-                GUILayout.Label($"  슬롯 {item.SlotNumber}  {item.ComponentId} ({item.ShelfSlotId})  {ItemStateText(status.ItemStates[i])}");
-            }
-        }
-
-        // 대시보드 표시 규칙(INTERFACES.md 3장): 대기, 가동, 정지.
-        private static string StateText(StationState state)
-        {
-            switch (state)
-            {
-                case StationState.Running: return "가동";
-                case StationState.Fault: return "정지";
-                default: return "대기";
-            }
-        }
-
-        private static string ItemStateText(KittingItemState state)
-        {
-            switch (state)
-            {
-                case KittingItemState.Picking: return "집는 중";
-                case KittingItemState.Placing: return "옮기는 중";
-                case KittingItemState.Placed: return "완료";
-                case KittingItemState.Skipped: return "누락(집지 않음)";
-                default: return "대기";
-            }
-        }
-
-        private static string LastResultText(IKittingStatus status)
-        {
-            switch (status.LastResult)
-            {
-                case KittingResult.Completed:
-                    return $"마지막 결과: {status.LastLotNumber} 완료";
-                case KittingResult.StockShortage:
-                    return $"마지막 결과: {status.LastLotNumber} 재고 부족으로 중단 — {status.LastMessage}";
-                case KittingResult.Fault:
-                    return $"마지막 결과: {status.LastLotNumber} 오류로 중단 — {status.LastMessage}";
-                default:
-                    return "마지막 결과: 아직 없음";
+                DashboardText.Paragraph(
+                    $"누락 예정 슬롯: {plan.MissingSlot.Value} (평가용 정답, 판정에는 쓰지 않는다)", TextRole.Small, palette.Faint);
             }
         }
     }
