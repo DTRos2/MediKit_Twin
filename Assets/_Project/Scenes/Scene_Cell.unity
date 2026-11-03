@@ -2683,6 +2683,7 @@ GameObject:
   - component: {fileID: 769800220}
   - component: {fileID: 769800221}
   - component: {fileID: 769800222}
+  - component: {fileID: 769800223}
   m_Layer: 0
   m_Name: ConveyorHandoff
   m_TagString: Untagged
@@ -2718,6 +2719,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: MediKitTwin.Conveyor::MediKitTwin.Conveyor.ConveyorEndNotifier
   _lastConveyor: {fileID: 469657872}
+  _runout: {fileID: 769800223}
 --- !u!114 &769800217
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2813,6 +2815,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: MediKitTwin.Conveyor::MediKitTwin.Conveyor.ConveyorBeltScroller
   _minTopDot: 0.9
+--- !u!114 &769800223
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 769800214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 099187a318d64f6db70eae6d76da3b16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Conveyor::MediKitTwin.Conveyor.ConveyorEndRunout
+  _lastConveyor: {fileID: 469657872}
+  _seatPoint: {fileID: 926257209}
+  _surfaceProbeHeightM: 0.5
+  _surfaceLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _seatClearMarginM: 0.01
 --- !u!1001 &783705966
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4956,6 +4977,14 @@ PrefabInstance:
       value: UnloaderRobot
       objectReference: {fileID: 0}
     - target: {fileID: 3265768365900094123, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
+      propertyPath: rotationStep
+      value: 0.001
+      objectReference: {fileID: 0}
+    - target: {fileID: 3265768365900094123, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
+      propertyPath: gridPointStep
+      value: 0.001
+      objectReference: {fileID: 0}
+    - target: {fileID: 3265768365900094123, guid: f0cb943c15e915f4c992fa75e3a637a4, type: 3}
       propertyPath: obstacleMask.m_Bits
       value: 0
       objectReference: {fileID: 0}
@@ -5053,6 +5082,7 @@ GameObject:
   - component: {fileID: 2057151794}
   - component: {fileID: 2057151793}
   - component: {fileID: 2057151796}
+  - component: {fileID: 2057151797}
   m_Layer: 0
   m_Name: Body
   m_TagString: Untagged
@@ -5170,6 +5200,24 @@ MonoBehaviour:
     - {fileID: 0}
     - {fileID: 0}
     - {fileID: 926257209}
+--- !u!114 &2057151797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2057151791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f101d66f8484b91812c4072f9e9182e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Unloader::MediKitTwin.Unloader.AgvPickPlatform
+  _storage: {fileID: 2057151796}
+  _column: 0
+  _level: 2
+  _settleSeconds: 0.3
+  _searchHalfExtents: {x: 0.15, y: 0.1, z: 0.2}
+  _maxSnapM: 0.02
 --- !u!1 &2083357895
 GameObject:
   m_ObjectHideFlags: 0
