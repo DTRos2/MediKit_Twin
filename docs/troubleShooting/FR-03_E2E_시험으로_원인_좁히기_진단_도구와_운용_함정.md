@@ -136,6 +136,9 @@ Unity.exe -batchmode -projectPath <프로젝트> -runTests -testPlatform PlayMod
 | 씬 값을 실험함 | 배치는 씬 파일을 바꾸지 않지만 실험하다 바뀔 수 있다 | 백업하고 `cmp`로 복구를 확인한다 |
 | 같은 로그를 덮어씀 | 시험 이름이 파일 이름이라 다시 돌리면 이전 결과가 사라진다 | 실행마다 출력 폴더를 바꾼다 |
 | **시험 통과 = 에디터 동작이 아님** | 시험은 `Time.captureFramerate=50`으로 프레임마다 시간을 0.02초로 고정한다. 에디터는 프레임 시간이 매번 달라서 시험에서 통과하던 A-1 집기가 에디터에서만 `Fault`로 멈췄다 | 환경 변수 `MEDIKIT_E2E_CAPTURE_FPS=0`(고정 끔), `MEDIKIT_E2E_TARGET_FPS=30`(프레임 상한)으로 헤드리스에서 에디터 조건을 흉내 낸다. 결과 문서를 쓸 때 "에디터에서 확인함"과 "헤드리스에서만 확인함"을 구분해 적는다 |
+| 백그라운드로 돌린 배치의 "종료 코드 0" | 완료 알림의 종료 코드는 Unity가 아니라 그것을 감싼 셸 명령의 것이다. 시험이 실패하거나 Unity가 죽어도 0으로 온다 | 진짜 결과는 결과 XML이 있는지(크래시하면 없다), 로그에 `Crash!!!`가 있는지, XML의 `test-run result`로 본다. 래퍼에서 `Unity.exe`의 종료 코드(`-1073741819` = 0xC0000005 크래시)를 따로 찍어 둔다 |
+| 크래시 가르는 시험이 무효였음 | 물건의 `Rigidbody`를 지워 보려 했지만 `Graspable`이 의존해 지워지지 않았다(`Can't remove Rigidbody because Graspable depends on it`). 아무것도 안 바꾸고 "원인이 아니다"라고 결론낼 뻔했다 | 가르는 조작이 실제로 적용됐는지 로그로 확인한다. 의존하는 컴포넌트부터 `DestroyImmediate`로 지운다 (조인트 → `Graspable` → `Rigidbody`). 틀린 결론을 말했다면 바로 취소한다 |
+| 같은 크래시 스택, 다른 원인 | `setupDescTask` 스택은 접촉 처리 전반에서 나온다. 한 원인을 고쳐도 다른 원인으로 같은 스택이 다시 난다 | 방아쇠와 그 전의 조건을 따로 가른다. 지금까지 확인한 원인은 [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) 1절 끝의 표에 모았다 |
 
 ## 5. 처음 잘못 읽은 것 (다시 틀리지 않으려고 남긴다)
 
