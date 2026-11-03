@@ -8,6 +8,9 @@ namespace MediKitTwin.Common
     {
         public const string Managers = "Managers";
         public const string PackingSensor = "Sensor_Packing";
+
+        /// <summary>뚜껑을 덮는 팔 B의 루트 이름.</summary>
+        public const string ArmB = "ArmB";
         public const string ConveyorEndSensor = "Sensor_ConveyorEnd";
 
         /// <summary>팩킹 센서 아래에서 박스가 멈출 자리(팔 B가 맞춰진 자리).</summary>

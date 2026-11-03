@@ -1,0 +1,25 @@
+{
+    "name": "MediKitTwin.Label.Tests",
+    "rootNamespace": "MediKitTwin.Label.Tests",
+    "references": [
+        "MediKitTwin.Label",
+        "MediKitTwin.Common",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

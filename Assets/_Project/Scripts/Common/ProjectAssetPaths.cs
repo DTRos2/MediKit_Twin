@@ -23,6 +23,7 @@ namespace MediKitTwin.Common
         public const string ArmAPrefab = PrefabsFolder + "/ArmA.prefab";
         public const string LidSupplyTablePrefab = PrefabsFolder + "/PF_LidSupplyTable.prefab";
         public const string KittingJigPrefab = PrefabsFolder + "/PF_KittingJig.prefab";
+        public const string LabelStationPrefab = PrefabsFolder + "/PF_LabelStation.prefab";
         public const string ShelfPrefab = PrefabsFolder + "/PF_Shelf.prefab";
         public const string ShelfLayoutConfig = ConfigFolder + "/ShelfLayoutConfig.asset";
         public const string KitBoxPartitionConfig = ConfigFolder + "/KitBoxPartitionConfig.asset";
