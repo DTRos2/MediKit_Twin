@@ -38,6 +38,10 @@ namespace MediKitTwin.Inventory
         [Tooltip("열린 폭 중 물건이 차지해도 되는 비율(0~1). 나머지는 손가락이 들어갈 여유이다. 집는 방향을 알 수 없어 가장 긴 변을 기준으로 한다.")]
         [SerializeField, Range(0.1f, 1f)] private float _graspClearanceRatio = 0.8f;
 
+        [Header("키트 박스 칸")]
+        [Tooltip("키트 박스 칸막이 설정. 지정하면 물건 한 변이 칸 안에 들어가도록 크기 상한이 더 낮아진다. 비우면 그리퍼 기준만 쓴다.")]
+        [SerializeField] private KitBoxPartitionConfigSO _kitBoxPartition;
+
         [Header("로봇암 (로봇을 바꾸면 함께 바꾼다)")]
         [Tooltip("로봇암이 선반과 지그에 안정적으로 닿는 반경(m). FR5의 공식 작업 반경은 0.922m이지만 도구를 수평으로 들이밀면 줄어서 여유를 두고 정한다.")]
         [SerializeField, Min(0.1f)] private float _armReachM = 0.75f;
@@ -69,6 +73,20 @@ namespace MediKitTwin.Inventory
         public float GripperOpeningWidthM => _gripperOpeningWidthM;
 
         public float GraspClearanceRatio => _graspClearanceRatio;
+
+        public KitBoxPartitionConfigSO KitBoxPartition => _kitBoxPartition;
+
+        /// <summary>
+        /// 구성품 크기 상한. 그리퍼가 집을 수 있는 크기에, 키트 박스 칸막이가 있으면 칸에 끼지 않는 크기를 함께 지킨다.
+        /// 선반 빌더, 합성 데이터 생성기, 검사 표본 생성기, 칸막이 편집 도구가 같은 상한을 쓰도록 여기서 만든다.
+        /// </summary>
+        public GraspSizeLimit CreateItemSizeLimit()
+        {
+            var graspLimit = new GraspSizeLimit(_gripperOpeningWidthM, _graspClearanceRatio);
+            return _kitBoxPartition == null
+                ? graspLimit
+                : graspLimit.WithFaceDiagonalCeiling(_kitBoxPartition.CreateLayout().MaxItemFaceDiagonal);
+        }
 
         public float ArmReachM => _armReachM;
 

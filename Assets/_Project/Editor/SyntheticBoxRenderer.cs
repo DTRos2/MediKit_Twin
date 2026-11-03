@@ -48,7 +48,7 @@ public sealed class SyntheticBoxRenderer : IDisposable
         _cameraSettings = cameraSettings;
         _cameraModel = cameraSettings.CreateModel();
         _looks = looks;
-        _graspLimit = new GraspSizeLimit(shelfLayout.GripperOpeningWidthM, shelfLayout.GraspClearanceRatio);
+        _graspLimit = shelfLayout.CreateItemSizeLimit();
 
         _recipesByKit = new Dictionary<string, RecipeSO>();
         foreach (RecipeSO recipe in recipes)

@@ -22,6 +22,7 @@ MonoBehaviour:
   _itemFillRatio: 0.9
   _gripperOpeningWidthM: 0.077
   _graspClearanceRatio: 0.8
+  _kitBoxPartition: {fileID: 11400000, guid: 751e05c1cfe18954c8f800edc7df9e20, type: 2}
   _armReachM: 0.75
   _armShoulderHeightM: 0.155
   _shelfOffsetFromJigM: {x: 0, y: 0, z: 2.6}

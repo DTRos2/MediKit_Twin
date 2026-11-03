@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using ConveyorSystem;
+using MediKitTwin.Common;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -15,13 +16,6 @@ namespace MediKitTwin.EditorTools
     /// </summary>
     public static class CellSceneBuilder
     {
-        private const string ProjectRoot = "Assets/_Project";
-        private const string ScenePath = ProjectRoot + "/Scenes/Scene_Cell.unity";
-        private const string PrefabDir = ProjectRoot + "/Prefabs";
-        private const string MaterialDir = ProjectRoot + "/Materials";
-        private const string ConveyorPrefabDir = "Assets/Conveyor System/Prefab";
-        private const string UnloaderRobotModelPath = "Assets/Warehouse_Robot_Controller/Prefabs/robot_boxy.prefab";
-
         // 각 구간의 직선 컨베이어 개수 (1개 = 1m)
         private const int KittingLength = 4;
         private const int InspectionLength = 6;
@@ -91,9 +85,9 @@ namespace MediKitTwin.EditorTools
         [MenuItem("Tools/MediKit/Build Cell Scene")]
         public static void Build()
         {
-            if (File.Exists(ScenePath) &&
-                !EditorUtility.DisplayDialog("Scene_Cell 다시 만들기",
-                    "Scene_Cell.unity가 이미 있습니다. 새로 만들면 씬의 수동 변경이 사라집니다. (PF_* 프리팹은 유지됩니다)",
+            if (File.Exists(ProjectAssetPaths.CellScene) &&
+                !EditorUtility.DisplayDialog($"{Path.GetFileNameWithoutExtension(ProjectAssetPaths.CellScene)} 다시 만들기",
+                    $"{Path.GetFileName(ProjectAssetPaths.CellScene)}이(가) 이미 있습니다. 새로 만들면 씬의 수동 변경이 사라집니다. (PF_* 프리팹은 유지됩니다)",
                     "다시 만들기", "취소"))
             {
                 return;
@@ -106,7 +100,7 @@ namespace MediKitTwin.EditorTools
 
             var cell = new GameObject("Cell").transform;
             var zone = new Dictionary<string, Transform>();
-            foreach (var name in new[] { "Shelf", "KittingZone", "Conveyor", "Inspection", "Pusher", "Packing", "Unloading", "AGVPath", "Managers" })
+            foreach (var name in new[] { "Shelf", "KittingZone", "Conveyor", "Inspection", "Pusher", "Packing", "Unloading", "AGVPath", CellObjectNames.Managers })
             {
                 var t = new GameObject(name).transform;
                 t.SetParent(cell, false);
@@ -120,13 +114,13 @@ namespace MediKitTwin.EditorTools
             BuildInspection(zone, line);
             BuildPacking(zone, line);
             BuildUnloading(zone, line);
-            BuildManagers(zone["Managers"]);
+            BuildManagers(zone[CellObjectNames.Managers]);
 
             BuildFloor(cell);
             SetupCamera(cell);
 
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            Debug.Log("[CellSceneBuilder] Scene_Cell 생성 완료: " + ScenePath);
+            EditorSceneManager.SaveScene(scene, ProjectAssetPaths.CellScene);
+            Debug.Log("[CellSceneBuilder] Scene_Cell 생성 완료: " + ProjectAssetPaths.CellScene);
         }
 
         // 이미 저장된 PF_RejectBin, PF_Shelf의 내용을 새 모양으로 다시 만든다. 씬에 놓인 인스턴스의 위치는 그대로 유지된다.
@@ -176,7 +170,7 @@ namespace MediKitTwin.EditorTools
 
         private static void RebuildPrefab(string prefabName, Action<Transform> build)
         {
-            string path = $"{PrefabDir}/{prefabName}.prefab";
+            string path = $"{ProjectAssetPaths.PrefabsFolder}/{prefabName}.prefab";
             if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
             {
                 Debug.LogWarning("[CellSceneBuilder] 프리팹이 없어 건너뜁니다: " + path);
@@ -238,7 +232,7 @@ namespace MediKitTwin.EditorTools
 
         private static GameObject LoadConveyor(string name)
         {
-            string path = $"{ConveyorPrefabDir}/{name}.prefab";
+            string path = $"{ProjectAssetPaths.ConveyorPrefabsFolder}/{name}.prefab";
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null) throw new FileNotFoundException("컨베이어 프리팹이 없습니다: " + path);
             return prefab;
@@ -315,7 +309,7 @@ namespace MediKitTwin.EditorTools
             Vector3 packingPos = Floor(line.Inspection[5].CenterPoint.position);
             Station("PF_ArmB", "ArmB", zone["Packing"], packingPos + new Vector3(-1.1f, 0f, 0f), 270f, t => BuildArm(t, ColorBlue, 0.8f));
             Station("PF_LidSupplyTable", "LidSupplyTable", zone["Packing"], packingPos + new Vector3(-2.0f, 0f, 0.4f), 0f, BuildLidSupplyTable);
-            Sensor("Sensor_Packing", zone["Packing"], line.Inspection[5].CenterPoint.position, new Vector3(0.5f, 0.3f, 0.5f));
+            Sensor(CellObjectNames.PackingSensor, zone["Packing"], line.Inspection[5].CenterPoint.position, new Vector3(0.5f, 0.3f, 0.5f));
 
             Vector3 labelPos = Floor(line.Packing[1].CenterPoint.position);
             Station("PF_LabelStation", "LabelStation", zone["Packing"], labelPos, 0f, BuildLabelStation);
@@ -327,7 +321,7 @@ namespace MediKitTwin.EditorTools
             Vector3 end = last.OutputPoints[0].position;
             Vector3 flow = OutFlow(last);
 
-            Sensor("Sensor_ConveyorEnd", zone["Unloading"], end, new Vector3(0.4f, 0.3f, 0.5f));
+            Sensor(CellObjectNames.ConveyorEndSensor, zone["Unloading"], end, new Vector3(0.4f, 0.3f, 0.5f));
 
             Vector3 robotPos = Floor(end) + flow * 1.2f;
             Station("PF_UnloaderRobot", "UnloaderRobot", zone["Unloading"], robotPos, 0f, BuildUnloaderRobot);
@@ -429,7 +423,14 @@ namespace MediKitTwin.EditorTools
             // 지그 위 빈 키트 박스. 레이아웃 확인용이며, 나중에 박스 공급(IBoxSupply)이 지그가 비면 만들어 놓는다.
             // 박스 중심이 지그 중심에 오므로 슬롯 센서의 박스 기준 좌표와 같다.
             float plateTop = beltY + 0.02f + 0.015f;
-            OpenBox("KitBox", root, new Vector3(0f, plateTop + KitBoxSize.y * 0.5f, 0f), KitBoxSize, KitBoxWall, ColorCardboard, "M_KitBox", openTop: true, openFront: false);
+            Transform kitBox = OpenBox("KitBox", root, new Vector3(0f, plateTop + KitBoxSize.y * 0.5f, 0f), KitBoxSize, KitBoxWall, ColorCardboard, "M_KitBox", openTop: true, openFront: false);
+
+            // 슬롯 사이 칸막이. 설정 에셋이 아직 없으면(처음 빌드) 건너뛰고, "Add Kit Box Partitions"가 만든 뒤에 붙는다.
+            var partition = AssetDatabase.LoadAssetAtPath<MediKitTwin.Inventory.KitBoxPartitionConfigSO>(ProjectAssetPaths.KitBoxPartitionConfig);
+            if (partition != null)
+            {
+                KitBoxPartitionBuilder.Rebuild(kitBox, partition);
+            }
 
             // 슬롯 센서 위치는 RecipeSO.SlotLocalPosition과 같다. (박스 기준 로컬 좌표, 지그 회전 0)
             var slots = new[]
@@ -570,7 +571,7 @@ namespace MediKitTwin.EditorTools
                 depthCenter: wall * 0.5f,
                 itemsPerRow: shelf.ItemsPerRow,
                 fillRatio: shelf.ItemFillRatio);
-            var graspLimit = new MediKitTwin.Inventory.GraspSizeLimit(shelf.GripperOpeningWidthM, shelf.GraspClearanceRatio);
+            MediKitTwin.Inventory.GraspSizeLimit graspLimit = shelf.CreateItemSizeLimit();
 
             float graspScale = graspLimit.ScaleFor(look.Size.x, look.Size.y, look.Size.z);
             Vector3 graspableSize = look.Size * graspScale;
@@ -682,8 +683,8 @@ namespace MediKitTwin.EditorTools
 
         private static void BuildUnloaderRobot(Transform root)
         {
-            var robotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(UnloaderRobotModelPath);
-            if (robotPrefab == null) throw new FileNotFoundException("하역 로봇 프리팹이 없습니다: " + UnloaderRobotModelPath);
+            var robotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ProjectAssetPaths.WarehouseRobotPrefab);
+            if (robotPrefab == null) throw new FileNotFoundException("하역 로봇 프리팹이 없습니다: " + ProjectAssetPaths.WarehouseRobotPrefab);
 
             var robot = (GameObject)PrefabUtility.InstantiatePrefab(robotPrefab, root);
             robot.name = "Robot";
@@ -710,7 +711,7 @@ namespace MediKitTwin.EditorTools
         // PF_* 프리팹이 없으면 build로 만들어 저장하고, 있으면 그대로 쓴다. 씬에는 인스턴스만 놓는다.
         private static void Station(string prefabName, string instanceName, Transform parent, Vector3 position, float yaw, Action<Transform> build)
         {
-            string path = $"{PrefabDir}/{prefabName}.prefab";
+            string path = $"{ProjectAssetPaths.PrefabsFolder}/{prefabName}.prefab";
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (asset == null)
             {
@@ -777,7 +778,7 @@ namespace MediKitTwin.EditorTools
 
         private static Material GetMaterial(string name, Color color)
         {
-            string path = $"{MaterialDir}/{name}.mat";
+            string path = $"{ProjectAssetPaths.MaterialsFolder}/{name}.mat";
             var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (mat != null) return mat;
 
@@ -791,9 +792,9 @@ namespace MediKitTwin.EditorTools
 
         private static void EnsureFolders()
         {
-            foreach (var dir in new[] { "Scenes", "Prefabs", "Materials", "Models" })
+            foreach (var dir in new[] { ProjectAssetPaths.ScenesFolder, ProjectAssetPaths.PrefabsFolder, ProjectAssetPaths.MaterialsFolder, ProjectAssetPaths.ModelsFolder })
             {
-                Directory.CreateDirectory(Path.Combine(ProjectRoot, dir));
+                Directory.CreateDirectory(dir);
             }
             AssetDatabase.Refresh();
         }
