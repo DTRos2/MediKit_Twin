@@ -138,14 +138,21 @@ namespace Warcool.WarehouseRobot
             previousRotation = transform.rotation;
         }
 
+        // MediKit Twin 수정(3곳): 이 프로젝트는 새 Input System만 쓴다(activeInputHandler: 1). 그 설정에서는 UnityEngine.Input을 부르면 매 프레임 예외가 난다.
+        // RobotCargoInteractor는 집기·내리기가 끝날 때마다 controlsLocked를 풀어 이 컨트롤러가 키 입력을 읽게 되므로,
+        // 키 입력은 옛 Input이 켜졌을 때만 컴파일한다. 하역 로봇은 코드(MobileBaseDriver)가 움직이므로 키 입력이 없어도 된다.
         private void ReadMoveInput()
         {
+#if ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKey(KeyCode.W))
                 moveInputDirection = 1;
             else if (Input.GetKey(KeyCode.S))
                 moveInputDirection = -1;
             else
                 moveInputDirection = 0;
+#else
+            moveInputDirection = 0;
+#endif
         }
 
         private void HandleIdleInput()
@@ -156,6 +163,7 @@ namespace Warcool.WarehouseRobot
                 return;
             }
 
+#if ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKey(KeyCode.A))
             {
                 StartTurn(-rotationStep);
@@ -167,6 +175,7 @@ namespace Warcool.WarehouseRobot
                 StartTurn(rotationStep);
                 return;
             }
+#endif
 
             currentMoveSpeed = Mathf.MoveTowards(
                 currentMoveSpeed,
@@ -276,10 +285,12 @@ namespace Warcool.WarehouseRobot
                 transform.rotation = targetRotation;
                 state = RobotState.Idle;
 
+#if ENABLE_LEGACY_INPUT_MANAGER
                 if (Input.GetKey(KeyCode.A))
                     StartTurn(-rotationStep);
                 else if (Input.GetKey(KeyCode.D))
                     StartTurn(rotationStep);
+#endif
             }
         }
 

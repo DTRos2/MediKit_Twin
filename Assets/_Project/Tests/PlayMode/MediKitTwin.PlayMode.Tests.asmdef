@@ -7,6 +7,7 @@
         "MediKitTwin.Common",
         "MediKitTwin.Conveyor",
         "MediKitTwin.Label",
+        "MediKitTwin.Mobile",
         "MediKitTwin.Demo",
         "MediKitTwin.Orders",
         "MediKitTwin.Pusher",

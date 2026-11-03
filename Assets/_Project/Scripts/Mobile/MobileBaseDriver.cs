@@ -11,7 +11,7 @@ namespace MediKitTwin.Mobile
     /// 월드 위치 변화량으로 궤도를 돌리므로, 이 루트를 움직이면 바퀴와 궤도가 따라서 돈다.
     /// 시간은 Time.deltaTime이라 SimClock 배속이 그대로 적용된다.
     /// </summary>
-    public class MobileBaseDriver : MonoBehaviour, IMobileBase, IManualPlacement
+    public class MobileBaseDriver : MonoBehaviour, IReversibleMobileBase, IManualPlacement
     {
         [Tooltip("전진 속도(m/s).")]
         [SerializeField, Min(0.05f)] private float _moveSpeed = 1.2f;
@@ -45,6 +45,10 @@ namespace MediKitTwin.Mobile
         private bool _hasTarget;
         private float _finalYawDeg;
         private bool _hasFinalYaw;
+        private bool _reverse;
+
+        // 뒤로 갈 때 등이 앞이라고 보고 판단하려고 방향에 더하는 각도.
+        private const float ReverseYawOffsetDeg = 180f;
 
         public event Action Arrived;
 
@@ -58,6 +62,7 @@ namespace MediKitTwin.Mobile
         {
             _target = worldPosition;
             _hasFinalYaw = false;
+            _reverse = false;
             _hasTarget = true;
         }
 
@@ -66,6 +71,15 @@ namespace MediKitTwin.Mobile
             _target = worldPosition;
             _finalYawDeg = finalYawDeg;
             _hasFinalYaw = true;
+            _reverse = false;
+            _hasTarget = true;
+        }
+
+        public void ReverseTo(Vector3 worldPosition)
+        {
+            _target = worldPosition;
+            _hasFinalYaw = false;
+            _reverse = true;
             _hasTarget = true;
         }
 
@@ -103,12 +117,15 @@ namespace MediKitTwin.Mobile
             }
 
             float? finalYaw = _hasFinalYaw ? _finalYawDeg : (float?)null;
-            DriveStep step = _drive.Step(transform.position, transform.eulerAngles.y, _target, finalYaw, Time.deltaTime);
+
+            // 뒤로 갈 때는 등이 앞이라고 보고 판단한다. 목표가 뒤에 있으면 돌지 않고 곧장 물러난다.
+            float yawOffset = _reverse ? ReverseYawOffsetDeg : 0f;
+            DriveStep step = _drive.Step(transform.position, transform.eulerAngles.y + yawOffset, _target, finalYaw, Time.deltaTime);
 
             switch (step.Action)
             {
                 case DriveAction.Turn:
-                    transform.rotation = Quaternion.Euler(0f, step.YawDeg, 0f);
+                    transform.rotation = Quaternion.Euler(0f, step.YawDeg - yawOffset, 0f);
                     break;
                 case DriveAction.Move:
                     transform.position += step.Translation;
