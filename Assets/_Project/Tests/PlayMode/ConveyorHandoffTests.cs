@@ -8,9 +8,7 @@ using MediKitTwin.ArmB;
 using MediKitTwin.Common;
 using MediKitTwin.Conveyor;
 using NUnit.Framework;
-using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
@@ -34,6 +32,7 @@ namespace MediKitTwin.PlayMode.Tests
         private const float AlongTrackToleranceM = 0.002f;
         private const float StopArrivalToleranceM = 0.005f;
         private const float HeldDriftToleranceM = 0.001f;
+        private const float RestOnBeltToleranceM = 0.01f;
 
         [UnityTest, Timeout(300000)]
         public IEnumerator FinishedKit_RidesToPacking_WaitsForTheLid_ThenReachesTheEnd()
@@ -44,15 +43,16 @@ namespace MediKitTwin.PlayMode.Tests
             {
                 try
                 {
-                    yield return LoadCell();
-                    DisableAll<LidCoverTask>();
+                    yield return CellTestScene.Load();
+                    DisableInspectionLine();
+                    CellTestScene.DisableAll<LidCoverTask>();
                     ConveyorSceneRefs refs = ConveyorSceneRefs.Find();
 
                     var kit = new KitData(1, 1, "LOT-1", "병원", "EM");
                     CellEvents.RaiseKitReady(kit);
 
                     // 1) 박스가 컨베이어를 타고 멈출 자리에서 선다.
-                    yield return WaitUntil(() => events.AtPacking != null, TravelTimeoutSeconds);
+                    yield return CellTestScene.WaitUntil(() => events.AtPacking != null, TravelTimeoutSeconds);
                     Assert.That(events.AtPacking, Is.SameAs(kit), "팩킹 구역에 도착했다는 알림이 오지 않았다");
                     KitBoxCarrier carrier = AssertStoppedAtStopPoint(refs);
 
@@ -69,12 +69,12 @@ namespace MediKitTwin.PlayMode.Tests
 
                     // 3) 뚜껑이 덮이면 다시 출발해 끝까지 간다.
                     CellEvents.RaiseLidClosed(kit);
-                    yield return WaitUntil(() => events.AtConveyorEnd != null, TravelTimeoutSeconds);
+                    yield return CellTestScene.WaitUntil(() => events.AtConveyorEnd != null, TravelTimeoutSeconds);
                     Assert.That(events.AtConveyorEnd, Is.SameAs(kit), "컨베이어 끝에 도착했다는 알림이 오지 않았다");
                     AssertAtConveyorEnd(carrier);
 
                     // 4) 지그에는 새 박스가 다시 놓인다.
-                    yield return WaitUntil(() => refs.Supply.HasBox, JigRefillTimeoutSeconds);
+                    yield return CellTestScene.WaitUntil(() => refs.Supply.HasBox, JigRefillTimeoutSeconds);
                     Assert.That(refs.Supply.HasBox, Is.True, "박스를 보낸 뒤 지그에 새 박스가 놓이지 않았다");
                 }
                 finally
@@ -93,25 +93,26 @@ namespace MediKitTwin.PlayMode.Tests
             {
                 try
                 {
-                    yield return LoadCell();
+                    yield return CellTestScene.Load();
+                    DisableInspectionLine();
                     ConveyorSceneRefs refs = ConveyorSceneRefs.Find();
 
                     var kit = new KitData(1, 1, "LOT-1", "병원", "EM");
                     CellEvents.RaiseKitReady(kit);
 
-                    yield return WaitUntil(() => events.AtPacking != null, TravelTimeoutSeconds);
+                    yield return CellTestScene.WaitUntil(() => events.AtPacking != null, TravelTimeoutSeconds);
                     Assert.That(events.AtPacking, Is.SameAs(kit), $"팩킹 구역에 도착했다는 알림이 오지 않았다\n{events.Describe()}");
                     KitBoxCarrier carrier = AssertStoppedAtStopPoint(refs);
 
                     // 팔 B가 알아서 뚜껑을 집어 덮고 LidClosed를 보낸다. 이 시험이 보내지 않는다.
-                    yield return WaitUntil(() => events.LidClosed != null, LidTimeoutSeconds);
+                    yield return CellTestScene.WaitUntil(() => events.LidClosed != null, LidTimeoutSeconds);
                     Assert.That(events.LidClosed, Is.SameAs(kit), $"팔 B가 뚜껑을 덮지 못했다\n{events.Describe()}");
                     Assert.That(
                         carrier.GetComponentsInChildren<Transform>().Any(t => t.name.StartsWith(CellObjectNames.LidPrefix, StringComparison.Ordinal)),
                         Is.True,
                         "뚜껑이 박스를 따라 움직이도록 박스 아래에 붙어 있어야 한다");
 
-                    yield return WaitUntil(() => events.AtConveyorEnd != null, TravelTimeoutSeconds);
+                    yield return CellTestScene.WaitUntil(() => events.AtConveyorEnd != null, TravelTimeoutSeconds);
                     Assert.That(events.AtConveyorEnd, Is.SameAs(kit), $"뚜껑을 덮은 박스가 컨베이어 끝에 도착하지 못했다\n{events.Describe()}");
                     AssertAtConveyorEnd(carrier);
                 }
@@ -127,19 +128,14 @@ namespace MediKitTwin.PlayMode.Tests
         [UnityTearDown]
         public IEnumerator StopToolCameraFeeds()
         {
-            foreach (ToolCameraFeed feed in Object.FindObjectsByType<ToolCameraFeed>())
-            {
-                feed.enabled = false;
-            }
-
-            yield return null;
+            return CellTestScene.StopToolCameraFeeds();
         }
 
-        private static IEnumerator LoadCell()
+        // 이 시험은 빈 박스를 보내 컨베이어 구간만 본다. 검사 구간 제어가 켜져 있으면 빈 박스를 불량으로 판정해 푸셔로 보내므로 끈다.
+        // 검사·푸셔를 포함한 흐름은 FullProcessTests가 본다.
+        private static void DisableInspectionLine()
         {
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ProjectAssetPaths.CellScene, new LoadSceneParameters(LoadSceneMode.Single));
-            yield return null;
-            yield return null;
+            CellTestScene.DisableAll<InspectionConveyorLine>();
         }
 
         // 박스 받침이 팔 B가 찾는 센서 아래에서, 멈출 자리에 진행 방향과 옆 방향 모두 맞게 섰는지 확인하고 받침을 돌려준다.
@@ -157,7 +153,21 @@ namespace MediKitTwin.PlayMode.Tests
             Vector3 sideways = carrier.transform.position - refs.StopPoint.position;
             sideways.y = 0f;
             Assert.That(sideways.magnitude, Is.LessThan(StopArrivalToleranceM), "박스가 멈출 자리에 옆으로 맞게 서지 않았다");
+            AssertRestsOnBelt(carrier, refs.PackingConveyor);
             return carrier;
+        }
+
+        // 박스 바닥이 벨트 윗면에 닿아 있어야 한다. 공중에 떠도, 벨트 안에 파묻혀도 안 된다.
+        // 컨베이어는 받침의 피벗을 입력점 높이에 두고 그 높이는 벨트 윗면보다 높아서, 박스를 그대로 얹으면 그만큼 뜬다.
+        private static void AssertRestsOnBelt(KitBoxCarrier carrier, ConveyorBase conveyor)
+        {
+            float beltTop = conveyor.GetComponent<Renderer>().bounds.max.y;
+            float boxBottom = carrier.Box.GetComponentsInChildren<Renderer>().Min(renderer => renderer.bounds.min.y);
+
+            Assert.That(
+                boxBottom,
+                Is.EqualTo(beltTop).Within(RestOnBeltToleranceM),
+                $"박스 바닥(y {boxBottom:0.000})이 벨트 윗면(y {beltTop:0.000})에서 {(boxBottom - beltTop) * 100f:+0.0;-0.0}cm 떨어져 있다");
         }
 
         private static void AssertAtConveyorEnd(KitBoxCarrier carrier)
@@ -165,24 +175,6 @@ namespace MediKitTwin.PlayMode.Tests
             ConveyorBase last = FindLastConveyor();
             Assert.That(last, Is.Not.Null, "이어진 구간이 없는 마지막 구간을 찾을 수 없다");
             Assert.That(Vector3.Distance(carrier.transform.position, last.CenterPoint.position), Is.LessThan(StopToleranceM));
-        }
-
-        // 조건이 참이 되거나 시뮬레이션 시간으로 timeoutSeconds가 지날 때까지 기다린다.
-        private static IEnumerator WaitUntil(Func<bool> condition, float timeoutSeconds)
-        {
-            float deadline = Time.time + timeoutSeconds;
-            while (!condition() && Time.time < deadline)
-            {
-                yield return null;
-            }
-        }
-
-        private static void DisableAll<T>() where T : Behaviour
-        {
-            foreach (T behaviour in Object.FindObjectsByType<T>())
-            {
-                behaviour.enabled = false;
-            }
         }
 
         // 뒤에 이어진 구간이 없는 구간이 컨베이어의 끝이다.

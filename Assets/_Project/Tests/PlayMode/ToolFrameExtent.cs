@@ -20,6 +20,9 @@ namespace MediKitTwin.PlayMode.Tests
 
         public bool IsEmpty => _min.x > _max.x;
 
+        /// <summary>모은 점들을 감싸는 도구 축 나란한 상자의 중심(도구 기준, m). 비었으면 0이다.</summary>
+        public Vector3 Center => IsEmpty ? Vector3.zero : (_min + _max) * 0.5f;
+
         public void Include(Vector3 worldPoint)
         {
             Vector3 local = Quaternion.Inverse(_tool.rotation) * (worldPoint - _tool.position);

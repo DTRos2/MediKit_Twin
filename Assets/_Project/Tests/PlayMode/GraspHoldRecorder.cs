@@ -25,6 +25,7 @@ namespace MediKitTwin.PlayMode.Tests
         private readonly JointGripper _gripper;
         private readonly ArmController _arm;
         private readonly GraspRecorderOptions _options;
+        private readonly GraspPhotographer _photographer;
         private readonly StringBuilder _lines = new StringBuilder();
         private readonly PositionSeries _toolPositions = new PositionSeries();
         private readonly PositionSeries _basePositions = new PositionSeries();
@@ -43,11 +44,13 @@ namespace MediKitTwin.PlayMode.Tests
         private float _releasedAt = float.NegativeInfinity;
         private float _windowStart;
 
-        public GraspHoldRecorder(JointGripper gripper, ArmController arm, GraspRecorderOptions options = null)
+        /// <param name="photographer">쥔 순간과 쥔 뒤 잠시 지나서 그리퍼를 사진으로 남기는 쪽. 사진이 필요 없으면 null이다.</param>
+        public GraspHoldRecorder(JointGripper gripper, ArmController arm, GraspRecorderOptions options = null, GraspPhotographer photographer = null)
         {
             _gripper = gripper;
             _arm = arm;
             _options = options ?? new GraspRecorderOptions();
+            _photographer = photographer;
         }
 
         public static bool IsEnabled => Environment.GetEnvironmentVariable(EnableVariable) == "1";
@@ -84,6 +87,7 @@ namespace MediKitTwin.PlayMode.Tests
             {
                 _laterSnapshotDone = true;
                 Snapshot(simSeconds, $"쥔 뒤 {_options.LaterSnapshotSeconds:0.0}초");
+                Photograph("later");
                 // 쥔 직후 손가락이 목표를 지키는지, 넘어가는지 보려고 그동안의 프레임을 풀어 적는다.
                 DumpRecentFrames();
             }
@@ -104,6 +108,7 @@ namespace MediKitTwin.PlayMode.Tests
             _laterSnapshotDone = false;
             StartWindow(simSeconds);
             Snapshot(simSeconds, "쥠");
+            Photograph("grasp");
         }
 
         private void EndHold(float simSeconds)
@@ -149,10 +154,11 @@ namespace MediKitTwin.PlayMode.Tests
             _toolPositions.Add(tool.position);
             _basePositions.Add(_arm.BaseWorldPosition);
 
+            // 물건 중심은 도구 축에 나란한 상자의 중심으로 잰다. Graspable.Center는 월드 축 기준 상자의 중심이라 물건이 도구와 함께 돌면 실제 중심에서 어긋난다.
             Vector3 itemInTool = Vector3.zero;
             if (_item != null)
             {
-                itemInTool = Quaternion.Inverse(tool.rotation) * (_item.Center - tool.position);
+                itemInTool = ItemCenterInTool(tool);
                 _itemInTool.Add(itemInTool);
             }
 
@@ -163,6 +169,17 @@ namespace MediKitTwin.PlayMode.Tests
             {
                 _recentFrames.RemoveAt(0);
             }
+        }
+
+        private Vector3 ItemCenterInTool(Pose tool)
+        {
+            var extent = new ToolFrameExtent(tool);
+            foreach (Collider collider in _item.Colliders)
+            {
+                extent.Include(ColliderPoints.Of(collider));
+            }
+
+            return extent.Center;
         }
 
         // 놓기 직전 마지막 몇 프레임을 프레임마다 적는다. 진동이면 부호가 번갈아 나오고, 부드러운 움직임이면 한 방향으로 이어진다.
@@ -244,6 +261,18 @@ namespace MediKitTwin.PlayMode.Tests
             return string.Join(" ", parts);
         }
 
+        // 도구 끝점과 물건 중심의 가운데를 화면 한가운데에 두고 찍는다.
+        private void Photograph(string label)
+        {
+            if (_photographer == null || _item == null)
+            {
+                return;
+            }
+
+            Pose tool = _arm.ToolPose;
+            _photographer.Shoot(label, tool, (tool.position + _item.Center) * 0.5f);
+        }
+
         // 물건과 패드(손가락 끝)를 도구 끝점 기준 좌표로 나란히 적고, 손가락 관절이 얼마나 닫혔는지와 겹침 깊이를 적는다.
         private void Snapshot(float simSeconds, string label)
         {
@@ -261,6 +290,8 @@ namespace MediKitTwin.PlayMode.Tests
 
             _lines.AppendLine($"[{simSeconds:0.00}s] {label}: 막힘 판정 {_gripper.IsBlockedByObject}, 도구 끝점 ({tool.position.x:0.000},{tool.position.y:0.000},{tool.position.z:0.000})");
             _lines.AppendLine($"    물건(도구 기준) {itemExtent.Describe()}");
+            _lines.AppendLine($"    {GraspFrameDescriber.Axes(tool)}");
+            _lines.AppendLine($"    {GraspFrameDescriber.ItemAnchor(tool, _item)}");
 
             foreach (Collider finger in _gripper.FingerColliders)
             {

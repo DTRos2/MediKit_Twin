@@ -247,8 +247,8 @@ namespace MediKitTwin.PlayMode.Tests
             yield return null;
             yield return null;
 
-            var station = FindOne<IKittingStation>();
-            var input = FindOne<IOrderInput>();
+            var station = CellTestScene.FindOne<IKittingStation>();
+            var input = CellTestScene.FindOne<IOrderInput>();
             GameObject robot = GameObject.Find(RobotName);
             Assert.That(station, Is.Not.Null, "씬에서 키팅 설비(IKittingStation)를 찾을 수 없다");
             Assert.That(input, Is.Not.Null, "씬에서 주문 입력(IOrderInput)을 찾을 수 없다");
@@ -276,19 +276,6 @@ namespace MediKitTwin.PlayMode.Tests
             }
 
             Debug.Log($"[E2E] 시간 설정: 프레임 고정 {timing.CaptureFramerate}fps(0이면 고정 안 함), 프레임 상한 {timing.TargetFramerate}fps(0이면 제한 없음)");
-        }
-
-        private static T FindOne<T>() where T : class
-        {
-            foreach (MonoBehaviour behaviour in Object.FindObjectsByType<MonoBehaviour>())
-            {
-                if (behaviour is T found)
-                {
-                    return found;
-                }
-            }
-
-            return null;
         }
     }
 }
