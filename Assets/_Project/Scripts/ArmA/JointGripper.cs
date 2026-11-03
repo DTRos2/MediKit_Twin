@@ -40,18 +40,13 @@ namespace MediKitTwin.ArmA
         [SerializeField, Range(1f, 50f)] private float _holdDriveMultiplier = 10f;
 
         private IGripperHost _host;
-        private ArticulationBody[] _joints;
-        private IReadOnlyList<ArmProfileSO.GripperJointEntry> _entries;
+        private FingerJointSet _fingers;
         private float[] _positions;
-        private float[] _openValues;
-        private float[] _closedValues;
-        private Collider[] _fingerColliders = Array.Empty<Collider>();
         private GripClosureJudge _closureJudge;
         private GripHoldTargets _holdPlanner;
+        private FingerDriveBooster _driveBooster;
         // 물건을 쥐고 있는 동안 손가락 관절이 향할 목표. 쥐고 있지 않으면 null이라 개폐 정도(_opening)를 따른다.
         private float[] _holdTargets;
-        // 쥐기 전의 손가락 구동 값. 쥐는 동안 키운 구동을 놓을 때 되돌리는 데 쓴다.
-        private ArticulationDrive[] _normalDrives;
         private readonly GraspAttachment _attachment = new GraspAttachment();
         private float _opening = 1f;
         private float _targetOpening = 1f;
@@ -65,7 +60,7 @@ namespace MediKitTwin.ArmA
         public bool IsHolding => _attachment.IsAttached;
         public Graspable HeldObject => _attachment.Held;
 
-        public IReadOnlyList<Collider> FingerColliders => _fingerColliders;
+        public IReadOnlyList<Collider> FingerColliders => _fingers != null ? _fingers.Colliders : Array.Empty<Collider>();
 
         public Vector3 GraspCenter => _host != null ? _host.ToolPose.position : transform.position;
 
@@ -81,8 +76,8 @@ namespace MediKitTwin.ArmA
                     return false;
                 }
 
-                ReadJointPositions();
-                return _closureJudge.IsBlocked(_positions, _openValues, _closedValues);
+                _fingers.ReadPositions(_positions);
+                return _closureJudge.IsBlocked(_positions, _fingers.OpenValues, _fingers.ClosedValues);
             }
         }
 
@@ -96,87 +91,25 @@ namespace MediKitTwin.ArmA
                 return;
             }
 
-            _entries = _host.GripperJoints;
-            _joints = new ArticulationBody[_entries.Count];
-            for (int i = 0; i < _entries.Count; i++)
+            if (!FingerJointSet.TryCreate(_host, out _fingers, out string error))
             {
-                Transform link = TransformSearch.FindDeep(_host.RobotRoot, _entries[i].LinkName);
-                _joints[i] = link != null ? link.GetComponent<ArticulationBody>() : null;
-                if (_joints[i] == null)
-                {
-                    Debug.LogError($"{name}: 그리퍼 관절 링크 '{_entries[i].LinkName}'를 찾지 못했다.", this);
-                    enabled = false;
-                    return;
-                }
+                Debug.LogError($"{name}: {error}", this);
+                enabled = false;
+                return;
             }
 
-            CacheFingerState();
+            BuildGripLogic();
             ApplyOpening();
             _ready = true;
         }
 
-        // 손가락 판정에 쓰는 값(열린·닫힌 값)과 손가락 충돌체를 한 번만 모아 둔다.
-        private void CacheFingerState()
+        // 손가락 판정과 쥔 자리 계산에 쓰는 객체를 한 번만 만든다. 수치는 인스펙터 값을 따른다.
+        private void BuildGripLogic()
         {
-            _positions = new float[_joints.Length];
-            _openValues = new float[_joints.Length];
-            _closedValues = new float[_joints.Length];
-            var colliders = new List<Collider>();
-
-            for (int i = 0; i < _joints.Length; i++)
-            {
-                _openValues[i] = _entries[i].OpenValue;
-                _closedValues[i] = _entries[i].ClosedValue;
-                colliders.AddRange(_joints[i].GetComponentsInChildren<Collider>());
-            }
-
-            _fingerColliders = colliders.ToArray();
+            _positions = new float[_fingers.Count];
             _closureJudge = new GripClosureJudge(_fullyClosedRatio);
             _holdPlanner = new GripHoldTargets(_holdPreloadRatio);
-        }
-
-        // 쥐고 있는 동안 손가락 구동을 단단히 한다. 원래 값은 놓을 때 되돌리려고 모아 둔다.
-        private void StrengthenDrives()
-        {
-            _normalDrives = new ArticulationDrive[_joints.Length];
-            for (int i = 0; i < _joints.Length; i++)
-            {
-                ArticulationDrive drive = _joints[i].xDrive;
-                _normalDrives[i] = drive;
-                drive.stiffness *= _holdDriveMultiplier;
-                drive.damping *= _holdDriveMultiplier;
-                drive.forceLimit *= _holdDriveMultiplier;
-                _joints[i].xDrive = drive;
-            }
-        }
-
-        // 쥐기 전의 강성, 감쇠, 힘 한계로 되돌린다. 목표는 개폐 정도가 다시 정한다.
-        private void RestoreDrives()
-        {
-            if (_normalDrives == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < _joints.Length; i++)
-            {
-                ArticulationDrive drive = _joints[i].xDrive;
-                drive.stiffness = _normalDrives[i].stiffness;
-                drive.damping = _normalDrives[i].damping;
-                drive.forceLimit = _normalDrives[i].forceLimit;
-                _joints[i].xDrive = drive;
-            }
-
-            _normalDrives = null;
-        }
-
-        // 손가락 관절의 지금 위치를 프로필 값과 같은 단위(직선은 m, 회전은 rad)로 _positions에 읽는다.
-        private void ReadJointPositions()
-        {
-            for (int i = 0; i < _joints.Length; i++)
-            {
-                _positions[i] = _joints[i].jointPosition[0];
-            }
+            _driveBooster = new FingerDriveBooster(_fingers.Joints, _holdDriveMultiplier);
         }
 
         private void FixedUpdate()
@@ -212,16 +145,16 @@ namespace MediKitTwin.ArmA
 
         private void ApplyOpening()
         {
-            for (int i = 0; i < _joints.Length; i++)
+            for (int i = 0; i < _fingers.Count; i++)
             {
                 float value = _holdTargets != null
                     ? _holdTargets[i]
-                    : Mathf.Lerp(_entries[i].ClosedValue, _entries[i].OpenValue, _opening);
-                bool revolute = _joints[i].jointType == ArticulationJointType.RevoluteJoint;
+                    : Mathf.Lerp(_fingers.ClosedValues[i], _fingers.OpenValues[i], _opening);
 
-                ArticulationDrive drive = _joints[i].xDrive;
-                drive.target = revolute ? value * Mathf.Rad2Deg : value;
-                _joints[i].xDrive = drive;
+                ArticulationBody joint = _fingers.Joints[i];
+                ArticulationDrive drive = joint.xDrive;
+                drive.target = _fingers.IsRevolute(i) ? value * Mathf.Rad2Deg : value;
+                joint.xDrive = drive;
             }
         }
 
@@ -254,11 +187,11 @@ namespace MediKitTwin.ArmA
 
             // 닫는 명령은 끝까지 닫힌 값을 향해 와 있으므로, 그대로 두면 물건이 풀리는 순간 손가락이 한계 힘으로 물건을 뚫는다.
             // 손가락이 물건에 닿아 멈춘 자리를 목표로 바꿔 그 자리를 지키며 누르게 한다.
-            ReadJointPositions();
-            _holdTargets = _holdPlanner.Compute(_positions, _openValues, _closedValues);
+            _fingers.ReadPositions(_positions);
+            _holdTargets = _holdPlanner.Compute(_positions, _fingers.OpenValues, _fingers.ClosedValues);
 
             // 구동에 바로 반영한다. 다음 FixedUpdate까지 기다리면 그 사이 물리가 한 번 돌고, 그동안 손가락은 옛 목표(끝까지 닫힘)로 밀려 튀어 나간다.
-            StrengthenDrives();
+            _driveBooster.Boost();
             ApplyOpening();
             Grasped?.Invoke();
         }
@@ -297,10 +230,10 @@ namespace MediKitTwin.ArmA
             }
 
             // 여는 동작을 손가락이 있는 자리에서 시작한다. 닫힌 쪽 목표에서 시작하면 열리기 전에 한 번 더 세게 쥐게 된다.
-            ReadJointPositions();
-            _opening = GripHoldTargets.CurrentOpening(_positions, _openValues, _closedValues);
+            _fingers.ReadPositions(_positions);
+            _opening = GripHoldTargets.CurrentOpening(_positions, _fingers.OpenValues, _fingers.ClosedValues);
             _holdTargets = null;
-            RestoreDrives();
+            _driveBooster.Restore();
 
             _attachment.Detach();
             Released?.Invoke();
