@@ -11,6 +11,9 @@ namespace MediKitTwin.Pusher
     {
         public KitData Kit { get; private set; }
 
+        /// <summary>불량 박스가 이미 세었거나(안에 들어옴) 푸셔가 밖으로 떨어진 것으로 처리했으면 true. 한 박스를 두 번 세지 않게 한다.</summary>
+        public bool Counted { get; internal set; }
+
         public void Configure(KitData kit)
         {
             Kit = kit;

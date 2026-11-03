@@ -43,7 +43,7 @@ namespace MediKitTwin.Pusher
         private void OnTriggerEnter(Collider other)
         {
             RejectedKit kit = other.GetComponentInParent<RejectedKit>();
-            if (kit == null || kit.Kit == null || _loaded.Contains(kit))
+            if (kit == null || kit.Kit == null || kit.Counted)
             {
                 return;
             }
@@ -51,8 +51,27 @@ namespace MediKitTwin.Pusher
             Receive(kit);
         }
 
+        /// <summary>
+        /// 푸셔가 민 키트 박스가 불량 박스 안에 들어오지 않고 밖으로 떨어졌다고 알린다. (FR-09 예외)
+        /// 누적 불량 수에는 포함하고 적재 수는 올리지 않는다. 컨베이어가 다음 박스를 보내도록 KitRejected는 같이 보낸다. 박스를 지우는 일은 호출하는 쪽이 한다.
+        /// </summary>
+        public void RegisterOutside(RejectedKit box)
+        {
+            if (box == null || box.Kit == null || box.Counted)
+            {
+                return;
+            }
+
+            box.Counted = true;
+            box.Kit.CompleteTime = SimClock.Now;
+            _tally.AddOutside();
+            Debug.LogWarning($"[RejectBin] 로트 {box.Kit.LotNumber}가 불량 박스 밖으로 떨어졌다. 누적 {_tally.Total}", this);
+            CellEvents.RaiseKitRejected(box.Kit);
+        }
+
         private void Receive(RejectedKit box)
         {
+            box.Counted = true;
             _loaded.Add(box);
             box.Kit.CompleteTime = SimClock.Now;
             bool full = _tally.AddLoaded();
