@@ -66,6 +66,11 @@ namespace MediKitTwin.ArmA
                  "좁은 박스에서는 벌린 손가락이 벽과 이웃 물건 사이로 들어가지 못해, 가장 높은 값은 손가락이 벽 윗면보다 위에 오게 해야 한다: " +
                  "(벽 윗면 − 슬롯 중심) + 손가락이 도구 끝점 아래로 내려오는 길이(약 2.5cm) + 여유. 0은 슬롯 중심까지 내려가 놓는다. 후보가 많을수록 안 닿을 때 시간이 더 든다.")]
         [SerializeField] private float[] _boxReleaseHeights = { 0f, 0.04f, 0.07f, 0.11f };
+        [Tooltip("슬롯마다 놓기에 성공한 방식(놓는 높이, 서는 자리, 도구 방향)을 기억해, 같은 슬롯에 같은 구성품을 놓을 때 처음부터 찾지 않고 그 방식을 먼저 쓴다. " +
+                 "닿지 않거나 내려가지 못하면 잊고 처음부터 다시 찾는다. 끄면 매번 처음부터 찾는다.")]
+        [SerializeField] private bool _rememberPlacements = true;
+        [Tooltip("이 거리(m) 안이면 같은 슬롯으로 본다. 박스가 지그에 멈추는 자리가 조금씩 달라도 같은 슬롯을 알아보게 하되, 이웃 슬롯 사이 간격보다 작아야 한다.")]
+        [SerializeField, Min(0.001f)] private float _placementMemoryRadiusM = 0.02f;
 
         [Header("카메라와 물건 인식")]
         [Tooltip("도구 끝에 다는 카메라. 화면은 'Tool Camera' 패널에 나온다.")]
@@ -269,7 +274,8 @@ namespace MediKitTwin.ArmA
                     ? new BoxPlaceDiagnostics(tool.Probe, _baseMotionTraceMaxEntries, _baseMotionTraceMinYawTravelDeg)
                     : null,
                 _positioner as IArmPhaseSource,
-                CreateBaseMotionProbe());
+                CreateBaseMotionProbe(),
+                _rememberPlacements ? new PlacementMemory(_placementMemoryRadiusM) : null);
 
             _taughtFinder = new TaughtPoseFinder(
                 _useTaughtPoses ? new TaughtPickPoseRepository(FilePickPoseStorage.CreateDefault()) : null,

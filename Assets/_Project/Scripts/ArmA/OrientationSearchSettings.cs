@@ -53,6 +53,12 @@ namespace MediKitTwin.ArmA
             _rollCostWeight = rollCostWeight;
         }
 
+        /// <summary>기본 방향 하나만 보는 설정. 이미 알고 있는 방향이 지금도 닿는지만 확인할 때 쓴다(간격이 0이면 그 방향은 바꾸지 않는다).</summary>
+        public static OrientationSearchSettings NominalOnly()
+        {
+            return new OrientationSearchSettings(0f, 0f, 0f, 0f, 0f, 0f, 0f);
+        }
+
         /// <summary>손목 비틀기 범위만 바꾼 복사본. 나머지(기울이기, 좌우 돌리기, 비틀기 비중)는 그대로다.</summary>
         public OrientationSearchSettings WithRoll(float maxRollDeg, float rollStepDeg)
         {

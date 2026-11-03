@@ -17,6 +17,9 @@ namespace MediKitTwin.ArmA
     ///
     /// 놓는 높이는 낮은 후보부터 시도해 팔이 닿는 가장 낮은 높이로 정한다(ReleaseHeights). 좁은 박스에서는 끝 슬롯처럼 손가락이 벽 위에
     /// 머물러야만 닿는 곳이 있지만, 가운데 슬롯은 낮게 들어가 물건을 덜 떨어뜨릴 수 있기 때문이다.
+    ///
+    /// 슬롯마다 놓기에 성공한 방식(놓는 높이, 서는 자리, 도구 방향)은 기억해(PlacementMemory) 다음에 같은 슬롯에 같은 구성품을 놓을 때
+    /// 처음부터 찾지 않고 그 방식이 지금도 닿는지만 먼저 본다. 닿지 않거나 내려가지 못하면 잊고 예전처럼 처음부터 찾는다.
     /// </summary>
     public sealed class BoxPlaceRoutine
     {
@@ -38,6 +41,7 @@ namespace MediKitTwin.ArmA
         private readonly BoxPlaceDiagnostics _diagnostics;
         private readonly IArmPhaseSource _phases;
         private readonly BaseMotionProbe _motionProbe;
+        private readonly PlacementMemory _memory;
 
         /// <param name="toolPose">도구 끝점의 지금 월드 자세. 팔이 준비되지 않았으면 null을 돌려준다. 없으면 쥔 자세를 재지 못한다.</param>
         /// <param name="log">진행을 알리는 쪽. 필요 없으면 null.</param>
@@ -45,11 +49,14 @@ namespace MediKitTwin.ArmA
         /// <param name="diagnostics">가늠한 것과 실제로 하는 것의 차이, 물건의 미끄러짐을 로그로 남기는 쪽. 없으면 남기지 않는다.</param>
         /// <param name="phases">팔 베이스를 옮기는 동안 접은 뒤, 도착한 뒤를 알려 주는 쪽. 있으면 그 지점에서도 미끄러짐을 잰다. 없으면 재지 않는다.</param>
         /// <param name="motionProbe">팔 베이스를 옮기는 동안 물리 스텝마다 재는 데 필요한 것. 있고 phases도 있으면 이동마다 베이스의 움직임과 물건의 밀림을 스텝별로 잰다.</param>
+        /// <param name="memory">슬롯마다 성공한 놓기 방식을 기억하는 쪽. 있으면 같은 슬롯에 놓을 때 기억한 방식을 먼저 쓰고, 없으면 매번 처음부터 찾는다.</param>
         public BoxPlaceRoutine(
             StandPolicy policy, StandSearchRoutine standSearch, ArmMotionSteps steps, IItemHolder holder, BoxPlaceSettings settings,
             Func<Pose?> toolPose = null, Action<string> log = null, BaseStandClearance baseClearance = null,
-            BoxPlaceDiagnostics diagnostics = null, IArmPhaseSource phases = null, BaseMotionProbe motionProbe = null)
+            BoxPlaceDiagnostics diagnostics = null, IArmPhaseSource phases = null, BaseMotionProbe motionProbe = null,
+            PlacementMemory memory = null)
         {
+            _memory = memory;
             _baseClearance = baseClearance;
             _diagnostics = diagnostics;
             _phases = phases;
@@ -103,15 +110,36 @@ namespace MediKitTwin.ArmA
             ItemPlaceRequest request, TransferResult result, HeldItemFrame? frame, Quaternion restingRotation, HeldSlipTrail slipTrail)
         {
             ReleaseHeights heights = _settings.ReleaseHeights;
+            Vector3 slotPosition = request.WorldPose.position;
             int firstHeightIndex = 0;
             PlacementChoice choice;
             PlacePath path = default;
             Quaternion rotation = Quaternion.identity;
 
+            // 같은 슬롯에 같은 구성품을 놓은 적이 있으면 그 방식을 먼저 쓴다. 구성품은 달라도 같은 슬롯에서 성공한 적이 있으면,
+            // 그보다 낮은 높이는 어느 구성품도 닿지 못했으므로 거기서부터 찾는다.
+            PlacementRecall? recalled = null;
+            if (_memory != null)
+            {
+                if (_memory.TryRecall(slotPosition, request.ItemKey, out PlacementRecall recall))
+                {
+                    recalled = recall;
+                }
+                else if (_memory.TryGetLowestHeightIndex(slotPosition, out int lowest) && lowest > 0)
+                {
+                    firstHeightIndex = Mathf.Min(lowest, heights.Count - 1);
+                    _log?.Invoke(
+                        $"박스: 이 슬롯에는 앞서 슬롯 중심보다 {heights[firstHeightIndex] * 100f:0}cm 위에서 놓은 적이 있어, 그보다 낮은 높이는 건너뛰고 찾는다.");
+                }
+            }
+
             while (true)
             {
                 choice = new PlacementChoice();
-                yield return FindPlacement(request, frame, restingRotation, firstHeightIndex, choice);
+                yield return FindPlacement(request, frame, restingRotation, firstHeightIndex, recalled, choice);
+
+                // 기억한 방식은 첫 시도에만 쓴다. 통하지 않았어도 이어지는 시도는 처음부터 찾는다.
+                recalled = null;
                 if (!choice.IsFound)
                 {
                     // 마지막으로 시도한(가장 높은) 높이의 실패 이유를 호출한 쪽에 남긴다.
@@ -144,7 +172,17 @@ namespace MediKitTwin.ArmA
 
                 if (isOk)
                 {
+                    _memory?.Remember(slotPosition, request.ItemKey, choice.Recall);
                     break;
+                }
+
+                if (choice.IsReplayed)
+                {
+                    // 기억한 방식이 이번에는 내려가지 못했다. 박스나 팔의 상태가 달라졌을 수 있으니 잊고 처음부터 다시 찾는다.
+                    _memory?.Forget(slotPosition, request.ItemKey);
+                    _log?.Invoke($"박스: 기억해 둔 놓기 방식으로는 내려가지 못해 잊고 처음부터 다시 찾는다. ({descent.Detail})");
+                    firstHeightIndex = 0;
+                    continue;
                 }
 
                 int nextHeightIndex = choice.HeightIndex + 1;
@@ -174,11 +212,24 @@ namespace MediKitTwin.ArmA
 
         // 놓는 높이를 firstHeightIndex부터 낮은 순으로 시도해, 팔이 닿는 방향이 처음 나오는 높이를 choice에 담는다.
         // 먼저 물건이 선반에 놓여 있던 방향으로 놓는 도구 방향을 찾고, 없으면 똑바로 아래를 보는 방향으로 서는 자리까지 바꿔 가며 찾는다.
+        // 기억해 둔 방식(recalled)이 있으면 그것이 지금도 닿는지 먼저 본다. 닿으면 거기서 끝내고, 아니면 처음부터 찾는다.
         private IEnumerator FindPlacement(
-            ItemPlaceRequest request, HeldItemFrame? frame, Quaternion restingRotation, int firstHeightIndex, PlacementChoice choice)
+            ItemPlaceRequest request, HeldItemFrame? frame, Quaternion restingRotation, int firstHeightIndex, PlacementRecall? recalled,
+            PlacementChoice choice)
         {
             ReleaseHeights heights = _settings.ReleaseHeights;
             var search = new OrientationSearchResult();
+
+            if (recalled.HasValue)
+            {
+                yield return TryReplay(request, frame, restingRotation, recalled.Value, choice);
+                if (choice.IsFound)
+                {
+                    yield break;
+                }
+
+                _log?.Invoke("박스: 기억해 둔 놓기 방식이 지금은 닿지 않아 처음부터 찾는다.");
+            }
 
             if (frame.HasValue && _settings.PlacesInRestingOrientation)
             {
@@ -203,7 +254,8 @@ namespace MediKitTwin.ArmA
 
                     if (search.IsFound)
                     {
-                        choice.SetFound(search, heights[index], index, restingTool);
+                        choice.SetFound(
+                            search, heights[index], index, restingTool, RecallOf(index, true, search));
                     }
                     else
                     {
@@ -234,7 +286,8 @@ namespace MediKitTwin.ArmA
 
                     if (search.IsFound)
                     {
-                        choice.SetFound(search, heights[index], index, _settings.NominalToolRotation());
+                        choice.SetFound(
+                            search, heights[index], index, _settings.NominalToolRotation(), RecallOf(index, false, search));
                     }
                     else
                     {
@@ -247,6 +300,61 @@ namespace MediKitTwin.ArmA
                     choice.SetFailure(lastAttempt);
                 }
             }
+        }
+
+        // 찾은 방향과 서는 자리를 다음에 쓸 수 있게 기본 방향에서 벗어난 양으로 남긴다.
+        private static PlacementRecall RecallOf(int heightIndex, bool usesRestingOrientation, OrientationSearchResult search)
+        {
+            return new PlacementRecall(
+                heightIndex, usesRestingOrientation, search.PitchDeg, search.YawDeg, search.RollDeg, search.StandoffExtraM, search.LateralM);
+        }
+
+        // 기억해 둔 방식 그대로 그 서는 자리에 서서, 그 높이와 방향이 지금도 닿고 겹치지 않는지 한 후보만 본다.
+        // 방향을 하나만 보므로 찾기보다 훨씬 빠르다. 닿으면 choice를 채우고, 아니면 비워 둔다.
+        private IEnumerator TryReplay(
+            ItemPlaceRequest request, HeldItemFrame? frame, Quaternion restingRotation, PlacementRecall recall, PlacementChoice choice)
+        {
+            ReleaseHeights heights = _settings.ReleaseHeights;
+            if (recall.HeightIndex >= heights.Count)
+            {
+                yield break;
+            }
+
+            Quaternion nominal;
+            if (recall.UsesRestingOrientation)
+            {
+                // 선반에 놓여 있던 방향이 기본이던 방식인데 쥔 자세를 지금은 알 수 없으면 되풀이할 수 없다.
+                if (!frame.HasValue || !_settings.PlacesInRestingOrientation)
+                {
+                    yield break;
+                }
+
+                nominal = frame.Value.ToolRotationFor(restingRotation);
+            }
+            else
+            {
+                nominal = _settings.NominalToolRotation();
+            }
+
+            Quaternion rotation = recall.ToolRotation(nominal);
+            float releaseHeight = heights[recall.HeightIndex];
+            var attempt = new TransferResult();
+            var search = new OrientationSearchResult();
+            yield return _standSearch.ApproachAndSearch(
+                PlanFor(
+                    request, frame, rotation, OrientationSearchSettings.NominalOnly(),
+                    new[] { recall.StandoffExtraM }, new[] { recall.LateralM }, releaseHeight),
+                attempt, found => search = found);
+
+            if (!search.IsFound)
+            {
+                yield break;
+            }
+
+            _log?.Invoke(
+                $"박스: 이 슬롯에 앞서 놓았던 방식(슬롯 중심보다 {releaseHeight * 100f:0}cm 위, 서는 자리 뒤로 {recall.StandoffExtraM:0.00}m)을 그대로 쓴다.");
+            choice.SetFound(search, releaseHeight, recall.HeightIndex, rotation, recall);
+            choice.MarkReplayed();
         }
 
         // 방향을 찾을 때 시험한 도구 자리(기본 방향 기준)와, 찾은 방향으로 다시 계산해 실제로 가는 도구 자리가 다른지 남긴다.
