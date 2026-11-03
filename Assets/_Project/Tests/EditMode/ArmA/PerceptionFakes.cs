@@ -110,12 +110,20 @@ namespace MediKitTwin.ArmA.Tests
         internal static ShelfPickItem Item(Vector3 position) =>
             new ShelfPickItem(new Pose(position, Quaternion.identity), Vector3.back, null, "A-1");
 
-        internal static RecognitionSettings Recognition(bool require, float min = 0.004f, float max = 0.03f, float fingerDrop = 0f)
+        // 값을 주지 않은 항목은 설정 클래스가 정한 기본값을 따른다(기울임 0, 마무리 2회 등).
+        internal static RecognitionSettings Recognition(
+            bool require, float min = 0.004f, float max = 0.03f, float fingerDrop = 0f,
+            float tiltDeg = 0f, float settleTolerance = 0.005f, float maxSettle = 0.04f, int settleAttempts = 2)
         {
+            System.Globalization.CultureInfo c = System.Globalization.CultureInfo.InvariantCulture;
             string json = "{\"_enabled\":true,\"_requireRecognition\":" + (require ? "true" : "false")
-                + ",\"_noiseSigmaM\":0,\"_noiseSeed\":1,\"_minCorrectionM\":" + min.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                + ",\"_maxShiftM\":" + max.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                + ",\"_fingerDropBelowToolM\":" + fingerDrop.ToString(System.Globalization.CultureInfo.InvariantCulture) + "}";
+                + ",\"_noiseSigmaM\":0,\"_noiseSeed\":1,\"_minCorrectionM\":" + min.ToString(c)
+                + ",\"_maxShiftM\":" + max.ToString(c)
+                + ",\"_fingerDropBelowToolM\":" + fingerDrop.ToString(c)
+                + ",\"_graspTiltDeg\":" + tiltDeg.ToString(c)
+                + ",\"_settleAttempts\":" + settleAttempts.ToString(c)
+                + ",\"_settleToleranceM\":" + settleTolerance.ToString(c)
+                + ",\"_maxSettleM\":" + maxSettle.ToString(c) + "}";
             return JsonUtility.FromJson<RecognitionSettings>(json);
         }
     }

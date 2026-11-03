@@ -40,5 +40,16 @@ namespace MediKitTwin.ArmA
         {
             return new GraspTargets(Rotation, Near + offset, Grasp + offset, Retreat + offset, route);
         }
+
+        /// <summary>
+        /// 도구 끝점은 그대로 두고 세 자리의 도구 방향만 손가락이 닫히는 축(도구의 y축) 둘레로 tiltDeg만큼 돌린다. 양수이면 손가락 끝이 아래로 숙는다.
+        /// 손가락 뿌리의 받침 블록은 패드보다 뒤에 있어서, 끝을 숙이면 뿌리는 올라가고 패드 끝만 내려가
+        /// 선반 판 위에 놓인 얇은 물건 높이까지 패드가 닿는다. 관절 길은 돌린 방향에 맞춰 새로 푼 것을 받는다(없으면 null).
+        /// </summary>
+        public GraspTargets TiltedBy(float tiltDeg, TaughtJointRoute route)
+        {
+            Quaternion tilted = Rotation * Quaternion.AngleAxis(tiltDeg, Vector3.up);
+            return new GraspTargets(tilted, Near, Grasp, Retreat, route);
+        }
     }
 }
