@@ -1556,6 +1556,68 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4799894571927456816, guid: 7fc41a6a3eb7e2644ab1e9ad5b12532b, type: 3}
   m_PrefabInstance: {fileID: 378019204}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &396671024
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1809240095}
+    m_Modifications:
+    - target: {fileID: 3054765790575724999, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_Name
+      value: LabelStation
+      objectReference: {fileID: 0}
+    - target: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 4.4378004
+      objectReference: {fileID: 0}
+    - target: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 6.386637
+      objectReference: {fileID: 0}
+    - target: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.0060653975
+      objectReference: {fileID: 0}
+    - target: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.99998164
+      objectReference: {fileID: 0}
+    - target: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+--- !u!4 &396671025 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4828408902271934530, guid: e1ccbc610565ed54ab4e2639d00a021e, type: 3}
+  m_PrefabInstance: {fileID: 396671024}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &436305698
 GameObject:
   m_ObjectHideFlags: 0
@@ -2333,6 +2395,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: InspectionStation
       objectReference: {fileID: 0}
+    - target: {fileID: 9037304483248758690, guid: 80064aec4b6b30d45917f9cd7ca83186, type: 3}
+      propertyPath: _handleEnd
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2487,7 +2553,12 @@ MonoBehaviour:
     _noiseSeed: 7
     _minCorrectionM: 0.004
     _maxShiftM: 0.08
-    _fingerDropBelowToolM: 0.025
+    _fingerDropBelowToolM: 0.015
+    _graspTiltDeg: 15
+    _settleAttempts: 2
+    _settleWaitSeconds: 0.3
+    _settleToleranceM: 0.005
+    _maxSettleM: 0.04
   _collision:
     _enabled: 1
     _requireClear: 1
@@ -2609,6 +2680,8 @@ GameObject:
   - component: {fileID: 769800216}
   - component: {fileID: 769800219}
   - component: {fileID: 769800220}
+  - component: {fileID: 769800221}
+  - component: {fileID: 769800222}
   m_Layer: 0
   m_Name: ConveyorHandoff
   m_TagString: Untagged
@@ -2709,6 +2782,36 @@ MonoBehaviour:
   _isVisible: 1
   _speedSource: {fileID: 0}
   _nudgeMps: 0.1
+--- !u!114 &769800221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 769800214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4f9320f9af5f814aa5d33b74e86e3c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Demo::MediKitTwin.Demo.ProcessStatusDemoPanel
+  _panelAnchor: 1
+  _panelMargin: {x: 16, y: 16}
+  _panelSize: {x: 380, y: 400}
+  _startCollapsed: 0
+  _isVisible: 1
+--- !u!114 &769800222
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 769800214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ce51cbd0d29bf14b876ad6f4ac808bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Conveyor::MediKitTwin.Conveyor.ConveyorBeltScroller
+  _minTopDot: 0.9
 --- !u!1001 &783705966
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3932,6 +4035,7 @@ Transform:
   - {fileID: 832185622}
   - {fileID: 1897498896}
   - {fileID: 1527695083}
+  - {fileID: 396671025}
   m_Father: {fileID: 260911791}
   m_LocalEulerAnglesHint: {x: 0, y: -90.695, z: 0}
 --- !u!1001 &1815671700
@@ -4425,7 +4529,6 @@ GameObject:
   - component: {fileID: 2017511389}
   - component: {fileID: 2017511387}
   - component: {fileID: 2017511386}
-  - component: {fileID: 2017511385}
   - component: {fileID: 2017511392}
   - component: {fileID: 2017511393}
   m_Layer: 0
@@ -4435,25 +4538,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2017511385
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2017511384}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d3f125d408b50e44f91aeaf0ee37d5f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: MediKitTwin.Demo::MediKitTwin.Demo.KittingStatusDemoPanel
-  _panelAnchor: 1
-  _panelMargin: {x: 16, y: 16}
-  _panelSize: {x: 380, y: 360}
-  _startCollapsed: 0
-  _isVisible: 1
-  _station: {fileID: 0}
-  _defaultSlotCount: 4
 --- !u!114 &2017511386
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5503,7 +5587,7 @@ MonoBehaviour:
   kitBoxSearchRoot: {fileID: 1527695083}
   linearStepM: 0.01
   approachHeight: 0.1
-  liftHeight: 0.1
+  liftHeight: 0.16
   looseToleranceM: 0.01
   preciseToleranceM: 0.002
   looseRotationToleranceDeg: 5
