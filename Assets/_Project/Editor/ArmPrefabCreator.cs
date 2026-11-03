@@ -1,5 +1,6 @@
 using System.IO;
 using MediKitTwin.ArmA;
+using MediKitTwin.Common;
 using UnityEditor;
 using UnityEngine;
 
@@ -7,7 +8,7 @@ using UnityEngine;
 // 컨벤션: 프리팹 접두사 PF_, 한글과 공백 없음, 기능은 프리팹으로 만들고 씬에는 인스턴스만 둔다.
 public static class ArmPrefabCreator
 {
-    private const string Folder = "Assets/_Project/Prefabs";
+    private const string Folder = ProjectAssetPaths.PrefabsFolder;
 
     [MenuItem("Tools/Arm/Create robot prefabs (FR5, UR3)")]
     private static void CreateBoth()
@@ -46,7 +47,7 @@ public static class ArmPrefabCreator
 
         if (!AssetDatabase.IsValidFolder(Folder))
         {
-            AssetDatabase.CreateFolder("Assets/_Project", "Prefabs");
+            AssetDatabase.CreateFolder(ProjectAssetPaths.ProjectRoot, ProjectAssetPaths.PrefabsFolderName);
         }
 
         GameObject prefab = PrefabUtility.SaveAsPrefabAssetAndConnect(robot, path, InteractionMode.UserAction);

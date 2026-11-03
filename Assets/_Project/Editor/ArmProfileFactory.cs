@@ -1,5 +1,6 @@
 using System.IO;
 using MediKitTwin.ArmA;
+using MediKitTwin.Common;
 using UnityEditor;
 using UnityEngine;
 
@@ -7,7 +8,7 @@ using UnityEngine;
 // TCP 위치는 URDF 크기에서 추정한 값이라 Scene 뷰의 TCP 기즈모(파랑 +Z = 접근 방향)로 확인하고 Inspector에서 다듬는다.
 public static class ArmProfileFactory
 {
-    private const string Folder = "Assets/_Project/Config";
+    private const string Folder = ProjectAssetPaths.ConfigFolder;
     public const string Fr5FileName = "ArmProfile_FR5";
     public const string Ur3FileName = "ArmProfile_UR3_Robotiq";
 
@@ -106,7 +107,7 @@ public static class ArmProfileFactory
 
         if (!AssetDatabase.IsValidFolder(Folder))
         {
-            AssetDatabase.CreateFolder("Assets/_Project", "Config");
+            AssetDatabase.CreateFolder(ProjectAssetPaths.ProjectRoot, ProjectAssetPaths.ConfigFolderName);
         }
 
         if (File.Exists(path))

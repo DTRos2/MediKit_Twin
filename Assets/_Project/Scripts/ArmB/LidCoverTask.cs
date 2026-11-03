@@ -17,8 +17,6 @@ namespace MediKitTwin.ArmB
     [DisallowMultipleComponent]
     public sealed class LidCoverTask : MonoBehaviour
     {
-        private const string KitBoxNameKey = "KitBox";
-
         // 목표에 닿았다고 보는 기준. Normal은 목표와의 거리 하나로 본다.
         // Grasp는 손가락이 닫히는 방향(뚜껑 폭 방향)만 엄격하게 보고(여유가 한쪽 5mm뿐이다), 나머지 방향은 Loose 오차까지 허용한다.
         // Cover는 뚜껑과 박스 사이 틈이 사방 5mm이므로 가로 두 방향을 엄격하게 보고, 높이는 Loose 오차까지 허용한다.
@@ -298,7 +296,9 @@ namespace MediKitTwin.ArmB
 
             if (!LidCoverPlanner.IsSeated(lid.position, boxCenter, coverY, seatToleranceM))
             {
-                Fail($"뚜껑이 박스에 제대로 덮이지 않았습니다. 중심 차이 {(lid.position - new Vector3(boxCenter.x, coverY, boxCenter.z)).magnitude:0.000}m");
+                // 가로와 높이를 나눠 적는다. 높이가 높으면 뚜껑이 무언가(박스 안 물건)에 얹힌 것이고, 가로가 크면 옆으로 밀린 것이다.
+                Vector3 unseated = lid.position - new Vector3(boxCenter.x, coverY, boxCenter.z);
+                Fail($"뚜껑이 박스에 제대로 덮이지 않았습니다. 중심 차이 {unseated.magnitude:0.000}m (가로 {new Vector2(unseated.x, unseated.z).magnitude * 1000f:0.0}mm, 높이 {unseated.y * 1000f:0.0}mm)");
                 yield break;
             }
 
@@ -700,7 +700,7 @@ namespace MediKitTwin.ArmB
 
             foreach (Transform child in root)
             {
-                if (child.name.IndexOf(KitBoxNameKey, StringComparison.OrdinalIgnoreCase) >= 0)
+                if (child.name.IndexOf(CellObjectNames.KitBoxKey, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     return child;
                 }

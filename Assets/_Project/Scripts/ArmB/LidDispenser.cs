@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using MediKitTwin.Common;
 using UnityEngine;
 
 namespace MediKitTwin.ArmB
@@ -13,8 +14,6 @@ namespace MediKitTwin.ArmB
     [DisallowMultipleComponent]
     public sealed class LidDispenser : MonoBehaviour
     {
-        private const string LidNamePrefix = "Lid_";
-
         [Tooltip("뚜껑이 한 칸 올라오는 데 걸리는 시간(초)")]
         [SerializeField] private float riseDuration = 1.5f;
 
@@ -48,7 +47,7 @@ namespace MediKitTwin.ArmB
             CollectLids();
             if (stack.Count == 0)
             {
-                Debug.LogError($"[LidDispenser] {name} 아래에 {LidNamePrefix}01 같은 뚜껑이 없습니다.", this);
+                Debug.LogError($"[LidDispenser] {name} 아래에 {CellObjectNames.LidPrefix}01 같은 뚜껑이 없습니다.", this);
                 enabled = false;
                 return;
             }
@@ -118,7 +117,7 @@ namespace MediKitTwin.ArmB
             stack.Clear();
             foreach (Transform child in transform)
             {
-                if (child.name.StartsWith(LidNamePrefix)) stack.Add(child);
+                if (child.name.StartsWith(CellObjectNames.LidPrefix)) stack.Add(child);
             }
 
             // 이름 순서(Lid_01이 맨 위)로 정렬한다.
@@ -127,7 +126,7 @@ namespace MediKitTwin.ArmB
 
         private void RenameLids()
         {
-            for (int i = 0; i < stack.Count; i++) stack[i].name = $"{LidNamePrefix}{i + 1:00}";
+            for (int i = 0; i < stack.Count; i++) stack[i].name = $"{CellObjectNames.LidPrefix}{i + 1:00}";
         }
 
         // 로봇암 B가 없는 지금은 인스펙터에서 직접 눌러 확인한다. (플레이 모드에서 컴포넌트 우클릭)

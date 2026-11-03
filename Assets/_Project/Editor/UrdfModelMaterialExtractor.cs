@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using MediKitTwin.Common;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,7 +13,7 @@ public static class UrdfModelMaterialExtractor
     {
         string folder = AssetDatabase.GetAssetPath(Selection.activeObject);
         if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
-            folder = "Assets/fr5_description";
+            folder = ProjectAssetPaths.Fr5DescriptionFolder;
 
         Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
         if (urpLit == null)

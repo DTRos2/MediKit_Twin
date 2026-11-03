@@ -1,5 +1,6 @@
 using System.IO;
 using Unity.Robotics.UrdfImporter;
+using MediKitTwin.Common;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,10 +16,10 @@ public static class StlPrefabPregenerator
         if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
         {
             // 선택이 없거나 폴더가 아니면 기본 폴더를 사용한다.
-            folder = "Assets/fr5_description";
+            folder = ProjectAssetPaths.Fr5DescriptionFolder;
             if (!AssetDatabase.IsValidFolder(folder))
             {
-                Debug.LogError("Assets/fr5_description 폴더를 찾을 수 없습니다.");
+                Debug.LogError(ProjectAssetPaths.Fr5DescriptionFolder + " 폴더를 찾을 수 없습니다.");
                 return;
             }
         }

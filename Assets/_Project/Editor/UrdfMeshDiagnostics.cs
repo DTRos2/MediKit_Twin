@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using MediKitTwin.Common;
 using UnityEditor;
 using UnityEngine;
 
@@ -20,7 +21,7 @@ public static class UrdfMeshDiagnostics
         foreach (Match m in Regex.Matches(text, "filename=\"package://([^\"]+)\""))
         {
             string rel = m.Groups[1].Value;
-            string assetPath = "Assets/" + rel;
+            string assetPath = ProjectAssetPaths.AssetsRoot + "/" + rel;
             if (assetPath.EndsWith(".STL", System.StringComparison.OrdinalIgnoreCase))
                 assetPath = assetPath.Substring(0, assetPath.Length - 4) + ".prefab";
 
