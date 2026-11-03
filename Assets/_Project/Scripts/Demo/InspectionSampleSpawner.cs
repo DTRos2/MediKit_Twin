@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using MediKitTwin.ArmA;
 using MediKitTwin.Common;
+using MediKitTwin.Conveyor;
 using MediKitTwin.Inspection;
 using MediKitTwin.Inventory;
 using MediKitTwin.Recipes;
@@ -47,6 +49,16 @@ namespace MediKitTwin.Demo
         [Tooltip("박스 중심에서 안쪽 바닥면까지의 로컬 높이(m). 박스 높이의 절반에서 벽 두께를 뺀 값이다.")]
         [SerializeField] private float _boxFloorLocalY = -0.04f;
 
+        [Header("컨베이어")]
+        [Tooltip("씬에 InspectionConveyorLine이 있으면 박스를 Conv_Inspection_01에 올려 컨베이어로 검사 자리와 푸셔 자리까지 옮긴다. 끄거나 없으면 박스를 검사 자리에 바로 놓는다.")]
+        [SerializeField] private bool _useConveyor = true;
+
+        [Header("불량 박스 이동")]
+        [Tooltip("(컨베이어를 쓰지 않을 때만) 불량으로 판정된 박스를 푸셔 앞으로 옮긴다. 컨베이어가 없어서 박스가 푸셔까지 오지 않기 때문이며, 컨베이어를 구현하면 끈다.")]
+        [SerializeField] private bool _sendRejectedToPusher = true;
+        [Tooltip("판정 뒤 박스를 푸셔 앞으로 옮기기까지의 시간(초). 컨베이어로 이동하는 시간을 흉내 낸다. 시뮬레이션 시간이다.")]
+        [SerializeField, Min(0f)] private float _travelSeconds = 1f;
+
         [Header("위치 흔들림 (실제 키팅 편차 흉내)")]
         [Tooltip("학습 랜덤화 범위에 곱하는 배율. 0이면 흔들림 없음, 1이면 학습 범위(박스 ±1cm/±5도, 구성품 ±6mm/±20도) 끝까지, 2면 두 배.")]
         [SerializeField, Min(0f)] private float _jitterScale;
@@ -62,6 +74,7 @@ namespace MediKitTwin.Demo
         private KitData _currentKit;
         private string _currentNote;
         private int _count;
+        private bool _onConveyor;
 
         private void Awake()
         {
@@ -120,6 +133,12 @@ namespace MediKitTwin.Demo
         /// <summary>false이면 결과 로그를 남기지 않는다. 자동 측정(InspectionBenchmark)이 대량으로 돌릴 때 끈다.</summary>
         public bool LogResults { get; set; } = true;
 
+        /// <summary>false이면 박스를 컨베이어에 올리지 않고 검사 자리에 바로 놓는다. 자동 측정(InspectionBenchmark)이 대량으로 돌릴 때 끈다.</summary>
+        public bool UseConveyor { get => _useConveyor; set => _useConveyor = value; }
+
+        /// <summary>false이면 불량 박스를 푸셔 앞으로 옮기지 않는다. 자동 측정(InspectionBenchmark)이 대량으로 돌릴 때 끈다.</summary>
+        public bool SendRejectedToPusher { get => _sendRejectedToPusher; set => _sendRejectedToPusher = value; }
+
         /// <summary>위치 흔들림 배율. 자동 측정이 단계별로 바꿔 가며 쓴다.</summary>
         public float JitterScale { get => _jitterScale; set => _jitterScale = Mathf.Max(0f, value); }
 
@@ -154,6 +173,8 @@ namespace MediKitTwin.Demo
 
             if (_sample != null)
             {
+                // 컨베이어에 실려 있으면 먼저 풀어야 컨베이어가 지워진 박스를 계속 옮기려 하지 않는다.
+                _sample.GetComponent<IBoxConveyorRelease>()?.ReleaseToPhysics();
                 Destroy(_sample);
             }
 
@@ -177,8 +198,23 @@ namespace MediKitTwin.Demo
 
             _currentNote = variant == SampleVariant.Normal ? "정상 박스" : $"{variant} 박스, 슬롯 {target}";
 
-            // 박스가 놓인 뒤 한 프레임 기다리지 않아도 센서는 위치로 읽으므로 바로 알린다.
             kit = _currentKit;
+
+            // 컨베이어가 있으면 박스를 01 입구에 올린다. AtInspection은 박스가 검사 자리에 도착했을 때 컨베이어 쪽이 보낸다.
+            InspectionConveyorLine line = _useConveyor ? FindFirstObjectByType<InspectionConveyorLine>() : null;
+            if (line != null && line.TryPlaceBox(_sample, _currentKit))
+            {
+                _onConveyor = true;
+                return true;
+            }
+
+            if (line != null)
+            {
+                Debug.LogWarning($"{name}: 컨베이어에 박스를 올리지 못했다(01에 박스가 있거나 칸을 못 찾음). 검사 자리에 바로 놓는다.", this);
+            }
+
+            // 박스가 놓인 뒤 한 프레임 기다리지 않아도 센서는 위치로 읽으므로 바로 알린다.
+            _onConveyor = false;
             CellEvents.RaiseAtInspection(_currentKit);
             return true;
         }
@@ -270,7 +306,17 @@ namespace MediKitTwin.Demo
 
         private void OnInspectionResult(KitData kit)
         {
-            if (kit != _currentKit || !LogResults)
+            if (kit != _currentKit)
+            {
+                return;
+            }
+
+            if (!_onConveyor && _sendRejectedToPusher && kit.Verdict.HasValue && !kit.Verdict.Value.IsPass)
+            {
+                StartCoroutine(SendToPusher(kit));
+            }
+
+            if (!LogResults)
             {
                 return;
             }
@@ -281,6 +327,34 @@ namespace MediKitTwin.Demo
                 ? "없음"
                 : string.Join(",", Array.ConvertAll(kit.DetectedComponentIds, id => id ?? "-"));
             Debug.Log($"[InspectionSample] {kit.LotNumber} ({_currentNote}) → {(v.IsPass ? "정상" : "불량")} / 불일치 슬롯: {slots} / 센서: {detected} / 방식: {v.Method}", this);
+        }
+
+        // 컨베이어가 없어서 불량 박스를 푸셔 앞 자리로 옮긴다. 박스의 흔들림(놓인 위치 편차)은 그대로 유지한다.
+        private IEnumerator SendToPusher(KitData kit)
+        {
+            // 네임스페이스와 같은 이름이라 전체 이름으로 쓴다.
+            var pusher = FindFirstObjectByType<MediKitTwin.Pusher.Pusher>();
+            if (pusher == null)
+            {
+                Debug.LogWarning($"{name}: 씬에 Pusher가 없어 불량 박스를 옮기지 못한다.", this);
+                yield break;
+            }
+
+            GameObject box = _sample;
+            if (_travelSeconds > 0f)
+            {
+                yield return new WaitForSeconds(_travelSeconds);
+            }
+
+            // 기다리는 동안 새 샘플이 만들어졌으면 이 박스는 이미 지워졌다.
+            if (box == null || kit != _currentKit)
+            {
+                yield break;
+            }
+
+            Vector3 jitter = box.transform.position - (_spawnPoint.position + Vector3.up * _boxCenterOffsetY);
+            box.transform.position = pusher.BoxSpotWorld + new Vector3(jitter.x, 0f, jitter.z);
+            Debug.Log($"[InspectionSample] 불량 박스({kit.LotNumber})를 푸셔 앞으로 옮겼다.", this);
         }
     }
 }

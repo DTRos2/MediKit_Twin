@@ -94,6 +94,10 @@ namespace MediKitTwin.Demo
         {
             _running = true;
             _spawner.LogResults = false;
+            bool previousSend = _spawner.SendRejectedToPusher;
+            bool previousConveyor = _spawner.UseConveyor;
+            _spawner.SendRejectedToPusher = false;
+            _spawner.UseConveyor = false;
             float previousJitter = _spawner.JitterScale;
             _spawner.JitterScale = _jitterScale;
 
@@ -163,6 +167,8 @@ namespace MediKitTwin.Demo
 
             _waitingKit = null;
             _spawner.LogResults = true;
+            _spawner.SendRejectedToPusher = previousSend;
+            _spawner.UseConveyor = previousConveyor;
             _spawner.JitterScale = previousJitter;
             _running = false;
 

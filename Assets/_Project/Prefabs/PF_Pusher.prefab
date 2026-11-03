@@ -121,6 +121,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6888653473335994168}
+  - component: {fileID: 1716568013988256685}
   m_Layer: 0
   m_Name: PF_Pusher
   m_TagString: Untagged
@@ -145,6 +146,28 @@ Transform:
   - {fileID: 4348879706878568909}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1716568013988256685
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4795686551345220196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 015b2b118f93e814789f2ee7956e4055, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Pusher::MediKitTwin.Pusher.Pusher
+  _head: {fileID: 0}
+  _pushDistance: 1.05
+  _pushSpeed: 1
+  _returnSpeed: 1.2
+  _boxSpotLocal: {x: 0.9, y: 0.905, z: 0}
+  _boxSpotHalfExtents: {x: 0.15, y: 0.04, z: 0.2}
+  _boxNamePrefix: KitBox
+  _boxWaitSeconds: 30
+  _boxMassKg: 0.3
+  _fallSettleSeconds: 5
 --- !u!1 &5231994037233622202
 GameObject:
   m_ObjectHideFlags: 0
@@ -173,7 +196,7 @@ Transform:
   m_GameObject: {fileID: 5231994037233622202}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.35, y: 1.01, z: 0}
+  m_LocalPosition: {x: 0.35, y: 0.96, z: 0}
   m_LocalScale: {x: 0.1, y: 0.2, z: 0.4}
   m_ConstrainProportionsScale: 0
   m_Children: []

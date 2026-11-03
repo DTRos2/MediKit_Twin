@@ -528,6 +528,7 @@ GameObject:
   - component: {fileID: 3802010599573476053}
   - component: {fileID: 5181481160757614760}
   - component: {fileID: 5941875438979047978}
+  - component: {fileID: 9037304483248758690}
   m_Layer: 0
   m_Name: PF_InspectionStation
   m_TagString: Untagged
@@ -601,6 +602,14 @@ MonoBehaviour:
   _boxCenterOffsetY: -0.15
   _boxYawDegrees: 0
   _boxFloorLocalY: -0.04
+  _useConveyor: 1
+  _sendRejectedToPusher: 1
+  _travelSeconds: 1
+  _jitterScale: 0
+  _boxOffsetMeters: 0.01
+  _boxYawJitterDegrees: 5
+  _itemOffsetMeters: 0.006
+  _itemYawJitterDegrees: 20
 --- !u!114 &5941875438979047978
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -615,3 +624,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: MediKitTwin.Inspection.Cnn::MediKitTwin.Inspection.Cnn.CnnInspector
   _model: {fileID: 5022602860645237092, guid: 0a6bd9ea5715dbe41b77ac6feb8f68e3, type: 3}
   _classes: {fileID: 4900000, guid: e06a9b99902a17a4e9e532ef5c2b9d32, type: 3}
+--- !u!114 &9037304483248758690
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7866746408788709408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf474fc304467294692ebf50e550056a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Conveyor::MediKitTwin.Conveyor.InspectionConveyorLine
+  _namePrefix: Conv_Inspection_
+  _entryIndex: 1
+  _inspectIndex: 2
+  _pushIndex: 4
+  _endIndex: 6
+  _stopRadius: 0.08
+  _resultWaitSeconds: 10
+  _pushWaitSeconds: 30
+  _endHoldSeconds: 3
