@@ -1294,6 +1294,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 711375624}
     m_Modifications:
+    - target: {fileID: 4348879706878568909, guid: ea356893c5a69b745928242ebe6e65c6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96
+      objectReference: {fileID: 0}
     - target: {fileID: 4795686551345220196, guid: ea356893c5a69b745928242ebe6e65c6, type: 3}
       propertyPath: m_Name
       value: Pusher
@@ -5139,6 +5143,22 @@ PrefabInstance:
     - target: {fileID: 3476297551822157567, guid: 39e07e0eb49bd66439d1ce6d58abf175, type: 3}
       propertyPath: m_Name
       value: Conv_Inspection_04
+      objectReference: {fileID: 0}
+    - target: {fileID: 4951763990287162342, guid: 39e07e0eb49bd66439d1ce6d58abf175, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.8758
+      objectReference: {fileID: 0}
+    - target: {fileID: 4951763990287162342, guid: 39e07e0eb49bd66439d1ce6d58abf175, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.0629
+      objectReference: {fileID: 0}
+    - target: {fileID: 5333728536762617082, guid: 39e07e0eb49bd66439d1ce6d58abf175, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.8758
+      objectReference: {fileID: 0}
+    - target: {fileID: 5333728536762617082, guid: 39e07e0eb49bd66439d1ce6d58abf175, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.0629
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
