@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: MediKitTwin.ML::MediKitTwin.ML.SyntheticRandomizationSO
   _itemOffsetMeters: 0.006
   _itemYawDegrees: 20
+  _itemLyingChance: 0.85
+  _itemLyingYawDegrees: 90
   _boxOffsetMeters: 0.01
   _boxYawDegrees: 5
   _lightIntensityDeviation: 0.3

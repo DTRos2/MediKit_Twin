@@ -118,6 +118,24 @@ namespace MediKitTwin.ArmA
             StartCoroutine(LiftAndDiscard(box));
         }
 
+        /// <summary>
+        /// 지그의 박스를 떼어 넘긴다. RemoveBox와 달리 박스를 올려 지우지 않고 그대로 내준다.
+        /// 지그에서 "없다"고 보므로 respawnDelay가 지나거나 PlaceBox가 불리면 새 박스가 내려온다.
+        /// </summary>
+        public Transform TakeBox()
+        {
+            // 내려오는 중인 박스는 아직 지그 자리에 닿지 않았으므로 넘기지 않는다.
+            if (!HasBox || dropping)
+            {
+                return null;
+            }
+
+            Transform box = current;
+            current = null;
+            emptySeconds = 0f;
+            return box;
+        }
+
         public bool TryGetSlotTarget(Vector3 slotLocalPosition, out BoxSlotTarget target)
         {
             Transform box = CurrentBox;
@@ -167,7 +185,7 @@ namespace MediKitTwin.ArmA
             dropping = false;
         }
 
-        // 컨베이어로 보내는 동작이 없는 지금은 인스펙터에서 직접 눌러 확인한다. (플레이 모드에서 컴포넌트 우클릭)
+        // 컨베이어에 태우지 않고 박스만 치워 보는 시험용이다. 인스펙터에서 직접 눌러 확인한다. (플레이 모드에서 컴포넌트 우클릭)
         // 박스를 위로 들어 올렸다가 지우면, 잠시 뒤 새 박스가 위에서 내려온다.
         [ContextMenu("Remove Box (Test)")]
         private void RemoveBoxForTest()

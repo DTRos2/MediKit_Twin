@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using MediKitTwin.ArmA;
+using MediKitTwin.Common;
 using MediKitTwin.Mobile;
 using UnityEditor;
 using UnityEngine;
@@ -13,10 +14,9 @@ using Warcool.WarehouseRobot;
 // 이동은 키 입력이 아니라 MobileBaseDriver(코드 명령)가 맡고, 하역 로봇의 GridRobotController는 잠가서 궤도 애니메이션만 쓴다.
 public static class ArmAMobileBaseBuilder
 {
-    private const string ArmAPrefabPath = "Assets/_Project/Prefabs/ArmA.prefab";
-    private const string RobotPrefabPath = "Assets/Warehouse_Robot_Controller/Prefabs/robot_boxy.prefab";
-    private const string MeshFolder = "Assets/_Project/Models/ArmABase";
-    private const string OldWheelMeshFolder = "Assets/_Project/Models/ArmAWheels";
+    private const string MeshFolderName = "ArmABase";
+    private const string MeshFolder = ProjectAssetPaths.ModelsFolder + "/" + MeshFolderName;
+    private const string OldWheelMeshFolder = ProjectAssetPaths.ModelsFolder + "/ArmAWheels";
     private const string BaseName = "MobileBase";
     private const string OldWheelsName = "Wheels";
 
@@ -28,16 +28,16 @@ public static class ArmAMobileBaseBuilder
     [MenuItem("Tools/Arm/Add mobile base (lower body) to ArmA prefab")]
     private static void Run()
     {
-        if (!File.Exists(ArmAPrefabPath))
+        if (!File.Exists(ProjectAssetPaths.ArmAPrefab))
         {
-            Debug.LogError($"프리팹을 찾지 못했다: {ArmAPrefabPath}");
+            Debug.LogError($"프리팹을 찾지 못했다: {ProjectAssetPaths.ArmAPrefab}");
             return;
         }
 
-        var robotAsset = AssetDatabase.LoadAssetAtPath<GameObject>(RobotPrefabPath);
+        var robotAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ProjectAssetPaths.WarehouseRobotPrefab);
         if (robotAsset == null)
         {
-            Debug.LogError($"프리팹을 찾지 못했다: {RobotPrefabPath}");
+            Debug.LogError($"프리팹을 찾지 못했다: {ProjectAssetPaths.WarehouseRobotPrefab}");
             return;
         }
 
@@ -59,7 +59,7 @@ public static class ArmAMobileBaseBuilder
 
     private static void Build(GameObject robotAsset)
     {
-        GameObject armA = PrefabUtility.LoadPrefabContents(ArmAPrefabPath);
+        GameObject armA = PrefabUtility.LoadPrefabContents(ProjectAssetPaths.ArmAPrefab);
         try
         {
             // 이전에 만든 하부나 바퀴(이전 방식)가 있으면 지우고 다시 만든다. 몇 번 실행해도 결과가 같다.
@@ -108,9 +108,9 @@ public static class ArmAMobileBaseBuilder
 
             AddIfMissing<MobileBaseDriver>(armA);
 
-            PrefabUtility.SaveAsPrefabAsset(armA, ArmAPrefabPath);
+            PrefabUtility.SaveAsPrefabAsset(armA, ProjectAssetPaths.ArmAPrefab);
             AssetDatabase.DeleteAsset(OldWheelMeshFolder);
-            Debug.Log($"{ArmAPrefabPath}: 하부(바퀴, 궤도, 하부 차체)를 붙이고 팔을 {lift:F2}m 옮겼다.\n{report}");
+            Debug.Log($"{ProjectAssetPaths.ArmAPrefab}: 하부(바퀴, 궤도, 하부 차체)를 붙이고 팔을 {lift:F2}m 옮겼다.\n{report}");
         }
         finally
         {
@@ -266,14 +266,14 @@ public static class ArmAMobileBaseBuilder
 
     private static void SaveMesh(Mesh mesh)
     {
-        if (!AssetDatabase.IsValidFolder("Assets/_Project/Models"))
+        if (!AssetDatabase.IsValidFolder(ProjectAssetPaths.ModelsFolder))
         {
-            AssetDatabase.CreateFolder("Assets/_Project", "Models");
+            AssetDatabase.CreateFolder(ProjectAssetPaths.ProjectRoot, ProjectAssetPaths.ModelsFolderName);
         }
 
         if (!AssetDatabase.IsValidFolder(MeshFolder))
         {
-            AssetDatabase.CreateFolder("Assets/_Project/Models", "ArmABase");
+            AssetDatabase.CreateFolder(ProjectAssetPaths.ModelsFolder, MeshFolderName);
         }
 
         string path = $"{MeshFolder}/{mesh.name}.asset";

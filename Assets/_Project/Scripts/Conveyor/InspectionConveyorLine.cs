@@ -26,6 +26,8 @@ namespace MediKitTwin.Conveyor
         [SerializeField, Min(1)] private int _pushIndex = 4;
         [Tooltip("끝 칸 번호(패킹 자리). 정상 박스가 여기서 멈췄다가 지워진다.")]
         [SerializeField, Min(1)] private int _endIndex = 6;
+        [Tooltip("끄면 끝 칸에서 박스를 멈추고 지우는 일을 하지 않는다. 끝 칸에 팩킹 정지(PackingStop)와 컨베이어 끝 알림(ConveyorEndNotifier)이 따로 있어 박스를 뚜껑 덮기와 하역까지 보내야 하는 통합 씬에서 끈다.")]
+        [SerializeField] private bool _handleEnd = true;
 
         [Header("시간과 거리")]
         [Tooltip("박스가 칸 중심에서 이 거리 안에 들어오면 멈추고 중심에 맞춘다(m). 한 프레임에 움직이는 거리(속도 2m/s에서 약 3cm)보다 커야 한다.")]
@@ -45,7 +47,7 @@ namespace MediKitTwin.Conveyor
         private ConveyorBase _end;
 
         /// <summary>컨베이어 칸을 모두 찾아서 박스를 받을 수 있으면 true.</summary>
-        public bool IsReady => _entry != null && _inspect != null && _push != null && _end != null;
+        public bool IsReady => _entry != null && _inspect != null && _push != null && (!_handleEnd || _end != null);
 
         private void Awake()
         {
@@ -56,7 +58,8 @@ namespace MediKitTwin.Conveyor
 
             if (!IsReady)
             {
-                Debug.LogError($"{name}: {_namePrefix}{_entryIndex:00}, {_inspectIndex:00}, {_pushIndex:00}, {_endIndex:00} 컨베이어를 모두 찾아야 한다.", this);
+                string endPart = _handleEnd ? $", {_endIndex:00}" : string.Empty;
+                Debug.LogError($"{name}: {_namePrefix}{_entryIndex:00}, {_inspectIndex:00}, {_pushIndex:00}{endPart} 컨베이어를 모두 찾아야 한다.", this);
             }
         }
 
@@ -65,7 +68,10 @@ namespace MediKitTwin.Conveyor
             CellEvents.InspectionResult += OnInspectionResult;
             Subscribe(_inspect, true);
             Subscribe(_push, true);
-            Subscribe(_end, true);
+            if (_handleEnd)
+            {
+                Subscribe(_end, true);
+            }
         }
 
         private void OnDisable()
@@ -73,7 +79,10 @@ namespace MediKitTwin.Conveyor
             CellEvents.InspectionResult -= OnInspectionResult;
             Subscribe(_inspect, false);
             Subscribe(_push, false);
-            Subscribe(_end, false);
+            if (_handleEnd)
+            {
+                Subscribe(_end, false);
+            }
         }
 
         /// <summary>
@@ -151,7 +160,7 @@ namespace MediKitTwin.Conveyor
             {
                 StartCoroutine(AtPushRoutine(conveyor, carrier));
             }
-            else if (conveyor == _end)
+            else if (_handleEnd && conveyor == _end)
             {
                 StartCoroutine(AtEndRoutine(conveyor, carrier));
             }

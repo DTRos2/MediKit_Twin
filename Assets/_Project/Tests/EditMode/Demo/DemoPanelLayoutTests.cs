@@ -93,18 +93,40 @@ namespace MediKitTwin.Demo.Tests
         }
 
         [Test]
-        public void DefaultPanels_AreSplitLeftAndRightWithoutOverlapping()
+        public void BottomCenter_WithNoOffset_IsCenteredAndSitsAgainstTheBottomEdge()
         {
-            // 각 패널 클래스가 기본으로 쓰는 값이다. 왼쪽에 주문과 선반을 쌓고, 오른쪽에 키팅 현황을 둔다.
-            Rect orders = Place(DemoPanelAnchor.TopLeft, 10f, 10f, 340f, 400f);
-            Rect shelf = Place(DemoPanelAnchor.TopLeft, 10f, 420f, 340f, 230f);
-            Rect kitting = Place(DemoPanelAnchor.TopRight, 10f, 10f, 360f, 380f);
+            Rect rect = Place(DemoPanelAnchor.BottomCenter, 0f, 16f, 760f, 232f);
 
-            Assert.That(orders.Overlaps(shelf), Is.False);
-            Assert.That(orders.Overlaps(kitting), Is.False);
-            Assert.That(shelf.Overlaps(kitting), Is.False);
-            Assert.That(kitting.xMin, Is.GreaterThan(ScreenWidth / 2f), "키팅 패널은 화면 오른쪽 절반에 있어야 한다");
-            Assert.That(orders.xMax, Is.LessThan(ScreenWidth / 2f), "주문 패널은 화면 왼쪽 절반에 있어야 한다");
+            Assert.That(rect.x, Is.EqualTo((ScreenWidth - 760f) * 0.5f));
+            Assert.That(rect.y, Is.EqualTo(ScreenHeight - 16f - 232f));
+            Assert.That(rect.center.x, Is.EqualTo(ScreenWidth * 0.5f).Within(0.001f));
+        }
+
+        [Test]
+        public void BottomCenter_HorizontalMargin_MovesThePanelRightOfCenter()
+        {
+            Rect centered = Place(DemoPanelAnchor.BottomCenter, 0f, 16f, 760f, 232f);
+            Rect shifted = Place(DemoPanelAnchor.BottomCenter, 50f, 16f, 760f, 232f);
+
+            Assert.That(shifted.x - centered.x, Is.EqualTo(50f));
+        }
+
+        [Test]
+        public void BottomCenter_FollowsTheCenterWhenTheScreenWidthChanges()
+        {
+            Rect wide = Place(DemoPanelAnchor.BottomCenter, 0f, 16f, 760f, 232f, screenWidth: 1920f);
+            Rect narrow = Place(DemoPanelAnchor.BottomCenter, 0f, 16f, 760f, 232f, screenWidth: 1280f);
+
+            Assert.That(wide.center.x - narrow.center.x, Is.EqualTo(320f).Within(0.001f));
+        }
+
+        [Test]
+        public void BottomCenter_WhenTheScreenIsNarrowerThanThePanel_ShrinksToTheScreenWidth()
+        {
+            Rect rect = Place(DemoPanelAnchor.BottomCenter, 0f, 16f, 760f, 232f, screenWidth: 600f);
+
+            Assert.That(rect.width, Is.EqualTo(600f));
+            Assert.That(rect.x, Is.EqualTo(0f));
         }
     }
 }

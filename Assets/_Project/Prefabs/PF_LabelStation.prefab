@@ -121,6 +121,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4828408902271934530}
+  - component: {fileID: 901376083432061268}
   m_Layer: 0
   m_Name: PF_LabelStation
   m_TagString: Untagged
@@ -145,6 +146,37 @@ Transform:
   - {fileID: 6984608185783422796}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &901376083432061268
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3054765790575724999}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5b8bea66dfc4c24bb609e21a00fefce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: MediKitTwin.Label::MediKitTwin.Label.LabelStation
+  _spotLocal: {x: 0, y: 0.92, z: 0}
+  _spotHalfExtents: {x: 0.15, y: 0.15, z: 0.15}
+  _look:
+    _size: {x: 0.09, y: 0.06}
+    _thickness: 0.002
+    _liftAboveSurface: 0.0003
+    _paperColor: {r: 1, g: 1, b: 1, a: 1}
+    _textColor: {r: 0.05, g: 0.05, b: 0.05, a: 1}
+    _characterSize: 0.0035
+    _fontSize: 64
+    _fontNames:
+    - Malgun Gothic
+    - Noto Sans KR
+    - Apple SD Gothic Neo
+    - Segoe UI
+    - Arial
+  _paperMaterial: {fileID: 2100000, guid: c083452d73a98064fa0189cf64cc94d9, type: 2}
+  _display: {fileID: 6984608185783422796}
+  _displayCharacterSize: 0.01
 --- !u!1 &6636784058070280913
 GameObject:
   m_ObjectHideFlags: 0

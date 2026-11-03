@@ -109,6 +109,113 @@ namespace MediKitTwin.ML.Tests
             }
         }
 
+        private static RandomizationRanges WithLying(float chance, float yawDegrees)
+        {
+            RandomizationRanges full = Ranges();
+            return new RandomizationRanges(
+                full.ItemOffsetMeters, full.ItemYawDegrees, full.BoxOffsetMeters, full.BoxYawDegrees,
+                full.LightIntensityDeviation, full.LightYawDegrees, full.LightPitchDegrees,
+                full.HueShift, full.SaturationDeviation, full.ValueDeviation,
+                itemLyingChance: chance, itemLyingYawDegrees: yawDegrees);
+        }
+
+        [Test]
+        public void WithoutLyingChance_NoItemLies()
+        {
+            for (int seed = 0; seed < 200; seed++)
+            {
+                var v = SyntheticVariation.Create(seed, Ranges(), 4);
+                for (int slot = 1; slot <= 4; slot++)
+                {
+                    Assert.IsFalse(v.IsItemLying(slot));
+                }
+            }
+        }
+
+        [Test]
+        public void LyingChanceOne_MakesEveryItemLie_WithYawInTheLyingRange()
+        {
+            RandomizationRanges ranges = WithLying(1f, 90f);
+            for (int seed = 0; seed < 200; seed++)
+            {
+                var v = SyntheticVariation.Create(seed, ranges, 4);
+                for (int slot = 1; slot <= 4; slot++)
+                {
+                    Assert.IsTrue(v.IsItemLying(slot));
+                    Assert.LessOrEqual(Math.Abs(v.GetItemLyingYawDegrees(slot)), 90f + 1e-4f);
+                }
+            }
+        }
+
+        [Test]
+        public void LyingItems_AreAboutTheGivenShareOfAllItems()
+        {
+            RandomizationRanges ranges = WithLying(0.85f, 90f);
+            int lying = 0;
+            const int boxes = 2000;
+            for (int seed = 0; seed < boxes; seed++)
+            {
+                var v = SyntheticVariation.Create(seed, ranges, 4);
+                for (int slot = 1; slot <= 4; slot++)
+                {
+                    lying += v.IsItemLying(slot) ? 1 : 0;
+                }
+            }
+
+            Assert.That(lying / (boxes * 4f), Is.EqualTo(0.85f).Within(0.02f));
+        }
+
+        [Test]
+        public void ItemYaw_StaysInTheNormalRange_EvenWhenTheItemIsDrawnToLie()
+        {
+            // 눕는 확률에 걸린 구성품도 서 있을 때의 각도는 그대로다. 눕지 않는 판과 상자가 ±90도로 돌면 직사각형을 거즈와 구별하기 어렵다.
+            RandomizationRanges ranges = WithLying(1f, 90f);
+            for (int seed = 0; seed < 300; seed++)
+            {
+                var v = SyntheticVariation.Create(seed, ranges, 4);
+                for (int slot = 1; slot <= 4; slot++)
+                {
+                    Assert.LessOrEqual(Math.Abs(v.GetItemYawDegrees(slot)), ranges.ItemYawDegrees + 1e-4f);
+                }
+            }
+        }
+
+        [Test]
+        public void LyingYaw_UsesTheWiderRange()
+        {
+            RandomizationRanges ranges = WithLying(1f, 90f);
+            float widest = 0f;
+            for (int seed = 0; seed < 300; seed++)
+            {
+                var v = SyntheticVariation.Create(seed, ranges, 4);
+                for (int slot = 1; slot <= 4; slot++)
+                {
+                    widest = Math.Max(widest, Math.Abs(v.GetItemLyingYawDegrees(slot)));
+                }
+            }
+
+            Assert.Greater(widest, ranges.ItemYawDegrees * 2f, "누운 각도가 서 있을 때의 범위보다 넓게 퍼져야 한다");
+        }
+
+        [Test]
+        public void LyingChance_DoesNotShiftTheOtherValues()
+        {
+            // 학습 데이터를 다시 만들어도 조명, 박스, 구성품 위치는 같은 시드에서 같게 나와야 한다. (NFR-06)
+            for (int seed = 0; seed < 100; seed++)
+            {
+                var standing = SyntheticVariation.Create(seed, Ranges(), 4);
+                var lying = SyntheticVariation.Create(seed, WithLying(0.85f, 90f), 4);
+
+                Assert.AreEqual(standing.BoxYawDegrees, lying.BoxYawDegrees);
+                Assert.AreEqual(standing.LightIntensityScale, lying.LightIntensityScale);
+                Assert.AreEqual(standing.LightWarmth, lying.LightWarmth);
+                for (int slot = 1; slot <= 4; slot++)
+                {
+                    Assert.AreEqual(standing.GetItemOffset(slot), lying.GetItemOffset(slot));
+                }
+            }
+        }
+
         [Test]
         public void ZeroSlotCount_Throws()
         {

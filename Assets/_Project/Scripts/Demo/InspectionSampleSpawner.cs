@@ -97,7 +97,7 @@ namespace MediKitTwin.Demo
                 _spawnPoint = transform.Find(SpawnPointName) ?? transform;
             }
 
-            _graspLimit = new GraspSizeLimit(_shelfLayout.GripperOpeningWidthM, _shelfLayout.GraspClearanceRatio);
+            _graspLimit = _shelfLayout.CreateItemSizeLimit();
         }
 
         private void OnEnable()

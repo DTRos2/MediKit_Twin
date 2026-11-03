@@ -17,7 +17,9 @@ namespace MediKitTwin.ML
             float hueShift,
             float saturationDeviation,
             float valueDeviation,
-            float lightWarmthDeviation = 0f)
+            float lightWarmthDeviation = 0f,
+            float itemLyingChance = 0f,
+            float itemLyingYawDegrees = 0f)
         {
             ItemOffsetMeters = itemOffsetMeters;
             ItemYawDegrees = itemYawDegrees;
@@ -30,6 +32,8 @@ namespace MediKitTwin.ML
             SaturationDeviation = saturationDeviation;
             ValueDeviation = valueDeviation;
             LightWarmthDeviation = lightWarmthDeviation;
+            ItemLyingChance = itemLyingChance;
+            ItemLyingYawDegrees = itemLyingYawDegrees;
         }
 
         /// <summary>구성품이 슬롯 중심에서 벗어나는 최대 거리(m, X와 Z 각각).</summary>
@@ -67,5 +71,14 @@ namespace MediKitTwin.ML
         /// 실제 씬은 따뜻한 조명이라 흰 조명으로만 학습하면 색이 달라져 오분류하기 때문이다.
         /// </summary>
         public float LightWarmthDeviation { get; }
+
+        /// <summary>
+        /// 원기둥 구성품이 옆으로 누워 있을 확률(0~1). 키팅에서 물건이 칸 안에 놓일 때 쓰러져 눕는 일이 실제로 있어서,
+        /// 서 있는 모습으로만 학습하면 누운 물건을 다른 구성품(소독제→채혈관, 붕대→면봉 등)으로 읽는다. 0이면 모두 서 있다.
+        /// </summary>
+        public float ItemLyingChance { get; }
+
+        /// <summary>누운 구성품이 제자리에서 도는 최대 각도(도). 눕는 방향은 정해져 있지 않아 서 있을 때보다 넓다.</summary>
+        public float ItemLyingYawDegrees { get; }
     }
 }

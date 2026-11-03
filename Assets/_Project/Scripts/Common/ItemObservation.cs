@@ -45,6 +45,17 @@ namespace MediKitTwin.Common
             return new ItemObservation(status, slotId, Identity, default, 0f);
         }
 
+        /// <summary>
+        /// 찾은 물건이 카메라의 지금 자세에서 화면 어디에 보이는지 다시 계산한다. Viewport는 찾아본 순간의 값이라,
+        /// 그 뒤로 로봇이 움직이면 화면의 표식이 물건에서 어긋난다. 화면에 표식을 그릴 때는 이것을 쓴다.
+        /// 찾지 못한 결과이거나, 지금 자세에서 물건이 화면이나 거리 범위 밖이면 false다.
+        /// </summary>
+        public bool TryViewportFrom(PinholeCamera camera, Pose cameraPose, out Vector2 viewport)
+        {
+            viewport = default;
+            return IsDetected && camera.TryProject(cameraPose, EstimatedPose.position, out viewport, out _);
+        }
+
         /// <summary>사람이 읽는 한 줄 설명.</summary>
         public string Describe()
         {

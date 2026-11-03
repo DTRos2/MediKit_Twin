@@ -38,7 +38,7 @@ namespace MediKitTwin.ArmA
             }
 
             _moveCount++;
-            _trace = new BaseMotionTrace(_probe.OnsetSlipM);
+            _trace = new BaseMotionTrace(_probe.OnsetSlipM, _probe.StillSpeedMps, _probe.StillYawRateDegPerSec);
             AddSample();
             _probe.Steps.Stepped += AddSample;
         }

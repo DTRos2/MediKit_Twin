@@ -5,7 +5,7 @@ using UnityEngine;
 namespace MediKitTwin.ArmA
 {
     /// <summary>
-    /// 선반 물건 앞쪽으로 들어가 쥐고 뒤로 빼는 순서: 그리퍼 열기 → 접근 → (카메라로 보고 쥐는 자리 고치기) → 쥐는 자리 → 재고에서 꺼내기 → 쥐기 → 후퇴.
+    /// 선반 물건 앞쪽으로 들어가 쥐고 뒤로 빼는 순서: 그리퍼 열기 → 접근 → (카메라로 보고 쥐는 자리 고치기) → 쥐는 자리 → (도구 끝점의 실제 오차 메우기) → 재고에서 꺼내기 → 쥐기 → 후퇴.
     /// 방향은 접근, 집기, 후퇴에 모두 같다. 스스로 찾은 방향(도구 끝점 자세로 이동)과 알려 준 자세(관절 각도로 이동)가 같은 순서를 쓰고,
     /// 어느 쪽으로 움직일지는 관절 경로(route)가 있는지로만 갈린다. 움직임 한 단계는 ArmMotionSteps, 쥐는 방식은 IItemHolder,
     /// 물건 앞에서 카메라로 보고 쥐는 자리를 고치는 일은 IGraspRefiner가 맡는다(refiner가 없으면 계획한 자리 그대로 쥔다).
@@ -63,6 +63,28 @@ namespace MediKitTwin.ArmA
             if (!isOk)
             {
                 yield break;
+            }
+
+            // 관절이 허용 오차 안에 들면 "닿았다"고 끝나는데 팔은 처져 있을 수 있다. 가라앉기를 기다렸다가 도구 끝점의 실제 오차를 메운다.
+            if (_refiner is IGraspSettler settler)
+            {
+                for (int attempt = 0; attempt < settler.SettleAttempts; attempt++)
+                {
+                    yield return new WaitForSeconds(settler.SettleWaitSeconds);
+
+                    GraspRefinement settled = settler.Settle(request, targets);
+                    if (!settled.IsCorrected)
+                    {
+                        break;
+                    }
+
+                    targets = settled.Targets;
+                    yield return _steps.MoveGrasp(targets.GraspPose, targets.Route?.Grasp, TransferSteps.ShelfReach, result, ok => isOk = ok);
+                    if (!isOk)
+                    {
+                        yield break;
+                    }
+                }
             }
 
             onReachedItem?.Invoke();

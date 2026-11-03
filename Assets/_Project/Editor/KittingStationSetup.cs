@@ -14,6 +14,7 @@ using UnityEngine;
 // 열려 있는 씬에 키팅에 필요한 컴포넌트를 붙이고 서로 연결한다.
 // 씬에 이미 있는 지그(KitBoxSupply), 선반(ShelfStockPresenter), 로봇암(ArmController)을 찾아 쓰고,
 // 주문 세션, 키팅 컨트롤러, 이송, 시험 패널을 한 오브젝트(KittingStation)와 로봇에 붙인다.
+// 키팅이 끝난 박스를 컨베이어로 보내는 연결은 Tools > MediKit > Setup Conveyor Handoff가 맡는다.
 // 몇 번을 실행해도 같은 결과가 되도록 이미 붙은 컴포넌트는 다시 붙이지 않고 연결만 다시 한다.
 public static class KittingStationSetup
 {
@@ -49,11 +50,10 @@ public static class KittingStationSetup
         GameObject station = FindOrCreateStation();
         var orders = GetOrAdd<OrderSessionBehaviour>(station);
         var controller = GetOrAdd<KittingController>(station);
-        var handoff = GetOrAdd<ConveyorHandoffStub>(station);
         var manual = GetOrAdd<ManualKittingStation>(station);
         GetOrAdd<OrderCsvDemoPanel>(station);
         GetOrAdd<ShelfStockDemoPanel>(station);
-        GetOrAdd<KittingStatusDemoPanel>(station);
+        // 현황 패널은 공정 전체를 보는 ProcessStatusDemoPanel이고, 컨베이어 이송 연결 도구(Setup Conveyor Handoff)가 붙인다.
         GetOrAdd<RecognitionMarkerOverlay>(station);
         var jointPanel = GetOrAdd<ArmJointDemoPanel>(station);
 
@@ -73,7 +73,6 @@ public static class KittingStationSetup
             & SerializedFieldAssigner.SetReference(controller, "_boxSupply", boxSupply)
             & SerializedFieldAssigner.SetReference(controller, "_itemTransfer", transfer)
             & SerializedFieldAssigner.SetReference(controller, "_scenario", scenario)
-            & SerializedFieldAssigner.SetReference(handoff, "_boxSupply", boxSupply)
             & SerializedFieldAssigner.SetReference(jointPanel, "_arm", arm)
             & WireManualKitting(manual, shelf, boxSupply, transfer, controller, recipes)
             & isBaseWired;

@@ -232,7 +232,8 @@ namespace MediKitTwin.ArmA
                 recognitionSettings,
                 solver != null ? new SeededRouteBuilder(solver) : null,
                 current != null ? (Func<GraspTargets, bool>)(targets => current.IsClear(targets)) : null,
-                log);
+                log,
+                toolPose: () => host.ToolPose);
         }
     }
 }

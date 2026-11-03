@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using MediKitTwin.ArmA;
 using MediKitTwin.Common;
+using MediKitTwin.Dashboard;
 using UnityEngine;
 
 namespace MediKitTwin.Demo
@@ -15,8 +16,8 @@ namespace MediKitTwin.Demo
     /// </summary>
     public sealed class TaughtPoseSection
     {
-        private const float SlotLabelWidth = 24f;
-        private const float SlotFieldWidth = 60f;
+        private const float SlotLabelGap = 6f;
+        private const float SlotFieldWidth = 64f;
         private const int SlotIdMaxLength = 8;
 
         private readonly IArmState _state;
@@ -58,34 +59,47 @@ namespace MediKitTwin.Demo
 
         public void Draw()
         {
-            GUILayout.Space(6f);
-            GUILayout.Label("지금 자세를 선반 칸의 집는 자세로 저장 (ArmA 자리·방향 + 도구 + 관절)");
+            DashboardPalette palette = DashboardPalette.Default;
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("칸", GUILayout.Width(SlotLabelWidth));
-            _slotId = GUILayout.TextField(_slotId, SlotIdMaxLength, GUILayout.Width(SlotFieldWidth));
+            // 버튼을 누른 이벤트 안에서 메시지가 생기거나 사라지면 같은 OnGUI 안에서 위젯 수가 달라진다.
+            // 그리기 시작 때의 메시지로 고정하면 새 메시지는 다음 그리기부터 보이고 배치는 어긋나지 않는다.
+            string message = _message;
 
-            if (GUILayout.Button("지금 자세 저장"))
+            SectionHeading.Draw("집는 자세 저장");
+            DashboardSpacing.Row();
+            DashboardText.Paragraph("지금 자세를 선반 칸의 집는 자세로 저장한다 (ArmA 자리·방향 + 도구 + 관절)", TextRole.Small, palette.Muted);
+            DashboardSpacing.Block();
+
+            using (DashboardRow.Begin())
             {
-                Save();
+                DashboardText.Inline("칸", TextRole.Small, palette.Muted, height: DashboardMetrics.ControlHeight);
+                GUILayout.Space(SlotLabelGap);
+                _slotId = DashboardField.TextField(_slotId, SlotIdMaxLength, SlotFieldWidth);
+                DashboardSpacing.Block();
+
+                if (DashboardButton.Draw("저장"))
+                {
+                    Save();
+                }
+
+                DashboardSpacing.Row();
+                if (DashboardButton.Draw("불러오기"))
+                {
+                    Load();
+                }
+
+                DashboardSpacing.Row();
+                if (DashboardButton.Draw("삭제"))
+                {
+                    Remove();
+                }
             }
 
-            if (GUILayout.Button("불러오기"))
+            DashboardSpacing.Row();
+            DashboardText.Paragraph(_savedText, TextRole.Small, palette.Muted);
+            if (message.Length > 0)
             {
-                Load();
-            }
-
-            if (GUILayout.Button("삭제"))
-            {
-                Remove();
-            }
-
-            GUILayout.EndHorizontal();
-
-            GUILayout.Label(_savedText);
-            if (_message.Length > 0)
-            {
-                GUILayout.Label(_message);
+                DashboardText.Paragraph(message, TextRole.Small, palette.InkSoft);
             }
         }
 

@@ -85,6 +85,37 @@ namespace MediKitTwin.ArmA.Tests
             }
         }
 
+        // 쥐는 자리에 닿은 뒤 도구 끝점의 오차를 메우는 쪽까지 흉내 낸다. 마무리를 부른 횟수와 받은 명령을 남긴다.
+        private sealed class FakeSettlingRefiner : IGraspRefiner, IGraspSettler
+        {
+            internal readonly List<string> Log;
+            internal readonly List<GraspTargets> Asked = new List<GraspTargets>();
+            internal Func<int, GraspTargets, GraspRefinement> DecideSettle;
+
+            internal FakeSettlingRefiner(List<string> log, int attempts)
+            {
+                Log = log;
+                SettleAttempts = attempts;
+            }
+
+            public int SettleAttempts { get; }
+
+            public float SettleWaitSeconds => 0.3f;
+
+            public GraspRefinement Refine(ItemPickRequest request, GraspTargets planned)
+            {
+                Log.Add("refine");
+                return GraspRefinement.Keep(planned, string.Empty);
+            }
+
+            public GraspRefinement Settle(ItemPickRequest request, GraspTargets current)
+            {
+                Log.Add("settle");
+                Asked.Add(current);
+                return DecideSettle(Asked.Count, current);
+            }
+        }
+
         private ShelfGraspSequence Create(IGraspRefiner refiner = null)
         {
             var diagnostics = new TransferDiagnostics(_tool, null, null, () => false, 0.01f);
@@ -209,6 +240,81 @@ namespace MediKitTwin.ArmA.Tests
 
             Assert.That(_log, Does.Not.Contain("refine"));
             Assert.That(_tool.Targets[1].position, Is.EqualTo(Vector3.up));
+        }
+
+        [Test]
+        public void SettlesAfterReachingTheGraspPosition_AndBeforeTakingStockOrGrasping()
+        {
+            var shift = new Vector3(0f, 0f, 0.02f);
+            var refiner = new FakeSettlingRefiner(_log, attempts: 2)
+            {
+                DecideSettle = (count, current) => count == 1
+                    ? GraspRefinement.Corrected(current.ShiftedBy(shift, null), "메움")
+                    : GraspRefinement.Keep(current, string.Empty)
+            };
+
+            Run(Create(refiner), Request(), new TransferResult());
+
+            Assert.That(_log, Is.EqualTo(new[] { "open", "move", "refine", "move", "settle", "move", "settle", "commit", "grasp", "move" }));
+        }
+
+        [Test]
+        public void GraspsAndRetreatsAtTheSettledPositions()
+        {
+            var shift = new Vector3(0f, 0f, 0.02f);
+            var refiner = new FakeSettlingRefiner(_log, attempts: 2)
+            {
+                DecideSettle = (count, current) => count == 1
+                    ? GraspRefinement.Corrected(current.ShiftedBy(shift, null), "메움")
+                    : GraspRefinement.Keep(current, string.Empty)
+            };
+
+            Run(Create(refiner), Request(), new TransferResult());
+
+            Assert.That(_tool.Targets[1].position, Is.EqualTo(Vector3.up), "처음 쥐는 자리");
+            Assert.That(_tool.Targets[2].position, Is.EqualTo(Vector3.up + shift), "메운 쥐는 자리로 다시 간다");
+            Assert.That(_tool.Targets[3].position, Is.EqualTo(Vector3.right + shift), "후퇴도 메운 만큼 옮긴다");
+            Assert.That(refiner.Asked[1].Grasp, Is.EqualTo(Vector3.up + shift), "두 번째 마무리는 메운 명령에서 다시 본다");
+        }
+
+        [Test]
+        public void StopsSettling_AsSoonAsNothingNeedsFixing()
+        {
+            var refiner = new FakeSettlingRefiner(_log, attempts: 5)
+            {
+                DecideSettle = (count, current) => GraspRefinement.Keep(current, string.Empty)
+            };
+
+            Run(Create(refiner), Request(), new TransferResult());
+
+            Assert.That(refiner.Asked.Count, Is.EqualTo(1), "고칠 게 없으면 더 보지 않는다");
+            Assert.That(_tool.Targets.Count, Is.EqualTo(3), "접근, 쥐는 자리, 후퇴만 움직인다");
+        }
+
+        [Test]
+        public void SettlesNoMoreThanTheAllowedAttempts()
+        {
+            var refiner = new FakeSettlingRefiner(_log, attempts: 2)
+            {
+                DecideSettle = (count, current) => GraspRefinement.Corrected(current.ShiftedBy(Vector3.forward * 0.01f, null), "메움")
+            };
+
+            Run(Create(refiner), Request(), new TransferResult());
+
+            Assert.That(refiner.Asked.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void DoesNotSettle_WhenTheAttemptsAreZero()
+        {
+            var refiner = new FakeSettlingRefiner(_log, attempts: 0)
+            {
+                DecideSettle = (count, current) => throw new InvalidOperationException("부르면 안 된다")
+            };
+
+            Run(Create(refiner), Request(), new TransferResult());
+
+            Assert.That(_log, Does.Not.Contain("settle"));
         }
 
         [Test]

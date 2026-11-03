@@ -55,20 +55,15 @@ namespace MediKitTwin.ArmA
         public float TiltDeg { get; private set; }
 
         /// <summary>
-        /// 놓기 전에 부딪힘을 맞춘다. 쥐고 오는 동안은 물건이 박스를 포함한 모든 충돌체와 떨어져 있으므로,
-        /// 박스 아래의 충돌체(바닥판, 벽, 이미 놓인 물건)와는 다시 부딪히게 하고, 손가락과는 떨어지게 한다.
-        /// 손가락과 떨어지게 하는 것은 그리퍼가 열리며 손가락이 물건을 쳐서 날리거나 들어올릴 때 물건을 끌고 가지 않게 하기 위해서다.
+        /// 놓기 전에 부딪힘을 맞춘다. 쥐고 오는 동안은 물건이 아무것과도 부딪히지 않으므로, 제외를 풀어 박스(바닥판, 벽)와
+        /// 이미 놓인 물건에는 다시 부딪히게 하고, 손가락이 놓인 레이어(로봇 팔)와는 떨어지게 한다.
+        /// 로봇 팔과 떨어지게 하는 것은 그리퍼가 열리며 손가락이 물건을 쳐서 날리거나 들어올릴 때 물건을 끌고 가지 않게 하기 위해서다.
+        /// 물건의 레이어는 그대로이므로 나중에 놓는 물건은 이 물건에 얹힐 수 있다.
         /// </summary>
-        /// <param name="fingers">손가락 충돌체. 모르면 null.</param>
-        public void PrepareCollisions(Graspable item, Transform box, IReadOnlyList<Collider> fingers)
+        /// <param name="fingers">손가락 충돌체. 모르면 null이고, 그러면 제외 없이 레이어 행렬대로 부딪힌다.</param>
+        public void PrepareCollisions(Graspable item, IReadOnlyList<Collider> fingers)
         {
-            Collider[] own = item.Colliders;
-            CollisionIsolation.Restore(own, box.GetComponentsInChildren<Collider>());
-
-            if (fingers != null)
-            {
-                CollisionIsolation.Isolate(own, fingers, null);
-            }
+            ColliderLayerExclusion.Exclude(item.Colliders, ColliderLayerExclusion.LayersOf(fingers));
         }
 
         /// <summary>
@@ -105,10 +100,8 @@ namespace MediKitTwin.ArmA
                 }
             }
 
-            // 켜 둔 채 속도를 0으로 만든 뒤 고정한다. 고정한 물체에 속도를 쓰면 경고가 난다.
-            item.Body.linearVelocity = Vector3.zero;
-            item.Body.angularVelocity = Vector3.zero;
-            item.Body.isKinematic = true;
+            // 고정하면 보간도 꺼서, 박스가 컨베이어를 타고 움직일 때 물건이 제자리에 남지 않고 박스를 따라간다(Graspable.Freeze).
+            item.Freeze();
 
             Vector3 center = item.Center;
             IsInsideBox = BoxFootprint.Contains(parent, center);

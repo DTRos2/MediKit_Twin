@@ -1,5 +1,6 @@
 using MediKitTwin.ArmA;
 using MediKitTwin.ArmB;
+using MediKitTwin.Common;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -15,8 +16,6 @@ namespace MediKitTwin.EditorTools
     /// </summary>
     public static class ArmBLidSetup
     {
-        private const string LidTablePrefabPath = "Assets/_Project/Prefabs/PF_LidSupplyTable.prefab";
-        private const string LidNamePrefix = "Lid_";
         private const float LidMassKg = 0.2f;
 
         [MenuItem("Tools/MediKit/Setup ArmB Lid Grasp")]
@@ -36,13 +35,13 @@ namespace MediKitTwin.EditorTools
         // 프리팹 안의 Lid_* 뚜껑마다 Rigidbody와 Graspable이 있게 한다. 반환값은 처리한 뚜껑 수.
         private static int SetupLidPrefab()
         {
-            GameObject root = PrefabUtility.LoadPrefabContents(LidTablePrefabPath);
+            GameObject root = PrefabUtility.LoadPrefabContents(ProjectAssetPaths.LidSupplyTablePrefab);
             int count = 0;
             try
             {
                 foreach (Transform child in root.transform)
                 {
-                    if (!child.name.StartsWith(LidNamePrefix)) continue;
+                    if (!child.name.StartsWith(CellObjectNames.LidPrefix)) continue;
 
                     Rigidbody body = child.GetComponent<Rigidbody>();
                     if (body == null) body = child.gameObject.AddComponent<Rigidbody>();
@@ -53,7 +52,7 @@ namespace MediKitTwin.EditorTools
                     count++;
                 }
 
-                PrefabUtility.SaveAsPrefabAsset(root, LidTablePrefabPath);
+                PrefabUtility.SaveAsPrefabAsset(root, ProjectAssetPaths.LidSupplyTablePrefab);
             }
             finally
             {
@@ -76,7 +75,7 @@ namespace MediKitTwin.EditorTools
             var tool = arm.GetComponent<IkArmTarget>();
             var gripper = arm.GetComponent<JointGripper>();
             var dispenser = Object.FindFirstObjectByType<LidDispenser>();
-            Transform packingSensor = FindByName("Sensor_Packing");
+            Transform packingSensor = FindByName(CellObjectNames.PackingSensor);
             if (tool == null || gripper == null || dispenser == null || packingSensor == null)
             {
                 Debug.LogError($"[ArmBLidSetup] 연결할 대상이 없습니다. IkArmTarget {(tool != null)}, JointGripper {(gripper != null)}, LidDispenser {(dispenser != null)}, Sensor_Packing {(packingSensor != null)}");
