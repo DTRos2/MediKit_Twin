@@ -2,7 +2,8 @@
     "name": "MediKitTwin.Conveyor",
     "rootNamespace": "MediKitTwin.Conveyor",
     "references": [
-        "MediKitTwin.Common"
+        "MediKitTwin.Common",
+        "ConveyorSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
