@@ -37,6 +37,9 @@ namespace MediKitTwin.Conveyor
 
             KitBoxCarrier carrier = _factory.Create(box, kit, rotation);
             carrier.transform.SetParent(_entry.transform, true);
+
+            // 컨베이어는 받침의 피벗(박스 바닥)을 입력점 높이에 두는데, 그 높이는 벨트 윗면보다 높다. 박스만 그만큼 내려 벨트에 얹는다.
+            carrier.SeatOnBelt(BeltSurface.InputAboveSurface(_entry));
             return _entry.AcceptParcel(carrier.Parcel);
         }
     }
