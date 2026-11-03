@@ -53,7 +53,7 @@ public static class KittingStationSetup
         var manual = GetOrAdd<ManualKittingStation>(station);
         GetOrAdd<OrderCsvDemoPanel>(station);
         GetOrAdd<ShelfStockDemoPanel>(station);
-        GetOrAdd<KittingStatusDemoPanel>(station);
+        // 현황 패널은 공정 전체를 보는 ProcessStatusDemoPanel이고, 컨베이어 이송 연결 도구(Setup Conveyor Handoff)가 붙인다.
         GetOrAdd<RecognitionMarkerOverlay>(station);
         var jointPanel = GetOrAdd<ArmJointDemoPanel>(station);
 

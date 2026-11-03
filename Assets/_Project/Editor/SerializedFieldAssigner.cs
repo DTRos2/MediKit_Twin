@@ -22,6 +22,22 @@ public static class SerializedFieldAssigner
         return true;
     }
 
+    /// <summary>true/false 필드에 값을 넣는다. 필드를 찾지 못하면 false이다.</summary>
+    public static bool SetBool(Object target, string fieldName, bool value)
+    {
+        var serialized = new SerializedObject(target);
+        SerializedProperty property = serialized.FindProperty(fieldName);
+        if (property == null || property.propertyType != SerializedPropertyType.Boolean)
+        {
+            Debug.LogError($"[SerializedFieldAssigner] {target.GetType().Name}에 true/false 필드 '{fieldName}'이 없다.", target);
+            return false;
+        }
+
+        property.boolValue = value;
+        serialized.ApplyModifiedProperties();
+        return true;
+    }
+
     /// <summary>오브젝트 참조 목록 필드를 주어진 값들로 바꾼다. 필드를 찾지 못하면 false이다.</summary>
     public static bool SetReferenceList(Object target, string fieldName, IReadOnlyList<Object> values)
     {

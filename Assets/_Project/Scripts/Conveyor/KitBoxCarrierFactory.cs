@@ -7,6 +7,7 @@ namespace MediKitTwin.Conveyor
     /// <summary>
     /// 박스를 받침(KitBoxCarrier)에 얹는다. 받침은 박스 바닥 중앙에 만들고, 박스는 월드 위치와 자세를 그대로 둔 채 받침의 자식이 된다.
     /// 지그에서 떼는 순간 박스가 움직이거나 돌아 보이지 않게 하려는 것이다.
+    /// 검사·푸셔 구간이 받침과 박스를 알아보도록 KitBoxParcel(받침)과 KitBoxConveyorRelease(박스)도 붙인다.
     /// </summary>
     public sealed class KitBoxCarrierFactory
     {
@@ -26,6 +27,15 @@ namespace MediKitTwin.Conveyor
             var carrier = carrierObject.AddComponent<KitBoxCarrier>();
             var parcel = carrierObject.AddComponent<Parcel>();
             carrier.Bind(kit, box, parcel);
+
+            // 검사 구간 제어(InspectionConveyorLine)는 Parcel에서 KitBoxParcel로 키트를 찾고,
+            // 푸셔는 박스에서 IBoxConveyorRelease를 찾아 컨베이어에서 풀므로 둘 다 붙여 둔다.
+            carrierObject.AddComponent<KitBoxParcel>().Configure(kit);
+            if (box.GetComponent<KitBoxConveyorRelease>() == null)
+            {
+                box.gameObject.AddComponent<KitBoxConveyorRelease>();
+            }
+
             return carrier;
         }
 

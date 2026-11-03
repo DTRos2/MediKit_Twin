@@ -45,6 +45,44 @@ namespace MediKitTwin.Conveyor.Tests
         }
 
         [Test]
+        public void SeatOnBelt_LowersTheBoxButNotTheCarrier()
+        {
+            _carrier = new KitBoxCarrierFactory().Create(_box.transform, NewKit(), Quaternion.identity);
+            Vector3 carrierBefore = _carrier.transform.position;
+            Vector3 boxBefore = _box.transform.position;
+
+            _carrier.SeatOnBelt(0.06f);
+
+            Assert.That(_carrier.transform.position, Is.EqualTo(carrierBefore), "컨베이어가 옮기는 피벗은 그대로");
+            Assert.That(boxBefore.y - _box.transform.position.y, Is.EqualTo(0.06f).Within(1e-5f));
+            Assert.That(_box.transform.position.x, Is.EqualTo(boxBefore.x).Within(1e-5f));
+            Assert.That(_box.transform.position.z, Is.EqualTo(boxBefore.z).Within(1e-5f));
+        }
+
+        [TestCase(0f)]
+        [TestCase(-0.05f)]
+        public void SeatOnBelt_DoesNothing_WhenThereIsNoGapToClose(float dropM)
+        {
+            _carrier = new KitBoxCarrierFactory().Create(_box.transform, NewKit(), Quaternion.identity);
+            Vector3 boxBefore = _box.transform.position;
+
+            _carrier.SeatOnBelt(dropM);
+
+            Assert.That(_box.transform.position, Is.EqualTo(boxBefore));
+        }
+
+        [Test]
+        public void SeatOnBelt_FollowsTheWorldDown_EvenWhenTheCarrierIsRotated()
+        {
+            _carrier = new KitBoxCarrierFactory().Create(_box.transform, NewKit(), Quaternion.Euler(0f, 90f, 0f));
+            float heightBefore = _box.transform.position.y;
+
+            _carrier.SeatOnBelt(0.06f);
+
+            Assert.That(heightBefore - _box.transform.position.y, Is.EqualTo(0.06f).Within(1e-5f));
+        }
+
+        [Test]
         public void Create_KeepsTheBoxWhereItWas_SoItDoesNotJumpWhenLeavingTheJig()
         {
             Vector3 positionBefore = _box.transform.position;
