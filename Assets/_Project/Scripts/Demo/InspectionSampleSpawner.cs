@@ -109,25 +109,36 @@ namespace MediKitTwin.Demo
         [ContextMenu("Spawn Sensor Failure Box And Inspect")]
         private void SpawnSensorFailure() => Spawn(SampleVariant.SensorFailure);
 
-        private void Spawn(SampleVariant variant)
+        /// <summary>false이면 결과 로그를 남기지 않는다. 자동 측정(InspectionBenchmark)이 대량으로 돌릴 때 끈다.</summary>
+        public bool LogResults { get; set; } = true;
+
+        private void Spawn(SampleVariant variant) => TrySpawn(variant, _kitCode, _targetSlot, out _, out _);
+
+        /// <summary>
+        /// 샘플 박스를 만들고 AtInspection을 보낸다. targetSlot이 0이면 무작위로 고르며, 실제 고른 슬롯을 target으로 돌려준다.
+        /// 정상 박스에서도 target은 값이 있지만 쓰이지 않는다.
+        /// </summary>
+        public bool TrySpawn(SampleVariant variant, string kitCode, int targetSlot, out KitData kit, out int target)
         {
+            kit = null;
+            target = 0;
             if (!Application.isPlaying || _template == null)
             {
                 Debug.LogWarning($"{name}: 플레이 모드에서만 샘플 박스를 만들 수 있다.", this);
-                return;
+                return false;
             }
 
-            RecipeSO recipe = _recipes.Find(r => r != null && r.KitCode == _kitCode.Trim().ToUpperInvariant());
+            RecipeSO recipe = _recipes.Find(r => r != null && r.KitCode == kitCode.Trim().ToUpperInvariant());
             if (recipe == null)
             {
-                Debug.LogError($"{name}: 키트 '{_kitCode}'의 레시피가 Recipes에 없다.", this);
-                return;
+                Debug.LogError($"{name}: 키트 '{kitCode}'의 레시피가 Recipes에 없다.", this);
+                return false;
             }
 
             _count++;
             var rng = new Random(unchecked(_seed * 7919 + _count));
             int slotCount = recipe.Items.Count;
-            int target = _targetSlot >= 1 && _targetSlot <= slotCount ? _targetSlot : rng.Next(1, slotCount + 1);
+            target = targetSlot >= 1 && targetSlot <= slotCount ? targetSlot : rng.Next(1, slotCount + 1);
             string[] contents = SampleBoxPlan.Plan(recipe, variant, target, AllComponentIds(), rng);
 
             if (_sample != null)
@@ -156,7 +167,9 @@ namespace MediKitTwin.Demo
             _currentNote = variant == SampleVariant.Normal ? "정상 박스" : $"{variant} 박스, 슬롯 {target}";
 
             // 박스가 놓인 뒤 한 프레임 기다리지 않아도 센서는 위치로 읽으므로 바로 알린다.
+            kit = _currentKit;
             CellEvents.RaiseAtInspection(_currentKit);
+            return true;
         }
 
         private GameObject BuildBox(RecipeSO recipe, string[] contents)
@@ -237,7 +250,7 @@ namespace MediKitTwin.Demo
 
         private void OnInspectionResult(KitData kit)
         {
-            if (kit != _currentKit)
+            if (kit != _currentKit || !LogResults)
             {
                 return;
             }
