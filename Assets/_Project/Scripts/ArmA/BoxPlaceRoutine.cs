@@ -96,14 +96,89 @@ namespace MediKitTwin.ArmA
         }
 
         // 서는 자리를 찾고 슬롯 위 → 슬롯 → 놓기 → 들어올리기를 한다. 팔 베이스를 옮기는 동안의 알림은 Run이 받아 둔다.
+        // 찾은 높이에서 슬롯까지 내려가지 못하면, 더 높은 놓는 높이가 남아 있는 한 그 위 높이부터 다시 찾는다.
+        // 방향을 찾을 때의 "닿는다"는 슬롯 자세 하나만 풀어 보는 것이라, 위에서 곧게 내려가는 길에서는 풀이가 따라오지 못하는
+        // 방향이 섞여 들 수 있다. 그런 방향 때문에 곧바로 실패하지 않도록 한 단계 높은 높이에서 다른 방향을 고른다.
         private IEnumerator PlaceWithTrail(
             ItemPlaceRequest request, TransferResult result, HeldItemFrame? frame, Quaternion restingRotation, HeldSlipTrail slipTrail)
         {
-            var search = new OrientationSearchResult();
             ReleaseHeights heights = _settings.ReleaseHeights;
-            float releaseHeight = 0f;
-            // 방향을 찾을 때 도구 자리를 계산한 기준 방향. 찾은 방향으로 다시 계산한 자리와 견주려고 남긴다.
-            Quaternion searchedNominal = Quaternion.identity;
+            int firstHeightIndex = 0;
+            PlacementChoice choice;
+            PlacePath path = default;
+            Quaternion rotation = Quaternion.identity;
+
+            while (true)
+            {
+                choice = new PlacementChoice();
+                yield return FindPlacement(request, frame, restingRotation, firstHeightIndex, choice);
+                if (!choice.IsFound)
+                {
+                    // 마지막으로 시도한(가장 높은) 높이의 실패 이유를 호출한 쪽에 남긴다.
+                    result.Fail(choice.SearchFailure.Failure, choice.SearchFailure.Detail);
+                    yield break;
+                }
+
+                // 서는 자리까지 베이스와 팔이 움직인 뒤다. 들어 올린 직후와 견주면 그 이동 중에 미끄러졌는지 안다.
+                MarkSlip(slipTrail, SlipPoints.BoxSide);
+
+                if (choice.ReleaseHeight > 0f)
+                {
+                    _log?.Invoke($"박스: 슬롯 중심보다 {choice.ReleaseHeight * 100f:0}cm 위에서 놓는다(닿는 가장 낮은 높이).");
+                }
+
+                rotation = choice.Search.Rotation;
+                path = PlacePath.For(
+                    frame, request.WorldPose.position, rotation, _settings.ApproachHeightM, _settings.LiftHeightM, choice.ReleaseHeight);
+                LogPlan(frame, request, choice.SearchedNominal, rotation, choice.ReleaseHeight, path);
+
+                // 이 시도의 실패는 따로 받는다. 더 높은 높이로 다시 찾을 수 있으면 호출한 쪽 결과에는 남기지 않는다.
+                var descent = new TransferResult();
+                bool isOk = false;
+                yield return _steps.MoveTool(new Pose(path.Above, rotation), TransferSteps.BoxAbove, descent, ok => isOk = ok);
+                if (isOk)
+                {
+                    MarkSlip(slipTrail, SlipPoints.AboveSlot);
+                    yield return _steps.MoveToolPrecisely(new Pose(path.Slot, rotation), TransferSteps.BoxSlot, descent, ok => isOk = ok);
+                }
+
+                if (isOk)
+                {
+                    break;
+                }
+
+                int nextHeightIndex = choice.HeightIndex + 1;
+                if (nextHeightIndex >= heights.Count)
+                {
+                    result.Fail(descent.Failure, descent.Detail);
+                    yield break;
+                }
+
+                _log?.Invoke(
+                    $"박스: 슬롯 중심보다 {choice.ReleaseHeight * 100f:0}cm 위 높이로는 내려가지 못해 {heights[nextHeightIndex] * 100f:0}cm 높이부터 다시 찾는다. ({descent.Detail})");
+                firstHeightIndex = nextHeightIndex;
+            }
+
+            LogBeforeRelease(slipTrail, request, choice.ReleaseHeight, path);
+            yield return _holder.Release(request);
+
+            bool isLifted = false;
+            yield return _steps.MoveTool(new Pose(path.Lift, rotation), TransferSteps.BoxLift, result, ok => isLifted = ok);
+            if (!isLifted)
+            {
+                yield break;
+            }
+
+            result.Succeed();
+        }
+
+        // 놓는 높이를 firstHeightIndex부터 낮은 순으로 시도해, 팔이 닿는 방향이 처음 나오는 높이를 choice에 담는다.
+        // 먼저 물건이 선반에 놓여 있던 방향으로 놓는 도구 방향을 찾고, 없으면 똑바로 아래를 보는 방향으로 서는 자리까지 바꿔 가며 찾는다.
+        private IEnumerator FindPlacement(
+            ItemPlaceRequest request, HeldItemFrame? frame, Quaternion restingRotation, int firstHeightIndex, PlacementChoice choice)
+        {
+            ReleaseHeights heights = _settings.ReleaseHeights;
+            var search = new OrientationSearchResult();
 
             if (frame.HasValue && _settings.PlacesInRestingOrientation)
             {
@@ -119,7 +194,7 @@ namespace MediKitTwin.ArmA
                 // 낮은 높이부터 시도해 닿는 가장 낮은 높이에서 놓는다. 물건이 덜 떨어지고, 박스 안에서 놓을수록 슬롯 자리에 가깝게 놓인다.
                 // 서 볼 자리를 여러 곳 훑지 않고 기본 자리 한 곳에서만 찾는다. 여러 곳을 미리 가늠하면 한 번에 10초 가까이 팔이 멈춰 서 있고,
                 // 이 방향은 닿는 자리가 좁아 다른 자리로 옮겨도 닿는 경우가 드물다. 못 찾으면 곧바로 위에서 내려놓는 쪽이 전체 시간을 아낀다.
-                for (int index = 0; index < heights.Count && !search.IsFound; index++)
+                for (int index = firstHeightIndex; index < heights.Count && !search.IsFound; index++)
                 {
                     var attempt = new TransferResult();
                     yield return _standSearch.ApproachAndSearch(
@@ -128,8 +203,7 @@ namespace MediKitTwin.ArmA
 
                     if (search.IsFound)
                     {
-                        releaseHeight = heights[index];
-                        searchedNominal = restingTool;
+                        choice.SetFound(search, heights[index], index, restingTool);
                     }
                     else
                     {
@@ -141,7 +215,7 @@ namespace MediKitTwin.ArmA
                 {
                     _log?.Invoke(
                         "박스: 물건을 선반에서 놓여 있던 방향 그대로 놓을 도구 방향을 찾지 못해 위에서 아래로 내려놓는다(물건이 모서리로 설 수 있다). " +
-                        $"(놓는 높이 {heights.Count}가지를 모두 시도함) {lastAttempt.Detail}");
+                        $"(놓는 높이 {heights.Count - firstHeightIndex}가지를 모두 시도함) {lastAttempt.Detail}");
                 }
             }
 
@@ -149,7 +223,7 @@ namespace MediKitTwin.ArmA
             {
                 var lastAttempt = new TransferResult();
                 // 낮은 높이부터 시도한다. 서는 자리까지 바꿔 가며 찾으므로, 낮은 높이가 안 될수록 시간이 더 든다.
-                for (int index = 0; index < heights.Count && !search.IsFound; index++)
+                for (int index = firstHeightIndex; index < heights.Count && !search.IsFound; index++)
                 {
                     var attempt = new TransferResult();
                     yield return _standSearch.ApproachAndSearch(
@@ -160,8 +234,7 @@ namespace MediKitTwin.ArmA
 
                     if (search.IsFound)
                     {
-                        releaseHeight = heights[index];
-                        searchedNominal = _settings.NominalToolRotation();
+                        choice.SetFound(search, heights[index], index, _settings.NominalToolRotation());
                     }
                     else
                     {
@@ -171,50 +244,9 @@ namespace MediKitTwin.ArmA
 
                 if (!search.IsFound)
                 {
-                    // 마지막으로 시도한(가장 높은) 높이의 실패 이유를 호출한 쪽에 남긴다.
-                    result.Fail(lastAttempt.Failure, lastAttempt.Detail);
-                    yield break;
+                    choice.SetFailure(lastAttempt);
                 }
             }
-
-            // 서는 자리까지 베이스와 팔이 움직인 뒤다. 들어 올린 직후와 견주면 그 이동 중에 미끄러졌는지 안다.
-            MarkSlip(slipTrail, SlipPoints.BoxSide);
-
-            if (releaseHeight > 0f)
-            {
-                _log?.Invoke($"박스: 슬롯 중심보다 {releaseHeight * 100f:0}cm 위에서 놓는다(닿는 가장 낮은 높이).");
-            }
-
-            Quaternion rotation = search.Rotation;
-            PlacePath path = PlacePath.For(
-                frame, request.WorldPose.position, rotation, _settings.ApproachHeightM, _settings.LiftHeightM, releaseHeight);
-            LogPlan(frame, request, searchedNominal, rotation, releaseHeight, path);
-
-            bool isOk = false;
-            yield return _steps.MoveTool(new Pose(path.Above, rotation), TransferSteps.BoxAbove, result, ok => isOk = ok);
-            if (!isOk)
-            {
-                yield break;
-            }
-
-            MarkSlip(slipTrail, SlipPoints.AboveSlot);
-
-            yield return _steps.MoveToolPrecisely(new Pose(path.Slot, rotation), TransferSteps.BoxSlot, result, ok => isOk = ok);
-            if (!isOk)
-            {
-                yield break;
-            }
-
-            LogBeforeRelease(slipTrail, request, releaseHeight, path);
-            yield return _holder.Release(request);
-
-            yield return _steps.MoveTool(new Pose(path.Lift, rotation), TransferSteps.BoxLift, result, ok => isOk = ok);
-            if (!isOk)
-            {
-                yield break;
-            }
-
-            result.Succeed();
         }
 
         // 방향을 찾을 때 시험한 도구 자리(기본 방향 기준)와, 찾은 방향으로 다시 계산해 실제로 가는 도구 자리가 다른지 남긴다.

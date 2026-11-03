@@ -74,6 +74,55 @@ namespace MediKitTwin.Demo.Tests
         }
 
         [Test]
+        public void TailLines_KeepsTheMostRecentLines_OldestFirst()
+        {
+            var buffer = new LogBuffer(10);
+            for (int i = 1; i <= 5; i++)
+            {
+                buffer.Add(i, LogSeverity.Info, $"줄{i}");
+            }
+
+            var lines = buffer.TailLines(LogSeverity.Info, 2);
+
+            Assert.That(lines.Count, Is.EqualTo(2));
+            Assert.That(lines[0].Text, Is.EqualTo("줄4"));
+            Assert.That(lines[1].Text, Is.EqualTo("줄5"));
+        }
+
+        [Test]
+        public void TailLines_CountsOnlyTheLinesThatPassTheFilter()
+        {
+            var buffer = new LogBuffer(10);
+            buffer.Add(1.0, LogSeverity.Warning, "w1");
+            buffer.Add(2.0, LogSeverity.Info, "i");
+            buffer.Add(3.0, LogSeverity.Error, "e1");
+
+            var lines = buffer.TailLines(LogSeverity.Warning, 5);
+
+            Assert.That(lines.Count, Is.EqualTo(2));
+            Assert.That(lines[0].Text, Is.EqualTo("w1"));
+            Assert.That(lines[1].Text, Is.EqualTo("e1"));
+        }
+
+        [Test]
+        public void TailLines_OfAnEmptyBuffer_IsEmpty()
+        {
+            Assert.That(new LogBuffer(3).TailLines(LogSeverity.Info, 5), Is.Empty);
+        }
+
+        [Test]
+        public void TailLines_IsACopy_SoLaterLogsDoNotChangeAnEarlierResult()
+        {
+            var buffer = new LogBuffer(10);
+            buffer.Add(1.0, LogSeverity.Info, "a");
+            var lines = buffer.TailLines(LogSeverity.Info, 5);
+
+            buffer.Add(2.0, LogSeverity.Info, "b");
+
+            Assert.That(lines.Count, Is.EqualTo(1));
+        }
+
+        [Test]
         public void AnEmptyBuffer_GivesAnEmptyText()
         {
             Assert.That(new LogBuffer(3).ToText(), Is.Empty);

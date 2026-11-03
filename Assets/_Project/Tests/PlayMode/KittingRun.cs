@@ -51,7 +51,8 @@ namespace MediKitTwin.PlayMode.Tests
             _overlapProbe = new ArmOverlapProbe(robot.transform);
             _poseSnapshot = new ArmPoseSnapshot(arm, watchedCell);
             _toolPath = new ToolPathRecorder(arm, 0.25f);
-            _graspHold = new GraspHoldRecorder(robot.GetComponentInChildren<JointGripper>(), controller);
+            _graspHold = new GraspHoldRecorder(
+                robot.GetComponentInChildren<JointGripper>(), controller, photographer: GraspPhotographer.FromEnvironment());
             Recorder = new KittingProgressRecorder(station);
             _stageLog = new StageBaseLog(controller, _overlapProbe);
             Recorder.StageChanged += _stageLog.Record;

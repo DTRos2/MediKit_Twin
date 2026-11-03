@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using MediKitTwin.Common;
 using UnityEngine;
 
@@ -10,7 +9,8 @@ namespace MediKitTwin.ArmA
     /// 물리로 물건을 쥐는 방식. 손가락이 실제로 물건에 닿아 멈추고, 그 상태에서 물건을 손에 붙여 들고 간다.
     ///  1) 그리퍼가 열릴 때까지 기다린 뒤, 선반 물건의 복제본(콜라이더, 리지드바디, Graspable)을 물건 자리에 고정해 둔다.
     ///     고정해 두는 것은 손가락이 닫힐 때 물건이 밀려나지 않고 손가락을 막아 세우게 하기 위해서다.
-    ///  2) 물건은 손가락 외의 모든 충돌체와 부딪히지 않게 한다. 들고 가다 선반, 박스, 로봇의 다른 링크에 걸려 로봇이 끌려가는 일을 막는다.
+    ///  2) 물건은 손가락이 놓인 레이어(로봇 팔) 외의 레이어와 부딪히지 않게 한다. 들고 가다 선반, 박스에 걸려 로봇이 끌려가는 일을 막는다.
+    ///     충돌체 짝을 걸지 않고 충돌체의 제외 레이어로 정한다(ColliderLayerExclusion: 짝을 수십 개 걸면 팔 B 구동 쓰기에서 PhysX가 죽는다).
     ///  3) 그리퍼를 닫는다. 기존 JointGripper가 닫은 뒤 도구 끝점 반경 안의 Graspable을 고정 조인트로 붙인다(마찰에 의존하지 않는 안정 파지).
     ///  4) 손가락이 물건에 걸려 멈췄는지(IGripContact) 확인한다. 끝까지 닫혔다면 손가락 사이에 물건이 없는 것이므로 실패로 알린다.
     ///  5) 붙은 것을 확인한 뒤에야 물건을 물리로 풀고 중력을 켠다. 붙기 전에 켜면 손가락 사이로 떨어진다.
@@ -21,16 +21,12 @@ namespace MediKitTwin.ArmA
     /// </summary>
     public sealed class PhysicsGraspHolder : MonoBehaviour, IItemHolder, IHeldItemSource
     {
-        // 그리퍼가 열리기를 기다리는 최대 시간(초). 넘으면 열리지 않은 채 진행한다(닫을 때 손가락 사이에 물건이 안 들어갈 수 있다).
-        private const float OpenWaitTimeoutSeconds = 2f;
-
-        // 멈췄다고 보려면 속도가 연달아 이 횟수만큼 기준 이하여야 한다. 바닥에 닿아 튀기 직전의 한순간을 멈춤으로 오해하지 않게 한다.
-        private const int RestSamples = 5;
-
         [Tooltip("그리퍼(IGripper 구현체, 보통 JointGripper). 닫으면 반경 안의 Graspable을 조인트로 붙인다. IGripContact도 구현하면 손가락 접촉을 확인한다.")]
         [SerializeField] private MonoBehaviour _gripper;
 
         [Header("쥐기")]
+        [Tooltip("쥐기 전에 그리퍼가 열리기를 기다리는 최대 시간(초). 넘으면 열리지 않은 채 진행한다(닫을 때 손가락 사이에 물건이 안 들어갈 수 있다).")]
+        [SerializeField, Min(0.1f)] private float _openWaitTimeoutSeconds = 2f;
         [Tooltip("그리퍼를 닫은 뒤 물건을 쥘 때까지 기다리는 최대 시간(초). 그리퍼가 닫히는 시간과 안정 시간보다 길어야 한다.")]
         [SerializeField, Min(0.5f)] private float _graspTimeoutSeconds = 3f;
         [Tooltip("복제한 물건의 질량(kg).")]
@@ -47,6 +43,8 @@ namespace MediKitTwin.ArmA
         [SerializeField, Min(0f)] private float _restSpeedMps = 0.01f;
         [Tooltip("이 회전 속도(rad/s) 이하이면 멈춘 것으로 본다.")]
         [SerializeField, Min(0f)] private float _restSpinRadPerSec = 0.2f;
+        [Tooltip("멈췄다고 보려면 속도가 연달아 이 횟수만큼 기준 이하여야 한다. 바닥에 닿아 튀기 직전의 한순간을 멈춤으로 오해하지 않게 한다.")]
+        [SerializeField, Min(1)] private int _restSampleCount = 5;
 
         private IGripper _grip;
         private IGripContact _contact;
@@ -87,7 +85,7 @@ namespace MediKitTwin.ArmA
             }
 
             _factory = new GraspableItemFactory(_itemMassKg);
-            _landing = new PlacedItemLanding(new RestDetector(_restSpeedMps, _restSpinRadPerSec, RestSamples), _landMinSeconds, _landTimeoutSeconds);
+            _landing = new PlacedItemLanding(new RestDetector(_restSpeedMps, _restSpinRadPerSec, _restSampleCount), _landMinSeconds, _landTimeoutSeconds);
         }
 
         public void OpenGripper()
@@ -104,7 +102,7 @@ namespace MediKitTwin.ArmA
             _held = _factory.Create(item.Prototype, item.Pose, startKinematic: true);
             // 선반에 얹혀 있던 방향을 기억해 둔다. 박스에 놓을 때 물건이 같은 방향으로 놓이게 도구 방향을 잡는 기준이다.
             _restingRotation = item.Pose.rotation;
-            IsolateHeldItem();
+            KeepOnlyArmCollisionWhileClosing();
             _grip.Close();
 
             float elapsed = 0f;
@@ -126,7 +124,7 @@ namespace MediKitTwin.ArmA
                 yield break;
             }
 
-            IgnoreFingersWhileHeld();
+            IgnoreEverythingWhileHeld();
             _held.EnablePhysics(useGravity: true);
             done(true);
         }
@@ -140,7 +138,7 @@ namespace MediKitTwin.ArmA
             // 부딪힘은 조인트가 풀리기 전에 맞춘다. 풀리는 순간부터 물건은 이미 박스에 걸리고 손가락에는 걸리지 않아야 한다.
             if (item != null)
             {
-                _landing.PrepareCollisions(item, request.Parent, _contact?.FingerColliders);
+                _landing.PrepareCollisions(item, _contact?.FingerColliders);
             }
 
             // 열면 JointGripper가 조인트를 푼다. 물건은 슬롯으로 옮기지 않고 풀린 자세 그대로 내려앉힌다.
@@ -220,42 +218,37 @@ namespace MediKitTwin.ArmA
         private IEnumerator WaitUntilOpen()
         {
             float elapsed = 0f;
-            while (_grip.Opening < 1f && elapsed < OpenWaitTimeoutSeconds)
+            while (_grip.Opening < 1f && elapsed < _openWaitTimeoutSeconds)
             {
                 yield return new WaitForFixedUpdate();
                 elapsed += Time.fixedDeltaTime;
             }
         }
 
-        // 쥔 뒤에는 조인트가 물건을 붙잡으므로 손가락과의 충돌은 끈다. 켜 두면 손가락이 물건을 누르는 힘과 조인트가 붙잡는 힘이 맞서서
-        // 팔이 가속할 때마다 물건이 손가락 사이에서 튀고 손가락이 안쪽으로 밀렸다 돌아온다(프레임 단위로 확인). 닫을 때 손가락이 물건에 막혀
-        // 멈추는 것은 이 시점 전에 이미 끝났다. 놓을 때는 PlacedItemLanding이 어차피 손가락과 떼어 놓는다.
-        private void IgnoreFingersWhileHeld()
+        // 쥔 뒤에는 조인트가 물건을 붙잡으므로 아무것과도 부딪히지 않게 한다. 손가락과의 충돌을 켜 두면 손가락이 물건을 누르는 힘과
+        // 조인트가 붙잡는 힘이 맞서서 팔이 가속할 때마다 물건이 손가락 사이에서 튀고 손가락이 안쪽으로 밀렸다 돌아온다(프레임 단위로 확인).
+        // 닫을 때 손가락이 물건에 막혀 멈추는 것은 이 시점 전에 이미 끝났다. 놓을 때는 PlacedItemLanding이 어차피 손가락과 떼어 놓는다.
+        private void IgnoreEverythingWhileHeld()
         {
             if (_contact == null)
             {
                 return;
             }
 
-            CollisionIsolation.Isolate(_held.Colliders, _contact.FingerColliders, null);
+            ColliderLayerExclusion.Exclude(_held.Colliders, ColliderLayerExclusion.AllLayers);
         }
 
-        // 쥔 물건이 손가락 외의 모든 충돌체와 부딪히지 않게 한다. 손가락 정보를 모르면 건드리지 않는다.
-        // 이 시점 이후에 새로 생긴 충돌체(예: 나중에 나오는 박스)는 해당되지 않지만, 한 번 놓인 물건은 곧 박스의 자식으로 고정된다.
-        private void IsolateHeldItem()
+        // 닫는 동안 물건은 손가락이 놓인 레이어(로봇 팔)와만 부딪히고, 선반과 박스 같은 나머지 레이어와는 부딪히지 않게 한다.
+        // 손가락 정보를 모르면 건드리지 않는다. 짝이 아니라 레이어로 정하므로, 이 시점 이후에 새로 생긴 충돌체(예: 나중에 나오는 박스)에도 똑같이 적용된다.
+        // 같은 팔 레이어의 손바닥 같은 다른 링크도 이 동안은 부딪힐 수 있지만, 물건은 손가락 사이(도구 끝점)에 있어 닿지 않는다.
+        private void KeepOnlyArmCollisionWhileClosing()
         {
             if (_contact == null)
             {
                 return;
             }
 
-            // 손가락과 물건 자신의 충돌체는 그대로 둔다. 나머지 모든 충돌체와는 부딪히지 않게 한다.
-            Collider[] own = _held.Colliders;
-            var keep = new HashSet<Collider>(_contact.FingerColliders);
-            keep.UnionWith(own);
-
-            Collider[] world = FindObjectsByType<Collider>(FindObjectsInactive.Exclude);
-            CollisionIsolation.Isolate(own, world, keep);
+            ColliderLayerExclusion.ExcludeAllExcept(_held.Colliders, ColliderLayerExclusion.LayersOf(_contact.FingerColliders));
         }
 
         private void DestroyHeld()

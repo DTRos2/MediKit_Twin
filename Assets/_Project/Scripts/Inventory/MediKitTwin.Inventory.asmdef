@@ -2,7 +2,8 @@
     "name": "MediKitTwin.Inventory",
     "rootNamespace": "MediKitTwin.Inventory",
     "references": [
-        "MediKitTwin.Common"
+        "MediKitTwin.Common",
+        "MediKitTwin.Recipes"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -64,6 +64,22 @@ namespace MediKitTwin.Demo
             return Join(minimum, maxLines);
         }
 
+        /// <summary>minimum 이상인 줄 가운데 가장 최근 maxLines줄을 오래된 줄부터 순서대로 돌려준다. 줄마다 따로 그리는 화면이 쓴다.</summary>
+        public IReadOnlyList<LogLine> TailLines(LogSeverity minimum, int maxLines)
+        {
+            var picked = new List<LogLine>();
+            for (int i = _lines.Count - 1; i >= 0 && picked.Count < maxLines; i--)
+            {
+                if (_lines[i].Severity >= minimum)
+                {
+                    picked.Add(_lines[i]);
+                }
+            }
+
+            picked.Reverse();
+            return picked;
+        }
+
         /// <summary>minimum 이상인 줄의 개수.</summary>
         public int CountAtLeast(LogSeverity minimum)
         {

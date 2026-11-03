@@ -3,6 +3,7 @@
     "rootNamespace": "MediKitTwin.Demo",
     "references": [
         "MediKitTwin.Common",
+        "MediKitTwin.Dashboard",
         "MediKitTwin.ArmA",
         "MediKitTwin.Conveyor",
         "MediKitTwin.Inspection",

@@ -616,7 +616,7 @@ namespace MediKitTwin.EditorTools
             float nearest = float.MaxValue;
             foreach (Transform candidate in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
-                if (!candidate.name.StartsWith("Lid_") || !candidate.gameObject.scene.IsValid()) continue;
+                if (!candidate.name.StartsWith(CellObjectNames.LidPrefix) || !candidate.gameObject.scene.IsValid()) continue;
                 float distance = (candidate.position - tool.position).sqrMagnitude;
                 if (distance < nearest) { nearest = distance; lid = candidate; }
             }
@@ -752,7 +752,7 @@ namespace MediKitTwin.EditorTools
         // 덮는 높이는 컨베이어 위 키트 박스 윗면에 뚜껑 윗판이 닿는 높이이다. 기준은 패킹 센서(Sensor_Packing)의 컨베이어 윗면이다.
         private static float CoverHeight(out GameObject sensor)
         {
-            sensor = FindActive("Sensor_Packing");
+            sensor = FindActive(CellObjectNames.PackingSensor);
             float beltY = sensor != null ? sensor.transform.position.y : 0.91f;
             return beltY + 0.135f + CoverClearance;
         }

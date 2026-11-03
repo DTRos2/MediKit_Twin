@@ -1,5 +1,6 @@
 using MediKitTwin.Recipes;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 namespace MediKitTwin.Inspection
@@ -12,18 +13,14 @@ namespace MediKitTwin.Inspection
     /// </summary>
     public sealed class InspectionCameraRig : MonoBehaviour
     {
-        // 합성 데이터 생성기(SyntheticBoxRenderer)의 배경색과 같아야 학습 이미지와 비슷하게 나온다.
-        private static readonly Color Background = new Color(0.45f, 0.47f, 0.50f);
-
         // 카메라가 박스 위에 설정대로 놓였는지 볼 때 허용하는 오차. 넘으면 크롭이 슬롯에서 어긋난다.
         private const float HeightToleranceMeters = 0.02f;
         private const float LateralToleranceMeters = 0.03f;
-        private const float YawToleranceDegrees = 5f;
 
         [Tooltip("합성 데이터 생성기와 같은 검사 카메라 설정.")]
         [SerializeField] private InspectionCameraSettingsSO _settings;
 
-        [Tooltip("카메라가 매달린 자리. 비워 두면 이 오브젝트다. 박스 중심 위 Settings의 높이에 두고, Y축 회전으로 이미지의 위쪽(박스 +Z) 방향을 맞춘다.")]
+        [Tooltip("카메라가 매달린 자리. 비워 두면 이 오브젝트다. 박스 중심 위 Settings의 높이에 둔다. 이미지의 위쪽은 찍을 때마다 박스의 +Z에 맞추고, 박스가 서 있지 않을 때만 이 자리의 Y축 회전을 쓴다.")]
         [SerializeField] private Transform _mount;
 
         private Camera _camera;
@@ -51,7 +48,7 @@ namespace MediKitTwin.Inspection
             _camera = cameraObject.AddComponent<Camera>();
             _camera.enabled = false;
             _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = Background;
+            _camera.backgroundColor = InspectionBackground.Color;
             _camera.orthographic = false;
             _camera.fieldOfView = _settings.VerticalFovDegrees;
             _camera.aspect = (float)_settings.ImageWidth / _settings.ImageHeight;
@@ -81,17 +78,26 @@ namespace MediKitTwin.Inspection
             }
         }
 
+        /// <summary>
+        /// 그리기 장치가 있어 카메라가 실제로 그릴 수 있으면 true. 그래픽 없이 도는 배치 실행(-nographics)에서는 false이다.
+        /// 그리지 못하는데 찍으면 회색 빈 이미지가 나오고, CNN은 그것을 전부 빈 슬롯으로 판정해 정상 키트도 불량으로 만든다.
+        /// 그래서 이때는 촬영을 실패로 돌려 규칙 판정(슬롯 센서)으로 대체되게 한다.
+        /// </summary>
+        public static bool CanRender => SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
+
         /// <summary>고정된 카메라로 박스를 찍은 전체 이미지(카메라 설정의 해상도). 호출한 쪽이 Texture를 지운다.</summary>
         public bool TryCapture(Transform box, out Texture2D image)
         {
             image = null;
-            if (!enabled || _camera == null || box == null)
+            if (!enabled || _camera == null || box == null || !CanRender)
             {
                 return false;
             }
 
             // 학습 때와 같은 방향: 아래를 보고 이미지의 위쪽이 박스의 +Z이다. 마운트를 기울여도 항상 수직으로 내려다본다.
-            Vector3 up = Quaternion.Euler(0f, _mount.eulerAngles.y, 0f) * Vector3.forward;
+            // 박스가 컨베이어 코너를 지나며 돌아 들어오므로, 카메라를 마운트 방향에 고정하지 않고 찍을 때마다 박스의 +Z에 맞춘다.
+            Vector3 mountUp = Quaternion.Euler(0f, _mount.eulerAngles.y, 0f) * Vector3.forward;
+            Vector3 up = BoxImageUp.From(box.forward, mountUp);
             _camera.transform.SetPositionAndRotation(_mount.position, Quaternion.LookRotation(Vector3.down, up));
             WarnIfMisaligned(box);
 
@@ -129,12 +135,11 @@ namespace MediKitTwin.Inspection
             Vector3 offset = _camera.transform.position - box.position;
             float height = offset.y;
             float lateral = new Vector2(offset.x, offset.z).magnitude;
-            float yaw = Mathf.Abs(Mathf.DeltaAngle(_mount.eulerAngles.y, box.eulerAngles.y));
 
+            // 방향은 따지지 않는다. 찍을 때마다 카메라를 박스의 +Z에 맞추므로 박스가 어느 쪽으로 돌아 와도 크롭은 어긋나지 않는다.
             bool heightOff = Mathf.Abs(height - _settings.HeightAboveBox) > HeightToleranceMeters;
             bool lateralOff = lateral > LateralToleranceMeters;
-            bool yawOff = yaw > YawToleranceDegrees;
-            if (!heightOff && !lateralOff && !yawOff)
+            if (!heightOff && !lateralOff)
             {
                 return;
             }
@@ -142,7 +147,7 @@ namespace MediKitTwin.Inspection
             _warnedAlignment = true;
             Debug.LogWarning(
                 $"{name}: 검사 카메라가 박스 위 설정 위치에 있지 않아 슬롯 크롭이 어긋난다. " +
-                $"박스 중심 위 높이 {height:F3}m(설정 {_settings.HeightAboveBox:F3}m), 수평 오차 {lateral:F3}m, 방향 차이 {yaw:F1}도.", this);
+                $"박스 중심 위 높이 {height:F3}m(설정 {_settings.HeightAboveBox:F3}m), 수평 오차 {lateral:F3}m.", this);
         }
     }
 }

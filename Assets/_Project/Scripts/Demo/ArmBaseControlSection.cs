@@ -1,4 +1,5 @@
 using MediKitTwin.Common;
+using MediKitTwin.Dashboard;
 using UnityEngine;
 
 namespace MediKitTwin.Demo
@@ -54,10 +55,31 @@ namespace MediKitTwin.Demo
 
         public void Draw()
         {
-            GUILayout.Space(6f);
-            _control.IsEnabled = GUILayout.Toggle(_control.IsEnabled, "ArmA 키보드 조작 (글자 입력 중에는 끈다)");
-            GUILayout.Label("방향키: 앞뒤·옆 이동   , . : 회전   오른쪽 Shift: 빠르게   Enter: 위치 출력");
-            GUILayout.Label(BasePoseReport.Format(_control.Current, _control.ArmBasePosition));
+            DashboardSpacing.Section();
+            _control.IsEnabled = SwitchRow.Draw(_control.IsEnabled, "키보드 조작", "글자 입력 중에는 꺼짐");
+            DashboardSpacing.Row();
+            DrawKeyGuide();
+            DashboardSpacing.Row();
+            DashboardText.Paragraph(BasePoseReport.Format(_control.Current, _control.ArmBasePosition), TextRole.Mono, DashboardPalette.Default.Muted);
+        }
+
+        // 키 모양 칸과 하는 일을 두 줄로 안내한다.
+        private static void DrawKeyGuide()
+        {
+            using (DashboardRow.Begin())
+            {
+                KeyHint.Draw("↑↓←→", "앞뒤·옆 이동");
+                KeyHint.Draw(", .", "회전");
+                GUILayout.FlexibleSpace();
+            }
+
+            DashboardSpacing.Row();
+            using (DashboardRow.Begin())
+            {
+                KeyHint.Draw("R-Shift", "빠르게");
+                KeyHint.Draw("Enter", "위치 출력");
+                GUILayout.FlexibleSpace();
+            }
         }
     }
 }

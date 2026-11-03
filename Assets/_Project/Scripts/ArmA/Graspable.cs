@@ -6,7 +6,10 @@ namespace MediKitTwin.ArmA
     [RequireComponent(typeof(Rigidbody))]
     public class Graspable : MonoBehaviour
     {
-        public Rigidbody Body { get; private set; }
+        private Rigidbody _body;
+
+        // Awake 전에도(예: 플레이 모드가 아닌 시험) 읽을 수 있게 처음 부를 때 찾는다.
+        public Rigidbody Body => _body != null ? _body : (_body = GetComponent<Rigidbody>());
 
         public bool IsHeld { get; internal set; }
 
@@ -42,11 +45,6 @@ namespace MediKitTwin.ArmA
             }
         }
 
-        private void Awake()
-        {
-            Body = GetComponent<Rigidbody>();
-        }
-
         /// <summary>
         /// 고정(키네마틱) 상태에서 물리로 움직이는 상태로 바꾼다. 손가락이 닫히는 동안에는 물체가 밀려나지 않게 고정해 두고,
         /// 그리퍼에 붙은 뒤에 이것을 불러 물체가 손을 따라 움직이게 한다.
@@ -55,7 +53,23 @@ namespace MediKitTwin.ArmA
         {
             Body.isKinematic = false;
             Body.useGravity = useGravity;
+            Body.interpolation = RigidbodyInterpolation.Interpolate;
             Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        }
+
+        /// <summary>
+        /// 물체를 지금 자리에 고정해 부모를 따라 움직이게 한다. 속도를 0으로 만든 뒤 키네마틱으로 바꾸고, 보간과 연속 충돌 검출을 끈다.
+        /// 보간이 켜진 몸체는 화면 위치를 물리가 낸 위치에서 매 프레임 덮어써서, 부모(박스)가 스크립트로 컨베이어를 타고 움직여도
+        /// 제자리에 남는다. 박스에 놓인 물건이 박스를 따라가려면 보간이 꺼져 있어야 한다. 연속 충돌 검출은 고정된 몸체에는 맞지 않는 설정이다.
+        /// 속도는 켜 둔 채로 0을 쓰고 나서 고정한다(고정한 몸체에 속도를 쓰면 경고가 난다).
+        /// </summary>
+        public void Freeze()
+        {
+            Body.linearVelocity = Vector3.zero;
+            Body.angularVelocity = Vector3.zero;
+            Body.isKinematic = true;
+            Body.interpolation = RigidbodyInterpolation.None;
+            Body.collisionDetectionMode = CollisionDetectionMode.Discrete;
         }
     }
 }

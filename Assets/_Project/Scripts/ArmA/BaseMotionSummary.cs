@@ -27,7 +27,7 @@ namespace MediKitTwin.ArmA
 
         public float MaxYawRateDegPerSec { get; internal set; }
 
-        /// <summary>베이스가 움직인 스텝이 하나라도 있었는지(BaseMotionTrace의 StillSpeedMps, StillYawRateDegPerSec 기준).</summary>
+        /// <summary>베이스가 움직인 스텝이 하나라도 있었는지(BaseMotionTrace를 만들 때 정한 움직임 기준 속도, 회전 속도 이상).</summary>
         public bool HasMotion { get; internal set; }
 
         /// <summary>이동 중 쥔 물건 중심이 도구 기준으로 가장 많이 밀린 거리(m).</summary>

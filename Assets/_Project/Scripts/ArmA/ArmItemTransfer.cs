@@ -18,6 +18,9 @@ namespace MediKitTwin.ArmA
     /// </summary>
     public sealed class ArmItemTransfer : MonoBehaviour, IItemTransfer, IManualHoldState
     {
+        // 인스펙터는 cm로 받고 코드는 m로 다루므로 바꾸는 배율. 조정할 값이 아니라 단위 변환이다.
+        private const float CentimetersPerMeter = 100f;
+
         [Tooltip("도구 끝점 목표를 받는 쪽(IToolPoseTarget 구현체, 보통 IkArmTarget).")]
         [SerializeField] private MonoBehaviour _toolTarget;
         [Tooltip("물건을 쥐고 놓는 방식(IItemHolder 구현체: ScriptAttachHolder 또는 PhysicsGraspHolder).")]
@@ -109,13 +112,22 @@ namespace MediKitTwin.ArmA
 
         [Header("진단")]
         [Tooltip("켜면 박스에 놓는 동안 쥔 물건이 도구에서 떨어진 거리, 가늠한 도구 자리와 실제로 가는 도구 자리의 차이(IK 결과 포함), " +
-                 "놓기 직전 물건의 미끄러짐과 어긋남을 로그로 남긴다. 슬롯마다 두세 줄이 늘어난다.")]
-        [SerializeField] private bool _logPlaceDiagnostics = true;
+                 "놓기 직전 물건의 미끄러짐과 어긋남을 로그로 남긴다. 슬롯마다 두세 줄이 늘어나 평소 화면 로그를 가득 채우므로 기본은 꺼 두고, " +
+                 "놓기 문제를 따질 때만 켠다.")]
+        [SerializeField] private bool _logPlacementTrace = false;
         [Tooltip("켜면 박스로 가며 팔 베이스를 옮길 때마다 물리 스텝마다 베이스의 속도와 쥔 물건의 밀림을 재서, 이동 한 번마다 요약 한두 줄을 로그로 남긴다. " +
-                 "물건이 베이스가 움직이는 중에 밀리는지 멈춘 뒤에 밀리는지 가리는 데 쓴다. 위 박스 진단이 켜져 있어야 한다. 이동이 되풀이될수록 줄이 늘어난다.")]
-        [SerializeField] private bool _logBaseMotion = true;
+                 "물건이 베이스가 움직이는 중에 밀리는지 멈춘 뒤에 밀리는지 가리는 데 쓴다. 위 박스 진단이 켜져 있어야 한다. 이동이 되풀이될수록 줄이 늘어나므로 기본은 꺼 둔다.")]
+        [SerializeField] private bool _logBaseMotionTrace = false;
         [Tooltip("이동 중 쥔 물건이 이만큼(cm) 밀리면 '밀리기 시작했다'고 보고, 그때 베이스가 움직이는 중이었는지와 속도를 로그에 남긴다.")]
         [SerializeField, Min(0.1f)] private float _baseMotionSlipOnsetCm = 2f;
+        [Tooltip("이 속도(m/s)를 넘으면 베이스가 움직이는 것으로 본다. 밀림이 움직이는 중에 생겼는지 멈춘 뒤에 생겼는지 가르는 기준이다.")]
+        [SerializeField, Min(0.001f)] private float _baseMotionStillSpeedMps = BaseMotionTrace.DefaultStillSpeedMps;
+        [Tooltip("이 회전 속도(도/초)를 넘으면 베이스가 도는 것으로 본다.")]
+        [SerializeField, Min(0.1f)] private float _baseMotionStillYawRateDegPerSec = BaseMotionTrace.DefaultStillYawRateDegPerSec;
+        [Tooltip("이동 한 번의 추이 줄에 적는 스텝의 최대 개수. 넘으면 일정한 간격으로 줄여 적는다.")]
+        [SerializeField, Min(10)] private int _baseMotionTraceMaxEntries = BoxPlaceDiagnostics.DefaultMaxTraceEntries;
+        [Tooltip("이만큼(도) 이상 돌았을 때만 추이에 회전 속도를 적는다. 돌지 않은 이동은 회전 속도가 전부 0이라 줄만 길어진다.")]
+        [SerializeField, Min(0f)] private float _baseMotionTraceMinYawTravelDeg = BoxPlaceDiagnostics.DefaultMinYawTravelToTraceDeg;
 
         private IItemHolder _itemHolder;
         private TaughtPoseFinder _taughtFinder;
@@ -253,7 +265,9 @@ namespace MediKitTwin.ArmA
                 CurrentToolPose,
                 message => Debug.Log($"{name}: {message}", this),
                 CreateBaseClearance(policy),
-                _logPlaceDiagnostics ? new BoxPlaceDiagnostics(tool.Probe) : null,
+                _logPlacementTrace
+                    ? new BoxPlaceDiagnostics(tool.Probe, _baseMotionTraceMaxEntries, _baseMotionTraceMinYawTravelDeg)
+                    : null,
                 _positioner as IArmPhaseSource,
                 CreateBaseMotionProbe());
 
@@ -266,7 +280,7 @@ namespace MediKitTwin.ArmA
         // 스텝 알림은 FixedUpdate에서 나오므로 이 오브젝트에 알림 컴포넌트를 하나 단다.
         private BaseMotionProbe CreateBaseMotionProbe()
         {
-            if (!_logPlaceDiagnostics || !_logBaseMotion)
+            if (!_logPlacementTrace || !_logBaseMotionTrace)
             {
                 return null;
             }
@@ -285,7 +299,9 @@ namespace MediKitTwin.ArmA
 
             // 시작과 끝은 코루틴(Update 쪽)에서, 그 사이는 FixedUpdate에서 재므로 둘에서 같은 뜻을 가진 fixedTime(마지막 물리 스텝의 시각)을 쓴다.
             // Time.time은 Update에서 프레임 시각이라 FixedUpdate의 스텝 시각보다 앞설 수 있어 시간이 거꾸로 가 보인다.
-            return new BaseMotionProbe(ticker, mobile, () => Time.fixedTime, _baseMotionSlipOnsetCm / 100f);
+            return new BaseMotionProbe(
+                ticker, mobile, () => Time.fixedTime, _baseMotionSlipOnsetCm / CentimetersPerMeter,
+                _baseMotionStillSpeedMps, _baseMotionStillYawRateDegPerSec);
         }
 
         // 박스 곁에 서는 자리에서 팔 베이스가 레일 같은 장애물에 파고들지 않게 하는 쪽. 베이스를 못 옮기는 팔이거나 끄면 만들지 않는다.

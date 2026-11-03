@@ -1,3 +1,4 @@
+using MediKitTwin.Common;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ public static class UrdfMaterialToUrp
     {
         string folder = AssetDatabase.GetAssetPath(Selection.activeObject);
         if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
-            folder = "Assets/fr5_description";
+            folder = ProjectAssetPaths.Fr5DescriptionFolder;
 
         Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
         if (urpLit == null)

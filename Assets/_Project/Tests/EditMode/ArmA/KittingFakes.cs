@@ -31,6 +31,12 @@ namespace MediKitTwin.ArmA.Tests
             HasBox = false;
         }
 
+        public Transform TakeBox()
+        {
+            // 이 가짜는 박스를 오브젝트로 만들지 않으므로 떼어 줄 것이 없다. 키팅 시험은 이 경로를 쓰지 않는다.
+            return null;
+        }
+
         public bool TryGetSlotTarget(Vector3 slotLocalPosition, out BoxSlotTarget target)
         {
             target = HasBox ? new BoxSlotTarget(default, null) : default;

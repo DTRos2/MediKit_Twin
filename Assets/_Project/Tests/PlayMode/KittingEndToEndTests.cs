@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using MediKitTwin.ArmA;
+using MediKitTwin.Common;
 using MediKitTwin.Orders;
 using MediKitTwin.Recipes;
 using NUnit.Framework;
@@ -22,7 +23,6 @@ namespace MediKitTwin.PlayMode.Tests
     /// </summary>
     public sealed class KittingEndToEndTests
     {
-        private const string ScenePath = "Assets/_Project/Scenes/Scene_Cell.unity";
         private const string RobotName = "fr5_robot";
         private const string WatchedCell = "Shelf_A-1";
         private const string BoxName = "KitBox";
@@ -243,12 +243,12 @@ namespace MediKitTwin.PlayMode.Tests
             int previousVSyncCount = QualitySettings.vSyncCount;
             ApplyFrameTiming(timing);
 
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ProjectAssetPaths.CellScene, new LoadSceneParameters(LoadSceneMode.Single));
             yield return null;
             yield return null;
 
-            var station = FindOne<IKittingStation>();
-            var input = FindOne<IOrderInput>();
+            var station = CellTestScene.FindOne<IKittingStation>();
+            var input = CellTestScene.FindOne<IOrderInput>();
             GameObject robot = GameObject.Find(RobotName);
             Assert.That(station, Is.Not.Null, "씬에서 키팅 설비(IKittingStation)를 찾을 수 없다");
             Assert.That(input, Is.Not.Null, "씬에서 주문 입력(IOrderInput)을 찾을 수 없다");
@@ -276,19 +276,6 @@ namespace MediKitTwin.PlayMode.Tests
             }
 
             Debug.Log($"[E2E] 시간 설정: 프레임 고정 {timing.CaptureFramerate}fps(0이면 고정 안 함), 프레임 상한 {timing.TargetFramerate}fps(0이면 제한 없음)");
-        }
-
-        private static T FindOne<T>() where T : class
-        {
-            foreach (MonoBehaviour behaviour in Object.FindObjectsByType<MonoBehaviour>())
-            {
-                if (behaviour is T found)
-                {
-                    return found;
-                }
-            }
-
-            return null;
         }
     }
 }

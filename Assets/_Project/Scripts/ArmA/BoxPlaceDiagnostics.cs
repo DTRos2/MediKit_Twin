@@ -19,21 +19,32 @@ namespace MediKitTwin.ArmA
         private const float MetersToCm = 100f;
         private const float MetersToMm = 1000f;
 
-        // 추이 줄에 적는 스텝의 최대 개수. 넘으면 일정한 간격으로 줄인다.
-        private const int MaxTraceEntries = 100;
+        /// <summary>정하지 않았을 때 쓰는 값: 추이 줄에 적는 스텝의 최대 개수. 넘으면 일정한 간격으로 줄인다.</summary>
+        public const int DefaultMaxTraceEntries = 100;
 
-        // 이만큼 이상 돌았을 때만 추이에 회전 속도를 적는다. 돌지 않은 이동의 회전 속도는 전부 0이라 줄만 길어진다.
-        private const float MinYawTravelToTraceDeg = 0.5f;
+        /// <summary>정하지 않았을 때 쓰는 값: 이만큼(도) 이상 돌았을 때만 추이에 회전 속도를 적는다.</summary>
+        public const float DefaultMinYawTravelToTraceDeg = 0.5f;
 
         // PlacePath.Positions의 순서와 같다.
         private static readonly string[] PointNames = { "슬롯 위", "슬롯", "들어올림" };
 
         private readonly Func<Pose, IkResult> _probe;
+        private readonly int _maxTraceEntries;
+        private readonly float _minYawTravelToTraceDeg;
 
         /// <param name="probe">월드 기준 도구 자세 → 지금 관절 자세에서 푼 IK 결과. 목표와 풀이 상태는 건드리지 않아야 한다.</param>
-        public BoxPlaceDiagnostics(Func<Pose, IkResult> probe)
+        /// <param name="maxTraceEntries">추이 줄에 적는 스텝의 최대 개수(1 이상). 넘으면 일정한 간격으로 줄인다.</param>
+        /// <param name="minYawTravelToTraceDeg">
+        /// 이만큼(도) 이상 돌았을 때만 추이에 회전 속도를 적는다. 돌지 않은 이동의 회전 속도는 전부 0이라 줄만 길어진다.
+        /// </param>
+        public BoxPlaceDiagnostics(
+            Func<Pose, IkResult> probe,
+            int maxTraceEntries = DefaultMaxTraceEntries,
+            float minYawTravelToTraceDeg = DefaultMinYawTravelToTraceDeg)
         {
             _probe = probe ?? throw new ArgumentNullException(nameof(probe));
+            _maxTraceEntries = Mathf.Max(1, maxTraceEntries);
+            _minYawTravelToTraceDeg = minYawTravelToTraceDeg;
         }
 
         /// <summary>쥔 물건 중심이 도구 기준으로 어디에 있고 얼마나 먼지.</summary>
@@ -124,12 +135,12 @@ namespace MediKitTwin.ArmA
         /// </summary>
         public string DescribeBaseMotionTrace(string label, BaseMotionSummary summary)
         {
-            int stride = Mathf.Max(1, Mathf.CeilToInt(summary.SampleCount / (float)MaxTraceEntries));
+            int stride = Mathf.Max(1, Mathf.CeilToInt(summary.SampleCount / (float)_maxTraceEntries));
             string interval = stride > 1 ? $", {stride}스텝마다" : string.Empty;
             string text = $"베이스 이동 [{label}] 추이({summary.SampleCount}스텝, 간격 {summary.StepSeconds:0.000}초{interval}) " +
                           $"속도(m/s) [{Series(summary.SpeedsMps, stride, "0.00", 1f)}]";
 
-            if (summary.YawTravelDeg >= MinYawTravelToTraceDeg)
+            if (summary.YawTravelDeg >= _minYawTravelToTraceDeg)
             {
                 text += $", 회전(도/초) [{Series(summary.YawRatesDegPerSec, stride, "0", 1f)}]";
             }

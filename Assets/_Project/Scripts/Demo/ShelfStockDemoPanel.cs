@@ -1,18 +1,21 @@
 using System.Collections.Generic;
 using MediKitTwin.Common;
+using MediKitTwin.Dashboard;
+using MediKitTwin.Recipes;
 using UnityEngine;
 
 namespace MediKitTwin.Demo
 {
     /// <summary>
-    /// 선반 재고를 눈으로 시험하는 패널. 로봇암 A의 키팅과 별개로, 칸마다 버튼을 눌러 물건을 집고(앞줄부터 사라지고 뒤쪽이 앞으로 밀려 나옴)
+    /// 선반 재고를 눈으로 시험하는 패널. 로봇암 A의 키팅과 별개로, 칸마다 타일을 눌러 물건을 집고(앞줄부터 사라지고 뒤쪽이 앞으로 밀려 나옴)
     /// 되돌리며, 재고가 0인 칸을 집어 보충 대기(30초)와 보충을 확인한다. 재고는 IStock으로만 다루므로 실제 설비와 같은 경로를 쓴다.
-    /// 수동 키팅(IManualKitting)이 있으면 "수동 키팅 모드"를 켜서, 버튼을 누른 칸으로 로봇이 직접 가서 집어 박스에 담게 할 수 있다.
-    /// 로봇 동작은 모르고 IManualKitting만 부른다.
+    /// 수동 키팅(IManualKitting)이 있으면 "수동 키팅 모드"를 켜서, 타일을 누른 칸으로 로봇이 직접 가서 집어 박스에 담게 할 수 있다.
+    /// 로봇 동작은 모르고 IManualKitting만 부른다. 행마다 어떤 키트의 재료인지는 레시피에서 읽는다(ShelfRowKits).
     /// </summary>
     public sealed class ShelfStockDemoPanel : DemoPanel
     {
-        private const float ButtonHeight = 34f;
+        private const string TotalQuantityUnit = "개";
+        private const string GuideText = "칸을 눌러 재고를 확인하세요 · 수동 키팅 모드에서는 로봇이 집습니다";
 
         [Tooltip("자재 재고(IStock을 구현한 컴포넌트, 보통 ShelfStockPresenter). 비워 두면 씬에서 찾는다.")]
         [SerializeField] private MonoBehaviour _stockSource;
@@ -20,14 +23,18 @@ namespace MediKitTwin.Demo
         [Tooltip("집을 때 알릴 주문 순번. 재고가 0이면 이 순번으로 StockEmpty가 나간다. 0은 어떤 주문도 아니다.")]
         [SerializeField, Min(0)] private int _orderSequence;
 
+        [Tooltip("선반 행에 붙일 키트 종류를 찾을 레시피. 비워 두면 씬에 올라와 있는 레시피를 모두 쓴다.")]
+        [SerializeField] private RecipeSO[] _recipes;
+
         private IStock _stock;
-        private IManualKitting _manual;
-        private readonly List<List<string>> _rows = new List<List<string>>();
+        private ManualKittingControls _manual;
+        private IReadOnlyList<ShelfRow> _rows;
+        private ShelfRowKits _rowKits;
         private bool _isReturnMode;
         private string _lastMessage = string.Empty;
 
         public ShelfStockDemoPanel()
-            : base("Shelf Stock", DemoPanelAnchor.TopLeft, new Vector2(10f, 420f), new Vector2(340f, 330f))
+            : base("선반 재고", "SHELF · 3×4", DemoPanelSlots.Shelf)
         {
         }
 
@@ -42,106 +49,86 @@ namespace MediKitTwin.Demo
             }
 
             // 수동 키팅은 없어도 된다. 없으면 이 패널은 재고만 만진다.
-            _manual = DemoComponentFinder.FindFirst<IManualKitting>();
+            IManualKitting manual = DemoComponentFinder.FindFirst<IManualKitting>();
+            if (manual != null)
+            {
+                _manual = new ManualKittingControls(manual, RunAtNextLayout);
+            }
+        }
+
+        protected override void DrawHeaderRight()
+        {
+            if (_stock.ShelfSlotIds == null)
+            {
+                return;
+            }
+
+            int total = 0;
+            foreach (string slotId in _stock.ShelfSlotIds)
+            {
+                total += _stock.GetQuantity(slotId);
+            }
+
+            DashboardText.Inline($"총 {total}{TotalQuantityUnit}", TextRole.Mono, DashboardPalette.Default.Muted);
         }
 
         protected override void DrawContents()
         {
             // 칸 목록은 재고가 만들어진 뒤에야 알 수 있으므로 첫 그리기에서 정한다.
-            if (_rows.Count == 0 && !TryBuildRows())
+            if (_rows == null && !TryBuildRows())
             {
                 return;
             }
 
-            bool isManual = DrawManualControls();
-            if (!isManual)
+            _manual?.DrawSwitch();
+            bool isManual = _manual != null && _manual.IsManualMode;
+
+            DashboardSpacing.Row();
+            if (isManual)
             {
-                _isReturnMode = GUILayout.Toggle(_isReturnMode, "되돌리기 모드 (끄면 집기)");
+                _manual.DrawOperations();
+            }
+            else
+            {
+                _isReturnMode = SwitchRow.Draw(_isReturnMode, "되돌리기 모드", "끄면 집기 · 켜면 박스에서 선반으로 반환");
             }
 
+            DashboardSpacing.Block();
+            DrawRows(isManual);
+            DashboardSpacing.Row();
+            DashboardText.Paragraph(MessageText(isManual), TextRole.Small, DashboardPalette.Default.Muted);
+        }
+
+        private string MessageText(bool isManual)
+        {
+            string message = isManual ? _manual.Message : _lastMessage;
+            return string.IsNullOrEmpty(message) ? GuideText : message;
+        }
+
+        private void DrawRows(bool isManual)
+        {
             // 수동 모드에서는 로봇이 움직일 수 있는 때(자동 키팅이 멈췄고 로봇이 쉬는 중)만 칸을 누를 수 있다.
             bool wasEnabled = GUI.enabled;
             GUI.enabled = wasEnabled && (!isManual || _manual.CanRequest);
 
-            foreach (List<string> row in _rows)
+            string pressed = null;
+            foreach (ShelfRow row in _rows)
             {
-                GUILayout.BeginHorizontal();
-                foreach (string shelfSlotId in row)
+                string pressedInRow = ShelfRowView.Draw(row, _rowKits.KitCodeOf(row.Letter), _stock);
+                if (pressedInRow != null)
                 {
-                    if (GUILayout.Button(ButtonLabel(shelfSlotId), GUILayout.Height(ButtonHeight)))
-                    {
-                        Press(shelfSlotId);
-                    }
+                    pressed = pressedInRow;
                 }
 
-                GUILayout.EndHorizontal();
+                DashboardSpacing.Row();
             }
 
             GUI.enabled = wasEnabled;
-            GUILayout.Label(isManual ? _manual.Message : _lastMessage);
-        }
 
-        // 수동 키팅 켜기와 끄기, 키트 종류 고르기, 새 박스. 수동 모드이면 true를 돌려준다.
-        private bool DrawManualControls()
-        {
-            if (_manual == null)
+            if (pressed != null)
             {
-                return false;
-            }
-
-            bool wantManual = GUILayout.Toggle(_manual.IsManualMode, "수동 키팅 모드 (칸을 누르면 로봇이 집어 박스에 담음)");
-            if (wantManual != _manual.IsManualMode)
-            {
-                _manual.SetManualMode(wantManual);
-            }
-
-            if (!_manual.IsManualMode)
-            {
-                return false;
-            }
-
-            DrawKitCodeSelector();
-
-            GUILayout.BeginHorizontal();
-            bool wasEnabled = GUI.enabled;
-            GUI.enabled = wasEnabled && !_manual.IsBusy;
-            if (GUILayout.Button("새 박스"))
-            {
-                _manual.StartNewBox();
-            }
-
-            GUI.enabled = wasEnabled;
-            GUILayout.EndHorizontal();
-            return true;
-        }
-
-        private void DrawKitCodeSelector()
-        {
-            IReadOnlyList<string> codes = _manual.KitCodes;
-            if (codes.Count == 0)
-            {
-                return;
-            }
-
-            var labels = new string[codes.Count];
-            int selected = 0;
-            for (int i = 0; i < codes.Count; i++)
-            {
-                labels[i] = codes[i];
-                if (codes[i] == _manual.SelectedKitCode)
-                {
-                    selected = i;
-                }
-            }
-
-            bool wasEnabled = GUI.enabled;
-            GUI.enabled = wasEnabled && !_manual.IsBusy;
-            int chosen = GUILayout.Toolbar(selected, labels);
-            GUI.enabled = wasEnabled;
-
-            if (chosen != selected)
-            {
-                _manual.SelectedKitCode = codes[chosen];
+                string slotId = pressed;
+                RunAtNextLayout(() => Press(slotId, isManual));
             }
         }
 
@@ -152,36 +139,16 @@ namespace MediKitTwin.Demo
                 return false;
             }
 
-            // 칸 ID의 첫 글자(행)가 바뀔 때마다 줄을 나눠 선반과 같은 3행 모양으로 그린다.
-            List<string> row = null;
-            char rowLetter = '\0';
-            foreach (string shelfSlotId in _stock.ShelfSlotIds)
-            {
-                if (row == null || shelfSlotId[0] != rowLetter)
-                {
-                    row = new List<string>();
-                    _rows.Add(row);
-                    rowLetter = shelfSlotId[0];
-                }
-
-                row.Add(shelfSlotId);
-            }
-
+            _rows = ShelfRows.Group(_stock.ShelfSlotIds);
+            _rowKits = ShelfRowKits.FromRecipes(_recipes != null && _recipes.Length > 0 ? _recipes : Resources.FindObjectsOfTypeAll<RecipeSO>());
             return true;
         }
 
-        private string ButtonLabel(string shelfSlotId)
+        private void Press(string shelfSlotId, bool isManual)
         {
-            string label = $"{shelfSlotId}\n{_stock.GetQuantity(shelfSlotId)}개";
-            float? remaining = _stock.GetRefillRemainingSeconds(shelfSlotId);
-            return remaining.HasValue ? $"{label} (보충 {remaining.Value:0}초)" : label;
-        }
-
-        private void Press(string shelfSlotId)
-        {
-            if (_manual != null && _manual.IsManualMode)
+            if (isManual)
             {
-                _manual.TryRequestPick(shelfSlotId);
+                _manual.RequestPick(shelfSlotId);
                 return;
             }
 
