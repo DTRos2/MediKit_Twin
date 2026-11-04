@@ -30,10 +30,25 @@ Unity.exe -batchmode -projectPath <프로젝트 경로> -executeMethod Synthetic
 **합성 이미지는 씬의 촬영 조건에 맞춰 두었다.** 아래가 바뀌면 데이터셋을 다시 만들어 재학습한다.
 - **조명**: 씬의 Directional Light와 같은 방향(yaw −30°, pitch 50°, ±25°와 ±10° 흔듦)과 색(흰색부터 씬의 따뜻한 조명까지 흔듦). 환경광·주광·보조광 세기는 `SyntheticLighting.Default`이고, 같은 박스를 씬과 합성에서 찍어 위치별 밝기를 맞춘 값이다. 합성은 환경 반사를 끈 재질을 쓴다. 근거와 측정은 [트러블슈팅 FR-07 3장](../docs/troubleShooting/FR-07_비전_검사_CNN_도입_중_만난_문제들.md)에 있다.
 - **배경색**: 박스 밖 색은 검사 카메라와 같은 `InspectionBackground.Color`.
-- **구성품 자세**: 원기둥(소독제, 붕대 등)은 85%가 옆으로 눕는다(`_itemLyingChance`). 실제 키팅에서 센 값이다. 판과 상자는 서 있는 자세에서 ±20°만 돈다.
+- **구성품 자세**: 원기둥(소독제, 붕대 등)은 85%가 옆으로 눕는다(`_itemLyingChance`). 실제 키팅에서 센 값이다. 두꺼운 판과 상자(거즈, 장갑)는 서 있는 자세에서 ±20°만 돈다.
+- **얇은 판과 가는 막대의 자세** (`ItemPosePlanner`): 얇은 판(시험 카세트, 샘플 백, 알코올 패드)은 한쪽 모서리를 들어 최대 25° 기울고(`_itemTiltDegrees`) 20%는 긴 모서리로 서며(`_itemEdgeStandChance`), 가는 막대(면봉, 바늘)는 최대 25° 기운다. 이 둘은 제자리에서 ±90°까지 돈다(`_itemFlatYawDegrees`). 실제 키팅에서 이런 물건이 칸막이에 기대 비스듬히 놓이거나 가로로 돌아 놓였다(2026-11-04 DX 키트).
 - **구성품 크기**: 선반·그리퍼 기준 크기 상한(`GraspSizeLimit`)을 반영한 현재 크기.
 
 학습 결과의 NFR-04는 합성 테스트 세트의 값이다. 이 점수가 좋아도 씬에서 틀릴 수 있으므로, 실제 씬(`InspectionCaptures`의 크롭, `InspectionBenchmark`)에서도 맞는지 따로 확인한 뒤 모델을 설치한다.
+
+### 2-1. 실제 씬 크롭 섞기
+합성 이미지만으로는 실제 씬의 흐릿한 구성품(칸 바닥과 색이 비슷한 면봉)을 읽지 못했다. 그래서 `InspectionStation`의 Save Captures로 저장한 실제 크롭(`InspectionCaptures`)에 정답 라벨을 붙여 합성 데이터와 함께 학습한다.
+1. `real_lots.json`에 세션 폴더 이름과 로트별 키트 코드(BL, DX, EM)를 적는다.
+2. 학습용 폴더를 만든다. 평가에만 쓸 세션은 `--test-sessions`로 따로 준다.
+   ```
+   python build_real_set.py --out ..\Datasets\RealCaptures\v1 --train-sessions <세션> ... --test-sessions <세션>
+   ```
+   정답은 레시피의 슬롯별 구성품이다. 단 기준 모델이 `empty`로 0.9 이상 읽은 슬롯은 `empty`로 둔다(불량 주입 누락). 사람이 이미지로 확인한 라벨이 아니다.
+3. 학습에 섞는다(`--real`은 train 분할을 `--real-repeat`번 반복해 넣고, `--real-test`는 평가에만 쓴다).
+   ```
+   python train.py --dataset ..\Datasets\<합성 폴더> --real ..\Datasets\RealCaptures\v1 --real-repeat 8 --real-test ..\Datasets\RealCaptures\v1
+   ```
+`Datasets/`와 `InspectionCaptures/`는 Git에 올리지 않는다. 다른 PC에서 같은 학습을 하려면 캡처 폴더를 따로 옮겨야 한다.
 
 ## 3. 학습
 ```
@@ -53,10 +68,22 @@ python train.py --dataset ..\Datasets\<실행 폴더>
 
 ## 5. 씬 성능 측정 결과 (NFR-04)
 
-### 5-1. 2026-11-04 재학습 모델 (설치된 모델)
-모델 `runs/yaw_fixed_0030`(데이터 `Datasets/InspectionSynthetic/20261104_002012`)이 `Assets/_Project/Models/Inspection/slot_cnn.onnx`에 설치되어 있다. 이전 모델은 실제 키팅 결과(그래픽 켠 전체 공정의 키트 3개)를 모두 불량으로 읽었다. 원인과 고친 과정은 [트러블슈팅 FR-07 3장](../docs/troubleShooting/FR-07_비전_검사_CNN_도입_중_만난_문제들.md)에 있다.
+### 5-0. 2026-11-04 오후 모델 (현재 설치된 모델)
+모델 `runs/dx_real_0004`(합성 데이터 `Datasets/InspectionSynthetic/20261104_154104`와 실제 크롭 140장 x 8)가 설치되어 있다. DX 정상 키트가 계속 불량으로 판정되던 문제를 고친 것이다. 원인과 과정은 [트러블슈팅 FR-07 DX 문서](../docs/troubleShooting/FR-07_DX_키트가_계속_불량으로_판정된다_기울어진_자세와_흐릿한_면봉을_학습하지_못했다.md)에 있다.
 
-| 평가 | 이전 모델 (`20261103-111741`) | 설치된 모델 |
+| 평가 | 결과 |
+|---|---|
+| 합성 테스트 박스 정확도 / 불량 재현율 / 정상 오경보 | 0.955 / 0.92 / 0.01 (NFR-04 통과, 재현율 여유가 얇다) |
+| 학습에 쓰지 않은 세션의 실제 크롭 13개 로트 (`dx_real_0003`) | 13/13 통과 |
+| 에디터 Play 실행 (설치 후, 작성자 확인) | 전부 정상 판정 |
+
+- 실제 크롭의 라벨은 레시피 기준이고 `empty` 슬롯은 모델이 정했다. 사람이 이미지로 확인하지 않았다.
+- 합성 테스트의 남은 오류는 `test_cassette`와 `gauze`, `swab`과 `empty`, `needle`과 `sample_bag` 사이의 혼동이다.
+
+### 5-1. 2026-11-04 오전 재학습 모델 (이전 모델)
+모델 `runs/yaw_fixed_0030`(데이터 `Datasets/InspectionSynthetic/20261104_002012`)이 `Assets/_Project/Models/Inspection/slot_cnn.onnx`에 설치되어 있었다(오후에 5-0의 모델로 교체). 이전 모델은 실제 키팅 결과(그래픽 켠 전체 공정의 키트 3개)를 모두 불량으로 읽었다. 원인과 고친 과정은 [트러블슈팅 FR-07 3장](../docs/troubleShooting/FR-07_비전_검사_CNN_도입_중_만난_문제들.md)에 있다.
+
+| 평가 | 이전 모델 (`20261103-111741`) | 오전 모델 |
 |---|---|---|
 | 합성 테스트 박스 정확도 / 불량 재현율 | NFR-04 통과 | 0.995 / 0.99 (정상 오경보 0) |
 | 실제 키팅 크롭 12장(키트 3개) | 4/12 (키트 0/3) | 12/12 (키트 3/3) |

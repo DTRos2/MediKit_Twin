@@ -135,6 +135,7 @@ public static class SyntheticDatasetGenerator
         sb.AppendLine($"camera: height={assets.Camera.HeightAboveBox} fov={assets.Camera.VerticalFovDegrees} image={assets.Camera.ImageWidth}x{assets.Camera.ImageHeight}");
         sb.AppendLine($"crop_size_m: {assets.Camera.CropSizeMeters.x}x{assets.Camera.CropSizeMeters.y}");
         sb.AppendLine($"item_lying_chance: {ranges.ItemLyingChance} lying_yaw_deg: {ranges.ItemLyingYawDegrees}");
+        sb.AppendLine($"item_tilt_deg: {ranges.ItemTiltDegrees} item_edge_stand_chance: {ranges.ItemEdgeStandChance} item_flat_yaw_deg: {ranges.ItemFlatYawDegrees}");
         sb.AppendLine("classes: empty + component ids");
         return sb.ToString();
     }

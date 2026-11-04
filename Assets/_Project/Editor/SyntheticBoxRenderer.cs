@@ -173,17 +173,19 @@ public sealed class SyntheticBoxRenderer : IDisposable
                 throw new InvalidOperationException($"{recipe.name}: 슬롯 {slot}이 없다.");
             }
 
-            AddItem(
-                box.transform, componentId, item.SlotLocalPosition, variation.GetItemOffset(slot),
-                variation.GetItemYawDegrees(slot), variation.GetItemLyingYawDegrees(slot), variation.IsItemLying(slot));
+            AddItem(box.transform, componentId, item.SlotLocalPosition, variation, slot);
         }
 
         _util.AddSingleGO(box);
         return box;
     }
 
-    private void AddItem(Transform box, string componentId, Vector3 slotLocal, Vector2 offset, float standingYawDegrees, float lyingYawDegrees, bool lying)
+    private void AddItem(Transform box, string componentId, Vector3 slotLocal, SyntheticVariation variation, int slotNumber)
     {
+        Vector2 offset = variation.GetItemOffset(slotNumber);
+        float standingYawDegrees = variation.GetItemYawDegrees(slotNumber);
+        float lyingYawDegrees = variation.GetItemLyingYawDegrees(slotNumber);
+        bool lying = variation.IsItemLying(slotNumber);
         ShelfItemLook look = _looks.GetLook(componentId, out _);
         float scale = _graspLimit.ScaleFor(look.Size.x, look.Size.y, look.Size.z);
         Vector3 size = look.Size * scale;
@@ -197,16 +199,31 @@ public sealed class SyntheticBoxRenderer : IDisposable
         // 넓은 범위로 돌리면 직사각형이 임의 각도로 놓여 정사각형(거즈)과 구별하기 어려워진다.
         float yawDegrees = onSide ? lyingYawDegrees : standingYawDegrees;
         float restHeight = onSide ? size.x : size.y;
+        float centerHeight = restHeight * 0.5f;
+        Quaternion rotation = Quaternion.Euler(0f, yawDegrees, 0f) * (onSide ? Quaternion.Euler(90f, 0f, 0f) : Quaternion.identity);
+
+        // 얇은 판과 가는 막대는 칸막이에 기대 기울거나(판은 긴 모서리로 서기도 한다) 평평하지 않게 놓인다. 두꺼운 판과 상자는 그대로이다.
+        ItemFlatness flatness = primitive == PrimitiveType.Cube ? ItemPosePlanner.Classify(size) : ItemFlatness.Block;
+        if (flatness != ItemFlatness.Block)
+        {
+            ItemPose pose = ItemPosePlanner.Plan(
+                size, flatness, variation.GetItemFlatYawDegrees(slotNumber),
+                variation.GetItemTiltPitchDegrees(slotNumber), variation.GetItemTiltRollDegrees(slotNumber),
+                variation.IsItemOnEdge(slotNumber), variation.GetItemEdgeSign(slotNumber));
+            rotation = pose.LocalRotation;
+            centerHeight = pose.CenterHeight;
+        }
+
         GameObject item = GameObject.CreatePrimitive(primitive);
         item.name = $"Item_{componentId}";
         item.hideFlags = HideFlags.HideAndDontSave;
         UnityEngine.Object.DestroyImmediate(item.GetComponent<Collider>());
 
         item.transform.SetParent(box, false);
-        item.transform.localPosition = new Vector3(slotLocal.x + offset.x, _boxFloorLocalY + restHeight * 0.5f, slotLocal.z + offset.y);
+        item.transform.localPosition = new Vector3(slotLocal.x + offset.x, _boxFloorLocalY + centerHeight, slotLocal.z + offset.y);
 
         // 원기둥 프리미티브의 축은 Y이다. X로 90도 눕혀 축을 수평으로 만든 뒤 제자리에서 돌린다.
-        item.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f) * (onSide ? Quaternion.Euler(90f, 0f, 0f) : Quaternion.identity);
+        item.transform.localRotation = rotation;
 
         // 원기둥 프리미티브는 높이가 scale.y의 2배이다.
         item.transform.localScale = primitive == PrimitiveType.Cylinder ? new Vector3(size.x, size.y * 0.5f, size.z) : size;

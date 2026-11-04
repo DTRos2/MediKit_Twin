@@ -14,9 +14,19 @@ namespace MediKitTwin.ML
         private readonly float[] _itemYawDegrees;
         private readonly float[] _itemLyingYawDegrees;
         private readonly bool[] _itemLying;
+        private readonly float[] _itemTiltPitchDegrees;
+        private readonly float[] _itemTiltRollDegrees;
+        private readonly bool[] _itemEdgeStand;
+        private readonly float[] _itemEdgeSign;
+        private readonly float[] _itemFlatYawDegrees;
 
         private SyntheticVariation(int slotCount)
         {
+            _itemTiltPitchDegrees = new float[slotCount];
+            _itemTiltRollDegrees = new float[slotCount];
+            _itemEdgeStand = new bool[slotCount];
+            _itemEdgeSign = new float[slotCount];
+            _itemFlatYawDegrees = new float[slotCount];
             _itemOffsets = new Vector2[slotCount];
             _itemYawDegrees = new float[slotCount];
             _itemLyingYawDegrees = new float[slotCount];
@@ -58,6 +68,21 @@ namespace MediKitTwin.ML
         /// <summary>슬롯 번호(1부터)의 구성품이 옆으로 누워 있어야 하면 true. 원기둥이 아닌 구성품은 촬영하는 쪽이 무시한다.</summary>
         public bool IsItemLying(int slotNumber) => _itemLying[slotNumber - 1];
 
+        /// <summary>슬롯 번호(1부터)의 얇은 판이나 가는 막대가 앞뒤로 기운 각도(도). ItemTiltDegrees 범위이다. 그런 구성품에만 쓴다.</summary>
+        public float GetItemTiltPitchDegrees(int slotNumber) => _itemTiltPitchDegrees[slotNumber - 1];
+
+        /// <summary>슬롯 번호(1부터)의 얇은 판이 좌우로 기운 각도(도). ItemTiltDegrees 범위이다. 판에만 쓴다.</summary>
+        public float GetItemTiltRollDegrees(int slotNumber) => _itemTiltRollDegrees[slotNumber - 1];
+
+        /// <summary>슬롯 번호(1부터)의 얇은 판이 긴 모서리로 서 있어야 하면 true. 판이 아닌 구성품은 촬영하는 쪽이 무시한다.</summary>
+        public bool IsItemOnEdge(int slotNumber) => _itemEdgeStand[slotNumber - 1];
+
+        /// <summary>모서리로 설 때 어느 쪽으로 세울지(+1 또는 -1).</summary>
+        public float GetItemEdgeSign(int slotNumber) => _itemEdgeSign[slotNumber - 1];
+
+        /// <summary>슬롯 번호(1부터)의 얇은 판이나 가는 막대가 제자리에서 돈 각도(도). ItemFlatYawDegrees가 0이면 GetItemYawDegrees와 같다.</summary>
+        public float GetItemFlatYawDegrees(int slotNumber) => _itemFlatYawDegrees[slotNumber - 1];
+
         public static SyntheticVariation Create(int seed, RandomizationRanges ranges, int slotCount)
         {
             if (slotCount <= 0)
@@ -96,6 +121,17 @@ namespace MediKitTwin.ML
                 variation._itemLying[i] = lying;
                 // 서 있을 때의 각도는 그대로 둔다. 누운 각도는 따로 두어, 눕지 않는 구성품(판, 상자)이 눕는 확률에 걸려도 ±20도 안에 머문다.
                 variation._itemLyingYawDegrees[i] = lyingYaw;
+            }
+
+            // 기운 자세는 그 뒤에 뽑는다. 이전 시드가 만들던 값이 바뀌지 않게 하려는 것이다. 범위가 0이어도 난수를 소비한다.
+            for (int i = 0; i < slotCount; i++)
+            {
+                variation._itemTiltPitchDegrees[i] = Symmetric(random, ranges.ItemTiltDegrees);
+                variation._itemTiltRollDegrees[i] = Symmetric(random, ranges.ItemTiltDegrees);
+                variation._itemEdgeStand[i] = random.NextDouble() < Math.Max(0f, ranges.ItemEdgeStandChance);
+                variation._itemEdgeSign[i] = random.NextDouble() < 0.5 ? 1f : -1f;
+                float flatYaw = Symmetric(random, ranges.ItemFlatYawDegrees);
+                variation._itemFlatYawDegrees[i] = ranges.ItemFlatYawDegrees > 0f ? flatYaw : variation._itemYawDegrees[i];
             }
 
             return variation;

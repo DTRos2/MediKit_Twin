@@ -21,6 +21,13 @@ namespace MediKitTwin.ML
         [Tooltip("누운 구성품이 제자리에서 도는 최대 각도(도). 눕는 방향은 정해져 있지 않다.")]
         [SerializeField, Range(0f, 180f)] private float _itemLyingYawDegrees = 90f;
 
+        [Tooltip("얇은 판(시험 카세트, 샘플 백, 알코올 패드)과 가는 막대(면봉, 바늘)가 한쪽으로 기우는 최대 각도(도). 키팅에서 이런 물건이 칸막이나 다른 물건에 기대 비스듬히 놓인다(2026-11-04 촬영한 DX 키트 3개). 바닥에 평평한 모습만 학습하면 기운 물건을 다른 구성품이나 빈 슬롯으로 읽는다. 0이면 평평하게만 놓는다.")]
+        [SerializeField, Range(0f, 60f)] private float _itemTiltDegrees = 25f;
+        [Tooltip("얇은 판이 넓은 면이 아니라 긴 모서리로 서 있을 확률. 샘플 백이 모서리로 선 채 검사 구역에 온 적이 있다(2026-11-04 DX 로트 4). 표본이 적은 값이라 키팅이 바뀌면 다시 센다. 0이면 항상 눕는다.")]
+        [SerializeField, Range(0f, 1f)] private float _itemEdgeStandChance = 0.2f;
+        [Tooltip("얇은 판과 가는 막대가 제자리에서 도는 최대 각도(도). 두꺼운 판과 상자(거즈, 장갑)는 위 '제자리에서 도는 최대 각도'를 그대로 쓴다. 정사각형(거즈)과 직사각형을 구별하기 어려워지지 않게 판과 막대에만 넓힌다. 실제 키팅에서 면봉과 샘플 백이 거의 가로로 돌아 놓인 적이 있어(2026-11-04 DX 로트 6, 7) 90도까지 둔다. 0이면 위 값을 쓴다.")]
+        [SerializeField, Range(0f, 90f)] private float _itemFlatYawDegrees = 90f;
+
         [Header("박스")]
         [Tooltip("기준 위치에서 벗어나는 최대 거리(m, X와 Z 각각).")]
         [SerializeField, Min(0f)] private float _boxOffsetMeters = 0.01f;
@@ -59,7 +66,10 @@ namespace MediKitTwin.ML
                 _valueDeviation,
                 _lightWarmthDeviation,
                 _itemLyingChance,
-                _itemLyingYawDegrees);
+                _itemLyingYawDegrees,
+                _itemTiltDegrees,
+                _itemEdgeStandChance,
+                _itemFlatYawDegrees);
         }
     }
 }

@@ -19,7 +19,10 @@ namespace MediKitTwin.ML
             float valueDeviation,
             float lightWarmthDeviation = 0f,
             float itemLyingChance = 0f,
-            float itemLyingYawDegrees = 0f)
+            float itemLyingYawDegrees = 0f,
+            float itemTiltDegrees = 0f,
+            float itemEdgeStandChance = 0f,
+            float itemFlatYawDegrees = 0f)
         {
             ItemOffsetMeters = itemOffsetMeters;
             ItemYawDegrees = itemYawDegrees;
@@ -34,6 +37,9 @@ namespace MediKitTwin.ML
             LightWarmthDeviation = lightWarmthDeviation;
             ItemLyingChance = itemLyingChance;
             ItemLyingYawDegrees = itemLyingYawDegrees;
+            ItemTiltDegrees = itemTiltDegrees;
+            ItemEdgeStandChance = itemEdgeStandChance;
+            ItemFlatYawDegrees = itemFlatYawDegrees;
         }
 
         /// <summary>구성품이 슬롯 중심에서 벗어나는 최대 거리(m, X와 Z 각각).</summary>
@@ -80,5 +86,17 @@ namespace MediKitTwin.ML
 
         /// <summary>누운 구성품이 제자리에서 도는 최대 각도(도). 눕는 방향은 정해져 있지 않아 서 있을 때보다 넓다.</summary>
         public float ItemLyingYawDegrees { get; }
+
+        /// <summary>
+        /// 얇은 판(시험 카세트, 샘플 백, 알코올 패드)과 가는 막대(면봉, 바늘)가 한쪽으로 기우는 최대 각도(도).
+        /// 키팅에서 이런 물건이 칸막이나 다른 물건에 기대 비스듬히 놓이는 일이 실제로 있다. 0이면 바닥에 평평하게만 놓는다.
+        /// </summary>
+        public float ItemTiltDegrees { get; }
+
+        /// <summary>얇은 판이 넓은 면이 아니라 긴 모서리로 서 있을 확률(0~1). 0이면 항상 눕는다. 막대에는 쓰지 않는다.</summary>
+        public float ItemEdgeStandChance { get; }
+
+        /// <summary>얇은 판과 가는 막대가 제자리에서 도는 최대 각도(도). 0이면 ItemYawDegrees를 쓴다. 두꺼운 판과 상자(거즈, 장갑)에는 쓰지 않는다.</summary>
+        public float ItemFlatYawDegrees { get; }
     }
 }
