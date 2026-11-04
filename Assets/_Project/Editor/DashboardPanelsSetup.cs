@@ -39,6 +39,7 @@ namespace MediKitTwin.EditorTools
             new Panel("키팅 로그", KittingLogPanelSetup.Apply),
             new Panel("툴 카메라", ToolCameraPanelSetup.Apply),
             new Panel("인식 표시", RecognitionMarkerSetup.Apply),
+            new Panel("팩킹 실패", PackingFailureAlertPanelSetup.Apply),
         };
 
         [MenuItem("Tools/MediKit/Setup Dashboard Panels")]

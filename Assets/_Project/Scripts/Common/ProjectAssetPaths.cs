@@ -36,6 +36,7 @@ namespace MediKitTwin.Common
         public const string KittingLogPanelPrefab = UiPrefabsFolder + "/PF_KittingLogPanel.prefab";
         public const string ToolCameraPanelPrefab = UiPrefabsFolder + "/PF_ToolCameraPanel.prefab";
         public const string RecognitionMarkerPrefab = UiPrefabsFolder + "/PF_RecognitionMarker.prefab";
+        public const string PackingFailureAlertPanelPrefab = UiPrefabsFolder + "/PF_PackingFailureAlertPanel.prefab";
         public const string UiSpritesFolder = UiPrefabsFolder + "/Sprites";
         public const string RingSprite = UiSpritesFolder + "/Ring.png";
         public const string OrderRowItemPrefab = UiPrefabsFolder + "/PF_OrderRowItem.prefab";
