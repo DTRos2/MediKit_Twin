@@ -23,6 +23,8 @@ namespace MediKitTwin.ArmA
         [SerializeField, Range(0f, 1f)] private float _forwardFraction = 1f;
         [Tooltip("켜면 카메라 자리에 작은 카메라 본체(상자와 렌즈)가 눈에 보인다. 카메라 화면에는 나오지 않고 충돌체도 없다. 그리퍼 가운데에 달면 본체가 손 몸통 안에 들어가 밖에서는 안 보인다.")]
         [SerializeField] private bool _showCameraBody = true;
+        [Tooltip("그리퍼 가운데에 달 때, 카메라를 위로 들어 올리는 각도(도). 선반에서 집으러 갈 때 물건이 화면 위쪽에 보이면 올려서 가운데로 맞춘다(반대로 아래쪽에 보이면 음수). 0이면 도구 끝점과 같은 쪽을 똑바로 본다.")]
+        [SerializeField, Range(-45f, 45f)] private float _pitchUpDeg = 20f;
         [Tooltip("도구 끝점에서 앞으로 이만큼 떨어진 축 위의 점을 본다(m). 접근 자리에서 물건까지의 거리쯤이 알맞다.")]
         [SerializeField, Min(0.05f)] private float _lookAheadM = 0.15f;
         [Tooltip("몸통 옆면에 단 자리에서 도구 끝점 좌표(X 옆, Y 위, Z 앞)로 더 옮길 양(m).")]
@@ -33,6 +35,8 @@ namespace MediKitTwin.ArmA
         [SerializeField] private Vector3 _localEulerDeg = Vector3.zero;
         [Tooltip("켜면 이 카메라 화면에서만 로봇 몸(손, 손가락, 팔)을 그리지 않아 앞이 가려지지 않는다. 메인 화면에는 로봇이 그대로 보이고 충돌에는 영향이 없다. 손가락을 화면에서 보고 싶으면 끈다.")]
         [SerializeField] private bool _hideOwnBody = true;
+        [Tooltip("카메라가 손 자세를 따라가는 지연 시간(초). 물리 스텝마다 끊기는 움직임과 손끝의 잔떨림을 걸러 화면을 안정시킨다. 클수록 부드럽지만 화면이 손보다 늦게 따라온다. 0이면 걸러내지 않고 손에 붙은 그대로 움직인다.")]
+        [SerializeField, Range(0f, 0.5f)] private float _smoothingSeconds = 0.08f;
         [Tooltip("세로 시야각(도).")]
         [SerializeField, Range(20f, 120f)] private float _verticalFovDeg = 70f;
         [Tooltip("화면 해상도(px). 키우면 선명하지만 매 프레임 그리는 비용이 는다.")]
@@ -50,6 +54,8 @@ namespace MediKitTwin.ArmA
 
         public float ForwardFraction => _forwardFraction;
 
+        public float PitchUpDeg => _pitchUpDeg;
+
         public float LookAheadM => _lookAheadM;
 
         public Vector3 Nudge => _nudge;
@@ -63,6 +69,8 @@ namespace MediKitTwin.ArmA
         public bool HideOwnBody => _hideOwnBody;
 
         public bool ShowCameraBody => _showCameraBody;
+
+        public float SmoothingSeconds => _smoothingSeconds;
 
         public float VerticalFovDeg => _verticalFovDeg;
 
