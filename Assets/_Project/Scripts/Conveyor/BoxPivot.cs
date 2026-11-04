@@ -16,5 +16,17 @@ namespace MediKitTwin.Conveyor
         {
             return new Vector3(boxRootPosition.x, boxBounds.min.y, boxRootPosition.z);
         }
+
+        /// <summary>박스 아래 모든 렌더러를 감싼 범위. 렌더러가 없으면 박스 위치 한 점이다.</summary>
+        public static Bounds MeasureBounds(Transform box)
+        {
+            var bounds = new Bounds(box.position, Vector3.zero);
+            foreach (Renderer renderer in box.GetComponentsInChildren<Renderer>())
+            {
+                bounds.Encapsulate(renderer.bounds);
+            }
+
+            return bounds;
+        }
     }
 }

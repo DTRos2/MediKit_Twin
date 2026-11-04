@@ -7,10 +7,13 @@
         "MediKitTwin.Common",
         "MediKitTwin.Conveyor",
         "MediKitTwin.Label",
+        "MediKitTwin.Mobile",
         "MediKitTwin.Demo",
         "MediKitTwin.Orders",
         "MediKitTwin.Pusher",
         "MediKitTwin.Recipes",
+        "MediKitTwin.Unloader",
+        "Warcool.WarehouseRobot",
         "ConveyorSystem",
         "UnityEngine.TestRunner"
     ],

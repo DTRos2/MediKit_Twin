@@ -297,7 +297,7 @@
 - 주문은 SRS FR-01에 따라 `StreamingAssets/Orders`의 CSV 파일로 읽는 것이 시나리오이다. 패널에서 CSV를 직접 넣는 기능은 시험용 편의이며 SRS의 화면(UI-01, UI-02)에는 없다.
 - 설비 상태 통지는 `StationStateReporter`가 맡는다. 상태가 바뀔 때만 `StationStateChanged`를, 1초마다 `StationAlive`를 보낸다.
 - 주문은 `OrderSession`이 받는다. 주문 파일을 실행 중에 바꿔도 `IKitSource`, `IOrderStatus` 참조를 다시 잡지 않아도 된다. 로트번호는 이어서 붙이고 `KitSequence`는 파일마다 1부터 센다.
-- 박스 크기(L, M)별 모델은 아직 반영하지 않는다(템플릿이 하나). 키팅이 끝나면(`KitReady`) `KitBoxDispatcher`가 `IBoxSupply.TakeBox()`로 지그의 박스를 떼어 컨베이어에 태운다. 박스는 `KitBoxCarrier`(피벗이 박스 바닥 중앙인 받침 + 컨베이어 에셋의 `Parcel`)에 얹혀 가고, `PackingStop`이 팩킹 구간에서 세운다(팔 B가 맞춰진 자리 `Sensor_Packing/PackingStopPoint`는 벨트 중심선보다 팔 쪽으로 약 26cm 치우쳐 있어서, 구간을 멈춘 뒤 박스를 그 자리로 옆으로 미끄러뜨린다). 선 뒤 `AtPacking`을 보내고 `LidClosed`를 받으면 출발시키며, `ConveyorEndNotifier`가 마지막 구간에서 `AtConveyorEnd`를 보낸다. 검사 구역(`AtInspection`~`InspectionResult`)은 아직 구현되지 않아 박스가 멈추지 않고 지나간다.
+- 박스 크기(L, M)별 모델은 아직 반영하지 않는다(템플릿이 하나). 키팅이 끝나면(`KitReady`) `KitBoxDispatcher`가 `IBoxSupply.TakeBox()`로 지그의 박스를 떼어 컨베이어에 태운다. 박스는 `KitBoxCarrier`(피벗이 박스 바닥 중앙인 받침 + 컨베이어 에셋의 `Parcel`)에 얹혀 가고, `PackingStop`이 팩킹 구간에서 세운다(팔 B가 맞춰진 자리 `Sensor_Packing/PackingStopPoint`는 벨트 중심선보다 팔 쪽으로 약 26cm 치우쳐 있어서, 구간을 멈춘 뒤 박스를 그 자리로 옆으로 미끄러뜨린다). 선 뒤 `AtPacking`을 보내고 `LidClosed`를 받으면 출발시키며, `ConveyorEndNotifier`가 마지막 구간에서 `AtConveyorEnd`를 보낸다. 컨베이어 에셋은 뒤에 이어진 구간이 없으면 박스를 구간 가운데에서 세우므로, 끝에 하역 받침대가 있는 씬에서는 `ConveyorEndRunout`이 막힌 박스를 구간 속도로 받침대의 자리(`AgvPick_Slot`) 위까지 옮겨 받침대 윗면에 내려앉히고 컨베이어에서 푼 뒤(`KitBoxParcel.ReleaseToPhysics`) 알려 주며, `ConveyorEndNotifier`는 그때 `AtConveyorEnd`를 보낸다(받침대에 앞 박스가 있으면 구간 가운데에서 기다린다). 받침대 연결은 `Tools/MediKit/Apply AGV Pick Layout`이 한다. 검사 구역(`AtInspection`~`InspectionResult`)은 아직 구현되지 않아 박스가 멈추지 않고 지나간다.
 
 ### 7-11. 검사 구역과 슬롯 감지 센서 (FR-06)
 
@@ -325,6 +325,27 @@
 - 푸셔는 박스가 자리 가까이(`Spot Tolerance` 6cm)에서 0.3초 움직이지 않을 때 밀기 시작한다. 밀기 직전에 박스의 `IBoxConveyorRelease.ReleaseToPhysics()`(`KitBoxParcel` 구현)를 불러 컨베이어에서 풀고 `Parcel`을 꺼서, 컨베이어 입구 영역에 닿은 박스를 패키지가 다시 붙잡지 않게 한다. 푸셔는 컨베이어 패키지를 참조하지 않는다.
 - `InspectionSampleSpawner`는 씬에 `InspectionConveyorLine`이 있으면 박스를 컨베이어에 올리고 `AtInspection`을 직접 보내지 않는다. 컨베이어가 없으면(또는 `Use Conveyor`를 끄면) 박스를 검사 자리에 바로 놓고 `AtInspection`을 보낸다. 이때 불량 판정 1초 뒤 박스를 푸셔 앞 자리(`Pusher.BoxSpotWorld`)로 옮긴다.
 - `PF_Pusher`와 `PF_RejectBin`은 다시 만들지 않고 `Tools > MediKit > Setup Pusher Prefab`, `Add Load Zone To RejectBin Prefab`으로 컴포넌트를 더한다. 빌더의 "Rebuild … Prefabs"는 `LoadZone`을 지우므로 다시 만든 뒤에는 이 메뉴를 한 번 더 실행한다.
+
+### 7-13. 하역 받침대 (FR-12)
+
+- 컨베이어 끝에는 하역 로봇(`UnloaderRobot`, 에셋 `Warcool.WarehouseRobot`)이 박스를 집는 받침대가 있다. `Unloader` 어셈블리는 에셋 어셈블리를 참조한다(CONVENTION 8장 예외).
+- `AgvPickPlatform`(받침대에 붙임)은 `AtConveyorEnd`를 받으면 `Settle Seconds`(0.3초) 기다린 뒤 칸 위치 주변을 물리로 훑어 그 키트의 박스(`IKitCarrier`)를 찾는다. 박스는 받침(`KitBoxCarrier`)에서 떼어 `CargoBox`, `KitCargo`(어느 키트인지), 키네마틱 `Rigidbody`를 붙이고 `ShelfStorage`의 칸(열 0, 칸 `Level` = 2)에 `PutBox`로 등록한다. 빈 받침은 지운다. 박스를 칸 위치로 `Max Snap`(2cm)보다 많이 옮기게 되면 박스 원점 가정이 어긋났다고 경고한다.
+- 칸 번호가 곧 로봇 팔 높이이다(에셋의 고정 애니메이션). 칸 2번이 `Load_Level_2`이며 벨트 윗면 높이에 닿는다.
+- `KitCargo`는 `IKitCarrier`를 구현한다. 받침이 사라진 뒤에도 박스가 받침대에 남아 있는지 컨베이어 끝(`ConveyorEndRunout`)이 알아보게 하려는 것이다(앞 박스가 있으면 뒤 박스는 구간 가운데에서 기다린다).
+- 받침대와 칸, 구역, 컴포넌트 연결은 `Tools/MediKit/Apply AGV Pick Layout`이 한다.
+- 하역장(`UnloadingDock`)에는 도크 바닥판 전체를 덮는 단(`DockPlace_Body`, 윗면 0.218m)이 있고, 로봇은 단 바깥 -x쪽 바닥에서 +x를 보고 서서 월드 -x면 가장자리에 박스를 내려놓는다. 칸은 `Unload_Level_0`(박스 원점 높이 0.268m)이다. 로봇 팔 높이가 칸 번호로 고정되어 바닥에는 놓을 수 없어서 단이 필요하다.
+- 키트 종류마다 구역(열)이 하나이다. 구역은 -x면 가장자리를 따라 z 방향으로 0.6m 간격으로 놓이고, 구역마다 칸(`DockPlace_Slot_n`), 로봇이 서야 할 자리(`DockPlace_DockPoint_n`: 칸에서 -x로 팔 도달 거리 0.394m), 감지 구역(`DockPlace_Zone_n`)이 있다. 박스 중심은 단 가장자리에서 0.18m 안쪽이고 로봇 중심은 가장자리에서 0.214m 바깥이다. 구역 번호와 키트 코드의 대응은 `UnloadingDockStock`의 `Kit Codes`(기본 EM, BL, DX) 순서이며 `ColumnFor(kitCode)`로 찾는다.
+- `UnloadingDockStock`은 가장자리 칸에 박스가 놓이면 `Shift Delay Seconds`(1초) 뒤 그 구역의 박스를 모두 +x로 `Pitch`(0.14m)만큼 밀어 가장자리 칸을 비운다. 밀려난 박스는 `DockPlace_Stock` 아래에 쌓이고, 구역마다 `Capacity Per Zone`(10)을 넘으면 가장 오래된(가장 먼) 박스를 치우고 `DOCK_ZONE_FULL` 경고를 보낸다.
+- 만들고 맞추기는 `Tools/MediKit/Setup Unloading Dock Platform`이 하며 `AGVPath`는 건드리지 않는다. 경로 끝을 구역의 `DockPoint`에 맞추는 것은 사람이 한다.
+- `AgvUnloadSequence`(`UnloaderRobot`에 붙임)는 `AgvPickPlatform.BoxRegistered`로 받은 박스를 등록 순서대로 하나씩 배달한다. 받침대 `DockPoint`로 이동·정렬 → 집기(`RobotCargoInteractor.RequestInteract`, Load) → 뒤로 물러남 → `AGVPath`를 키트 구역 가까이까지 이동 → 구역의 `DockPoint`로 이동·정렬 → 내려놓기(Unload) → `KitData.CompleteTime`을 `SimClock.Now`로 채우고 `KitShipped` 발행 → 뒤로 물러남 → 같은 경로를 되짚어 받침대 `DockPoint`로 복귀한다.
+- 이동 규칙: `DockPoint`는 받침대나 단 가장자리에서 팔 도달 거리밖에 안 떨어져 있어(로봇 중심에서 가장자리까지 0.214m) 제자리에서 돌면 로봇과 든 박스가 물체를 파고든다. 그래서 자리에 들어갈 때는 자리에서 `Staging Distance`(0.5m) 뒤(스테이징)에서 방향을 돌린 뒤 똑바로 전진하고, 나올 때는 `IReversibleMobileBase.ReverseTo`로 똑바로 후진해 스테이징까지 물러난 뒤 돈다. `IMobileBase.DriveTo`는 목표 쪽으로 제자리에서 돌고 나서 전진하므로 이런 자리에서는 쓰지 않는다. `MobileBaseDriver`가 `IReversibleMobileBase`를 구현한다(등이 앞이라고 보고 같은 구동 판단을 쓴다).
+- 경로: `AGVPath`는 하나이고 구역은 여럿이라 경로 끝이 목표 자리가 아니다. `AgvRoute.WaypointsBefore`가 목표 `DockPoint`에서 경로 위 가장 가까운 지점을 찾아 그 앞의 웨이포인트까지만 지나게 하고(끝까지 가서 되돌아오지 않는다), 되돌아올 때는 같은 웨이포인트를 거꾸로 지난다. 경로를 사람이 고쳐도 같은 규칙이 적용된다.
+- 웨이포인트 읽기: `AGVPath`의 자식에는 노란 레인(`AGV_Strip_n`)도 있어서, 이름이 `Waypoint Name Prefix`(기본 `AGV_WP`)로 시작하는 자식만 순서대로 웨이포인트로 읽는다.
+- 겹침 회피: 로봇은 사람이 정한 웨이포인트를 그대로 따른다. 다만 로봇 몸(`Footprint`: 구역 감지용 트리거 박스의 크기)이 물체(트리거와 윗면 `Ignore Below`(5cm) 아래의 바닥·레인은 제외)와 `Clearance Margin`(3cm) 안으로 겹치는 점은 `AgvClearance.PushOut`으로 물체 밖으로 겹침이 가장 작은 쪽으로 최소한만 옮긴다. 경로를 `Clearance Sample Step`(0.15m) 간격으로 훑어 겹치는 곳마다 옮긴 점을 경로에 넣는다. 옮긴 거리가 1cm를 넘으면 Console에 경고를 한 번 남긴다. 스테이징과 자리에 들어가는 마지막 구간은 일부러 물체 가까이 가므로 옮기지 않는다. 웨이포인트를 물체에서 로봇 반폭 이상 띄워 두면 경로 그대로 간다.
+- 집기와 내려놓기는 에셋의 고정 애니메이션이라, 로봇이 구역에 들어와 정렬되고(위치 5cm, 방향 5도) 내려놓을 칸이 비기 전에는 시작되지 않는다. 시퀀스는 시작될 때까지 `Interact Timeout Seconds`(10초) 동안 요청을 되풀이한다. 이동은 `IMobileBase`(`MobileBaseDriver`)로만 지시하고 한 지점당 `Drive Timeout Seconds`(60초)를 준다.
+- 실패하면 `WarningRaised`로 알리고 그 박스를 건너뛴다(`KitShipped`는 보내지 않는다): `UNLOADER_DRIVE_TIMEOUT`(도착 못 함), `UNLOADER_LOAD_FAILED`(집기 실패), `UNLOADER_UNLOAD_FAILED`(내려놓기 실패), `UNLOADER_NO_DOCK_ZONE`(키트 코드에 맞는 구역이 없어 첫 구역에 내려놓음, 로봇 자리가 연결되지 않았으면 건너뜀).
+- 연결은 `Tools/MediKit/Setup Unloader Sequence`가 한다. 이동 컴포넌트는 집기 컴포넌트와 같은 오브젝트에 붙인다(정렬 판정이 그 오브젝트의 위치와 방향을 본다). 먼저 `Apply AGV Pick Layout`과 `Setup Unloading Dock Platform`을 실행해 둔다.
+- 에셋 `GridRobotController`의 키 입력 3곳을 `#if ENABLE_LEGACY_INPUT_MANAGER`로 감쌌다. `RobotCargoInteractor`가 집기·내리기가 끝날 때마다 `controlsLocked`를 풀어 이 컨트롤러가 `UnityEngine.Input`을 읽게 되고, 이 프로젝트는 새 Input System만 써서 매 프레임 예외가 나기 때문이다.
 
 ## 8. 확정이 필요한 항목
 
