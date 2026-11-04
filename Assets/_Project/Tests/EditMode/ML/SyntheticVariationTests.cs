@@ -216,6 +216,98 @@ namespace MediKitTwin.ML.Tests
             }
         }
 
+        private static RandomizationRanges WithTilt(float tiltDegrees, float edgeStandChance, float flatYawDegrees)
+        {
+            RandomizationRanges full = Ranges();
+            return new RandomizationRanges(
+                full.ItemOffsetMeters, full.ItemYawDegrees, full.BoxOffsetMeters, full.BoxYawDegrees,
+                full.LightIntensityDeviation, full.LightYawDegrees, full.LightPitchDegrees,
+                full.HueShift, full.SaturationDeviation, full.ValueDeviation,
+                itemTiltDegrees: tiltDegrees, itemEdgeStandChance: edgeStandChance, itemFlatYawDegrees: flatYawDegrees);
+        }
+
+        [Test]
+        public void WithoutTiltRanges_ItemsStayFlat_AndFlatYawFollowsTheNormalYaw()
+        {
+            for (int seed = 0; seed < 200; seed++)
+            {
+                var v = SyntheticVariation.Create(seed, Ranges(), 4);
+                for (int slot = 1; slot <= 4; slot++)
+                {
+                    Assert.AreEqual(0f, v.GetItemTiltPitchDegrees(slot));
+                    Assert.AreEqual(0f, v.GetItemTiltRollDegrees(slot));
+                    Assert.IsFalse(v.IsItemOnEdge(slot));
+                    Assert.AreEqual(v.GetItemYawDegrees(slot), v.GetItemFlatYawDegrees(slot));
+                }
+            }
+        }
+
+        [Test]
+        public void TiltAndFlatYaw_StayWithinTheirRanges()
+        {
+            RandomizationRanges ranges = WithTilt(25f, 0.2f, 45f);
+            float widestYaw = 0f;
+            for (int seed = 0; seed < 500; seed++)
+            {
+                var v = SyntheticVariation.Create(seed, ranges, 4);
+                for (int slot = 1; slot <= 4; slot++)
+                {
+                    Assert.LessOrEqual(Math.Abs(v.GetItemTiltPitchDegrees(slot)), 25f + 1e-4f);
+                    Assert.LessOrEqual(Math.Abs(v.GetItemTiltRollDegrees(slot)), 25f + 1e-4f);
+                    Assert.LessOrEqual(Math.Abs(v.GetItemFlatYawDegrees(slot)), 45f + 1e-4f);
+                    Assert.That(Math.Abs(v.GetItemEdgeSign(slot)), Is.EqualTo(1f));
+                    widestYaw = Math.Max(widestYaw, Math.Abs(v.GetItemFlatYawDegrees(slot)));
+                }
+            }
+
+            Assert.Greater(widestYaw, ranges.ItemYawDegrees * 1.5f, "판과 막대의 각도가 일반 범위보다 넓게 퍼져야 한다");
+        }
+
+        [Test]
+        public void EdgeStandChance_GivesAboutTheGivenShare()
+        {
+            RandomizationRanges ranges = WithTilt(25f, 0.2f, 45f);
+            int onEdge = 0;
+            const int boxes = 2000;
+            for (int seed = 0; seed < boxes; seed++)
+            {
+                var v = SyntheticVariation.Create(seed, ranges, 4);
+                for (int slot = 1; slot <= 4; slot++)
+                {
+                    onEdge += v.IsItemOnEdge(slot) ? 1 : 0;
+                }
+            }
+
+            Assert.That(onEdge / (boxes * 4f), Is.EqualTo(0.2f).Within(0.02f));
+        }
+
+        [Test]
+        public void TiltRanges_DoNotShiftTheValuesDrawnBefore()
+        {
+            // 학습 데이터를 다시 만들어도 조명, 박스, 구성품 위치, 눕는 자세는 같은 시드에서 같게 나와야 한다. (NFR-06)
+            for (int seed = 0; seed < 100; seed++)
+            {
+                var flat = SyntheticVariation.Create(seed, WithLying(0.85f, 90f), 4);
+                RandomizationRanges full = WithLying(0.85f, 90f);
+                var tilted = SyntheticVariation.Create(seed, new RandomizationRanges(
+                    full.ItemOffsetMeters, full.ItemYawDegrees, full.BoxOffsetMeters, full.BoxYawDegrees,
+                    full.LightIntensityDeviation, full.LightYawDegrees, full.LightPitchDegrees,
+                    full.HueShift, full.SaturationDeviation, full.ValueDeviation,
+                    itemLyingChance: full.ItemLyingChance, itemLyingYawDegrees: full.ItemLyingYawDegrees,
+                    itemTiltDegrees: 25f, itemEdgeStandChance: 0.2f, itemFlatYawDegrees: 45f), 4);
+
+                Assert.AreEqual(flat.BoxYawDegrees, tilted.BoxYawDegrees);
+                Assert.AreEqual(flat.LightWarmth, tilted.LightWarmth);
+                for (int slot = 1; slot <= 4; slot++)
+                {
+                    Assert.AreEqual(flat.GetItemOffset(slot), tilted.GetItemOffset(slot));
+                    Assert.AreEqual(flat.GetItemYawDegrees(slot), tilted.GetItemYawDegrees(slot));
+                    Assert.AreEqual(flat.IsItemLying(slot), tilted.IsItemLying(slot));
+                    Assert.AreEqual(flat.GetItemLyingYawDegrees(slot), tilted.GetItemLyingYawDegrees(slot));
+                }
+            }
+        }
+
         [Test]
         public void ZeroSlotCount_Throws()
         {
