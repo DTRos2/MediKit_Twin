@@ -1,6 +1,6 @@
 namespace MediKitTwin.Dashboard
 {
-    /// <summary>글자의 쓰임새. 쓰임새마다 글꼴, 크기, 굵기가 정해져 있다(DashboardStyles).</summary>
+    /// <summary>글자의 쓰임새. 쓰임새마다 글꼴, 크기, 굵기가 정해져 있다(TextSpecs).</summary>
     public enum TextRole
     {
         /// <summary>패널 제목.</summary>

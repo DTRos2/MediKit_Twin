@@ -28,6 +28,7 @@ namespace MediKitTwin.Demo.Tests
                 { "Camera", DemoPanelSlots.Camera },
                 { "Status", DemoPanelSlots.Status },
                 { "Conveyor", DemoPanelSlots.Conveyor },
+                { "SimSpeed", DemoPanelSlots.SimSpeed },
                 { "Joints", DemoPanelSlots.Joints },
                 { "Log", DemoPanelSlots.Log },
             };
@@ -100,6 +101,7 @@ namespace MediKitTwin.Demo.Tests
             Assert.That(PlaceOnReferenceScreen(DemoPanelSlots.Camera).xMax, Is.LessThan(ScreenWidth * 0.5f));
             Assert.That(PlaceOnReferenceScreen(DemoPanelSlots.Status).xMin, Is.GreaterThan(ScreenWidth * 0.5f));
             Assert.That(PlaceOnReferenceScreen(DemoPanelSlots.Conveyor).xMin, Is.GreaterThan(ScreenWidth * 0.5f));
+            Assert.That(PlaceOnReferenceScreen(DemoPanelSlots.SimSpeed).xMin, Is.GreaterThan(ScreenWidth * 0.5f));
             Assert.That(PlaceOnReferenceScreen(DemoPanelSlots.Joints).xMin, Is.GreaterThan(ScreenWidth * 0.5f));
         }
 
@@ -143,11 +145,13 @@ namespace MediKitTwin.Demo.Tests
             Rect shelf = PlaceOnReferenceScreen(DemoPanelSlots.Shelf);
             Rect status = PlaceOnReferenceScreen(DemoPanelSlots.Status);
             Rect conveyor = PlaceOnReferenceScreen(DemoPanelSlots.Conveyor);
+            Rect simSpeed = PlaceOnReferenceScreen(DemoPanelSlots.SimSpeed);
             Rect joints = PlaceOnReferenceScreen(DemoPanelSlots.Joints);
 
             float gap = shelf.yMin - orders.yMax;
             Assert.That(conveyor.yMin - status.yMax, Is.EqualTo(gap));
-            Assert.That(joints.yMin - conveyor.yMax, Is.EqualTo(gap));
+            Assert.That(simSpeed.yMin - conveyor.yMax, Is.EqualTo(gap));
+            Assert.That(joints.yMin - simSpeed.yMax, Is.EqualTo(gap));
         }
     }
 }

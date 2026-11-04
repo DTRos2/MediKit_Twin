@@ -62,6 +62,12 @@ namespace MediKitTwin.Dashboard
             }
         }
 
+        /// <summary>글꼴 종류에 맞는 글꼴. 쓸 수 있는 것이 하나도 없으면 null(Unity 기본 글꼴).</summary>
+        public static Font For(DashboardFontRole role)
+        {
+            return role == DashboardFontRole.Mono ? Mono : Sans;
+        }
+
         private static Font Pick(string[] names)
         {
             var installed = new HashSet<string>(Font.GetOSInstalledFontNames(), StringComparer.OrdinalIgnoreCase);

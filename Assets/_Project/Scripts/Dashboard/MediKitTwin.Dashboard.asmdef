@@ -2,7 +2,8 @@
     "name": "MediKitTwin.Dashboard",
     "rootNamespace": "MediKitTwin.Dashboard",
     "references": [
-        "MediKitTwin.Common"
+        "MediKitTwin.Common",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

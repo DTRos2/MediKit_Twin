@@ -3,6 +3,7 @@
     "rootNamespace": "MediKitTwin.Dashboard.Tests",
     "references": [
         "MediKitTwin.Dashboard",
+        "UnityEngine.UI",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
