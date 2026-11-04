@@ -10,8 +10,8 @@ namespace MediKitTwin.Common
     /// </summary>
     public static class SimClock
     {
-        /// <summary>선택할 수 있는 배속. 일시정지는 Pause()로 따로 처리한다.</summary>
-        public static readonly float[] AllowedSpeeds = { 0.5f, 1f, 2f, 4f };
+        /// <summary>선택할 수 있는 배속(0.5, 1, 2). 일시정지는 Pause()로 따로 처리한다. 배속 패널의 버튼은 이 목록에서 만들어진다.</summary>
+        public static readonly float[] AllowedSpeeds = { 0.5f, 1f, 2f };
 
         /// <summary>시뮬레이션 시작 후 지난 시간(초). 배속과 일시정지가 반영된다.</summary>
         public static float Now => Time.time;
