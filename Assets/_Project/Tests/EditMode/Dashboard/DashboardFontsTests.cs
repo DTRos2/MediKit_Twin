@@ -30,6 +30,46 @@ namespace MediKitTwin.Dashboard.Tests
             Assert.That(DashboardFonts.Mono, Is.SameAs(DashboardFonts.Mono));
         }
 
+        // Domain Reload를 끈 에디터에서는 이전 Play의 글꼴이 정적 변수에 남아 두 번째 Play부터 글자가 비어 그려졌다.
+        [Test]
+        public void ResetCache_DiscardsTheCachedFont_AndTheNextUsePicksAFreshOne()
+        {
+            Font before = DashboardFonts.Sans;
+            if (before == null)
+            {
+                Assert.Ignore("이 컴퓨터에는 쓸 수 있는 글꼴이 없어 Unity 기본 글꼴을 쓴다.");
+            }
+
+            DashboardFonts.ResetCache();
+            Font after = DashboardFonts.Sans;
+
+            Assert.That(before == null, Is.True, "이전 글꼴이 버려지지 않고 남았다");
+            Assert.That(after != null, Is.True, "비운 뒤 새 글꼴을 고르지 못했다");
+            Assert.That(after, Is.Not.SameAs(before));
+        }
+
+        [Test]
+        public void AFontThatWasDestroyed_IsNotHandedOutAgain()
+        {
+            Font font = DashboardFonts.Sans;
+            if (font == null)
+            {
+                Assert.Ignore("이 컴퓨터에는 쓸 수 있는 글꼴이 없어 Unity 기본 글꼴을 쓴다.");
+            }
+
+            Object.DestroyImmediate(font);
+            Font next = DashboardFonts.Sans;
+
+            Assert.That(next != null, Is.True, "파괴된 글꼴이 캐시에 남아 그대로 나왔다");
+        }
+
+        [Test]
+        public void ResetCache_CanBeCalledAnyTime_EvenBeforeAnythingWasResolved()
+        {
+            DashboardFonts.ResetCache();
+            Assert.DoesNotThrow(DashboardFonts.ResetCache);
+        }
+
         private static void AssertUsable(Font font)
         {
             if (font == null)

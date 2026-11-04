@@ -3,6 +3,7 @@ using System.Linq;
 using MediKitTwin.ArmA;
 using MediKitTwin.Common;
 using MediKitTwin.Demo;
+using MediKitTwin.EditorTools;
 using MediKitTwin.Inventory;
 using MediKitTwin.Mobile;
 using MediKitTwin.Orders;
@@ -51,11 +52,11 @@ public static class KittingStationSetup
         var orders = GetOrAdd<OrderSessionBehaviour>(station);
         var controller = GetOrAdd<KittingController>(station);
         var manual = GetOrAdd<ManualKittingStation>(station);
-        GetOrAdd<OrderCsvDemoPanel>(station);
-        GetOrAdd<ShelfStockDemoPanel>(station);
-        // 현황 패널은 공정 전체를 보는 ProcessStatusDemoPanel이고, 컨베이어 이송 연결 도구(Setup Conveyor Handoff)가 붙인다.
-        GetOrAdd<RecognitionMarkerOverlay>(station);
-        var jointPanel = GetOrAdd<ArmJointDemoPanel>(station);
+        // 주문 패널은 코드로 그리지 않고 캔버스 아래 프리팹 인스턴스로 계층에 놓는다. 나머지 시험 패널은 아직 컴포넌트가 직접 그린다.
+        bool isOrderPanelReady = OrderPanelSetup.Apply(orders, isRebuild: false);
+        // 현황 패널은 공정 전체를 보는 공정 현황 패널(프리팹)이고, Setup Dashboard Panels가 캔버스 아래에 놓는다.
+        // 관절 제어, 키팅 로그, 툴 카메라, 인식 표시도 모두 프리팹이다. Setup Dashboard Panels가 캔버스 아래에 놓고(관절 제어는 조작할 로봇까지 연결한다)
+        // 코드는 실행할 때 이것들을 만들지 않는다.
 
         // 손가락이 물건에 닿아 멈추고 조인트로 들고 가는 물리 파지를 쓴다. 연출만 하는 ScriptAttachHolder로 바꾸려면 이 줄을 바꾼다.
         var holder = GetOrAdd<PhysicsGraspHolder>(arm.gameObject);
@@ -63,7 +64,8 @@ public static class KittingStationSetup
         bool isBaseWired = WireBaseMovement(arm, tool, shelf, transfer);
 
         bool isWired =
-            SerializedFieldAssigner.SetReferenceList(orders, "_recipes", recipes.Cast<Object>().ToList())
+            isOrderPanelReady
+            & SerializedFieldAssigner.SetReferenceList(orders, "_recipes", recipes.Cast<Object>().ToList())
             & SerializedFieldAssigner.SetReference(holder, "_gripper", gripper)
             & SerializedFieldAssigner.SetReference(transfer, "_toolTarget", tool)
             & SerializedFieldAssigner.SetReference(transfer, "_holder", holder)
@@ -73,7 +75,6 @@ public static class KittingStationSetup
             & SerializedFieldAssigner.SetReference(controller, "_boxSupply", boxSupply)
             & SerializedFieldAssigner.SetReference(controller, "_itemTransfer", transfer)
             & SerializedFieldAssigner.SetReference(controller, "_scenario", scenario)
-            & SerializedFieldAssigner.SetReference(jointPanel, "_arm", arm)
             & WireManualKitting(manual, shelf, boxSupply, transfer, controller, recipes)
             & isBaseWired;
 

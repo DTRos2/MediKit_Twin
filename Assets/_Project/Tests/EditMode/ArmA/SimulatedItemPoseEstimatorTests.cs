@@ -71,6 +71,47 @@ namespace MediKitTwin.ArmA.Tests
             Assert.That(askedTo, Is.EqualTo(new Vector3(0f, 0.1f, 0.4f)));
         }
 
+        // 화면 카메라는 흔들림을 거르려고 손을 늦게 따라온다. 손이 막 도착했을 때 화면 자세가 아직 옛 자리에 있어도,
+        // 물건이 보이는지는 손의 실제 자세로 가려야 한다.
+        [Test]
+        public void WhatTheCameraSees_FollowsTheHandPose_NotTheLaggingDisplayPose()
+        {
+            _camera.At = new Pose(new Vector3(2f, 0f, 0f), Quaternion.identity);
+            _camera.SensorAt = new Pose(Vector3.zero, Quaternion.identity);
+
+            ItemObservation seen = Create().Observe(PerceptionTestData.Item(new Vector3(0.1f, 0f, 0.5f)));
+
+            Assert.That(seen.IsDetected, Is.True);
+            Assert.That(seen.DistanceM, Is.EqualTo(0.5f).Within(1e-4f));
+        }
+
+        [Test]
+        public void AnItemOutsideTheHandsView_IsOutOfView_EvenIfTheDisplayPoseWouldSeeIt()
+        {
+            _camera.At = new Pose(Vector3.zero, Quaternion.identity);
+            _camera.SensorAt = new Pose(new Vector3(2f, 0f, 0f), Quaternion.identity);
+
+            ItemObservation seen = Create().Observe(PerceptionTestData.Item(new Vector3(0.1f, 0f, 0.5f)));
+
+            Assert.That(seen.Status, Is.EqualTo(ObservationStatus.OutOfView));
+        }
+
+        [Test]
+        public void TheLineOfSightStartsAtTheHand_NotAtTheLaggingDisplayPose()
+        {
+            Vector3 askedFrom = Vector3.one * 99f;
+            _camera.At = new Pose(new Vector3(2f, 0f, 0f), Quaternion.identity);
+            _camera.SensorAt = new Pose(new Vector3(0f, 0.1f, 0f), Quaternion.identity);
+
+            Create((from, to) =>
+            {
+                askedFrom = from;
+                return false;
+            }).Observe(PerceptionTestData.Item(new Vector3(0f, 0.1f, 0.4f)));
+
+            Assert.That(askedFrom, Is.EqualTo(new Vector3(0f, 0.1f, 0f)));
+        }
+
         [Test]
         public void WhenTheCameraIsNotReady_NothingIsAttempted()
         {

@@ -10,6 +10,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace MediKitTwin.PlayMode.Tests
@@ -36,15 +37,41 @@ namespace MediKitTwin.PlayMode.Tests
             yield return null;
             StopToolCameraFeeds();
 
-            // 패널이 씬에 있고, 속도 조절 컴포넌트를 찾았다(못 찾으면 패널이 스스로 꺼진다).
-            var panel = Object.FindAnyObjectByType<ConveyorSpeedDemoPanel>();
-            Assert.That(panel, Is.Not.Null, "씬에 ConveyorSpeedDemoPanel이 없다(Tools/MediKit/Setup Conveyor Handoff로 붙인다)");
+            // 패널이 씬의 계층에 있고, 속도 조절 컴포넌트를 찾았다(못 찾으면 패널이 스스로 꺼진다).
+            var panel = Object.FindAnyObjectByType<ConveyorSpeedPanelPresenter>();
+            Assert.That(panel, Is.Not.Null, "씬에 ConveyorSpeedPanelPresenter가 없다(Tools/MediKit/Setup Dashboard Panels로 올린다)");
             Assert.That(panel.enabled, Is.True, "패널이 속도 조절 컴포넌트를 찾지 못해 꺼졌다");
 
             IConveyorSpeedControl control = Object.FindAnyObjectByType<ConveyorSpeedSetter>();
             Assert.That(control, Is.Not.Null, "씬에 ConveyorSpeedSetter가 없다");
             ConveyorBase[] segments = Object.FindObjectsByType<ConveyorBase>(FindObjectsInactive.Include);
             Assert.That(segments, Is.Not.Empty, "씬에 컨베이어 구간이 없다");
+
+            // 패널의 슬라이더를 움직이면 속도가 바뀌고, "처음 속도로" 버튼과 +, − 버튼도 같은 길로 속도를 바꾼다.
+            float initialSpeed = control.SpeedMps;
+            Slider slider = panel.GetComponentInChildren<Slider>();
+            Assert.That(slider, Is.Not.Null, "패널에 속도 슬라이더가 없다");
+            Assert.That(slider.minValue, Is.EqualTo(control.MinSpeedMps).Within(SpeedTolerance), "슬라이더 범위가 컨베이어가 받는 범위와 같아야 한다");
+            Assert.That(slider.maxValue, Is.EqualTo(control.MaxSpeedMps).Within(SpeedTolerance));
+
+            float slid = Mathf.Approximately(initialSpeed, Mathf.Lerp(control.MinSpeedMps, control.MaxSpeedMps, 0.75f))
+                ? Mathf.Lerp(control.MinSpeedMps, control.MaxSpeedMps, 0.25f)
+                : Mathf.Lerp(control.MinSpeedMps, control.MaxSpeedMps, 0.75f);
+            slider.value = slid;
+            yield return null;
+            Assert.That(control.SpeedMps, Is.EqualTo(slid).Within(SpeedTolerance), "슬라이더를 움직이면 컨베이어 속도가 바뀌어야 한다");
+            AssertEverySegmentRunsAt(segments, slid);
+
+            ClickButton(panel, "ResetButton");
+            yield return null;
+            Assert.That(control.SpeedMps, Is.EqualTo(initialSpeed).Within(SpeedTolerance), "처음 속도로 버튼은 처음 속도로 되돌려야 한다");
+            Assert.That(slider.value, Is.EqualTo(initialSpeed).Within(SpeedTolerance), "슬라이더 손잡이도 되돌아와야 한다");
+
+            ClickButton(panel, "Plus");
+            yield return null;
+            Assert.That(control.SpeedMps, Is.GreaterThan(initialSpeed).Or.EqualTo(control.MaxSpeedMps).Within(SpeedTolerance), "+ 버튼은 속도를 올린다");
+            ClickButton(panel, "ResetButton");
+            yield return null;
 
             control.SetSpeed(ChangedSpeedMps);
             Assert.That(control.SpeedMps, Is.EqualTo(ChangedSpeedMps).Within(SpeedTolerance));
@@ -59,6 +86,21 @@ namespace MediKitTwin.PlayMode.Tests
             control.SetSpeed(WayTooFastMps);
             Assert.That(control.SpeedMps, Is.EqualTo(control.MaxSpeedMps).Within(SpeedTolerance));
             AssertEverySegmentRunsAt(segments, control.MaxSpeedMps);
+        }
+
+        // 이름으로 찾은 패널 안의 버튼을 누른 것처럼 onClick을 부른다(마우스는 배치 모드에서 쓸 수 없다).
+        private static void ClickButton(ConveyorSpeedPanelPresenter panel, string objectName)
+        {
+            foreach (Button button in panel.GetComponentsInChildren<Button>())
+            {
+                if (button.transform.parent.name == objectName)
+                {
+                    button.onClick.Invoke();
+                    return;
+                }
+            }
+
+            Assert.Fail($"패널에 '{objectName}' 버튼이 없다");
         }
 
         private static void AssertEverySegmentRunsAt(ConveyorBase[] segments, float expected)

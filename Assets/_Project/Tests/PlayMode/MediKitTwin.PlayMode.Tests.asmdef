@@ -6,6 +6,8 @@
         "MediKitTwin.ArmB",
         "MediKitTwin.Common",
         "MediKitTwin.Conveyor",
+        "MediKitTwin.Dashboard",
+        "UnityEngine.UI",
         "MediKitTwin.Label",
         "MediKitTwin.Mobile",
         "MediKitTwin.Demo",

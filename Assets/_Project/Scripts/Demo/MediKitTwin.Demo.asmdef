@@ -11,7 +11,8 @@
         "MediKitTwin.Orders",
         "MediKitTwin.Pusher",
         "MediKitTwin.Recipes",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

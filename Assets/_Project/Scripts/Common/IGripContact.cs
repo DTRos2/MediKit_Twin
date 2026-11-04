@@ -13,6 +13,12 @@ namespace MediKitTwin.Common
         /// <summary>손가락이 닫히다 물체에 걸려 끝까지 닫히지 못했으면 true. 닫는 명령을 내리고 충분히 기다린 뒤에 읽는다.</summary>
         bool IsBlockedByObject { get; }
 
+        /// <summary>가장 덜 닫힌 손가락의 닫힌 정도(0 열림 ~ 1 끝까지 닫힘). 얇은 물건은 이 값이 기준에 아슬아슬하게 못 미치거나 넘는다.</summary>
+        float LeastClosedRatio { get; }
+
+        /// <summary>이 정도 이상 닫혔으면 끝까지 닫힌 것(손가락 사이에 물건이 없음)으로 보는 기준(0~1).</summary>
+        float FullyClosedRatio { get; }
+
         /// <summary>물체와 맞닿는 손가락의 충돌체. 쥔 물건이 부딪혀야 하는 것은 이것뿐이다.</summary>
         IReadOnlyList<Collider> FingerColliders { get; }
 

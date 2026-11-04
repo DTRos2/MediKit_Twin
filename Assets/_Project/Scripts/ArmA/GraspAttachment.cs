@@ -26,6 +26,25 @@ namespace MediKitTwin.ArmA
             Held = target;
         }
 
+        /// <summary>
+        /// 쥔 물건을 motion(월드 변환)만큼 옮긴다. 팔이 통째로 옮겨질 때 물건을 같은 만큼 옮겨 손과의 상대 자세를 지킨다.
+        /// 물리 위치와 화면 위치를 함께 옮기고 속도는 건드리지 않는다. 쥐고 있지 않으면 아무것도 하지 않는다.
+        /// </summary>
+        public void Carry(Matrix4x4 motion)
+        {
+            if (Held == null)
+            {
+                return;
+            }
+
+            Rigidbody body = Held.Body;
+            Vector3 position = motion.MultiplyPoint3x4(body.position);
+            Quaternion rotation = motion.rotation * body.rotation;
+            body.position = position;
+            body.rotation = rotation;
+            Held.transform.SetPositionAndRotation(position, rotation);
+        }
+
         public void Detach()
         {
             if (_joint != null)

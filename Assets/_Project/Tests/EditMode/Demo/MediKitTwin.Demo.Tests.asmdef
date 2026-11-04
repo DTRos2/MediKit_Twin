@@ -6,6 +6,7 @@
         "MediKitTwin.Dashboard",
         "MediKitTwin.ArmA",
         "MediKitTwin.Common",
+        "MediKitTwin.Orders",
         "MediKitTwin.Recipes",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

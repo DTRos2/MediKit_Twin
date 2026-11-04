@@ -180,7 +180,7 @@
 ### 7-3. 시뮬레이션 시간 (`SimClock`)
 
 - `SimClock.Now`는 시뮬레이션 시간(초)이다. 시작·완료 시각, 보충 대기, 센서 타임아웃, 로그 시각이 모두 이 값을 읽는다.
-- 배속은 `Time.timeScale`로 반영한다. `TrySetSpeed`는 0.5, 1, 2, 4만 받고, `Pause`와 `Resume`으로 일시정지한다. (FR-15)
+- 배속은 `Time.timeScale`로 반영한다. `TrySetSpeed`는 0.5, 1, 2만 받고, `Pause`와 `Resume`으로 일시정지한다. (FR-15)
 - `SetSpeedLocked(true)`를 호출하면 배속이 1배로 돌아가고 `TrySetSpeed`가 `false`를 돌려준다. ROS 제어 모드가 시작할 때 켜고 끝날 때 끈다. 배속 버튼은 `IsSpeedLocked`가 `true`이면 비활성화하고 이유를 표시한다.
 
 ### 7-4. 검사 판정기 (`IInspector`)

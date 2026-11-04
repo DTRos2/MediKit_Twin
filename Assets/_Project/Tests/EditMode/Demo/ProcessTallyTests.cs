@@ -36,6 +36,26 @@ namespace MediKitTwin.Demo.Tests
         }
 
         [Test]
+        public void TheVersion_RisesOnlyWhenWhatTheScreenShowsChanges()
+        {
+            int start = _tally.Version;
+
+            _tally.OnKitReady(Kit(1));
+            int afterKit = _tally.Version;
+            _tally.OnStockEmpty();
+            int afterStock = _tally.Version;
+            _tally.OnStationStateChanged(StationId.ArmA, StationState.Running);
+            int afterStation = _tally.Version;
+            _tally.OnWarning("W", "경고");
+            int afterWarning = _tally.Version;
+
+            Assert.That(afterKit, Is.GreaterThan(start));
+            Assert.That(afterStock, Is.GreaterThan(afterKit));
+            Assert.That(afterStation, Is.GreaterThan(afterStock));
+            Assert.That(afterWarning, Is.GreaterThan(afterStation));
+        }
+
+        [Test]
         public void AKitThatPasses_WalksTheLineAndCountsAsCompletedOnlyAtTheEnd()
         {
             KitData kit = Judged(1, isPass: true);
@@ -199,6 +219,119 @@ namespace MediKitTwin.Demo.Tests
             _tally.OnWarning(string.Empty, "다른 경고");
 
             Assert.That(_tally.LastWarning, Is.EqualTo("다른 경고"));
+        }
+
+        // 주문을 다시 적용하면 키트 순번이 1부터 다시 시작한다. 같은 순번의 다른 키트를 시작 시각으로 구분한다.
+        private static KitData Started(int sequence, float startTime, bool isPass = true)
+        {
+            KitData kit = Judged(sequence, isPass);
+            kit.StartTime = startTime;
+            return kit;
+        }
+
+        [Test]
+        public void TheSameSequenceInANewOrder_IsAnotherKit_AndTheCountsKeepAddingUp()
+        {
+            KitData firstOrderKit = Started(1, startTime: 10f);
+            _tally.OnKitReady(firstOrderKit);
+            _tally.OnAtConveyorEnd(firstOrderKit);
+            Assert.That(_tally.CompletedCount, Is.EqualTo(1));
+            Assert.That(_tally.CurrentStage, Is.EqualTo(ProcessStage.Done));
+
+            _tally.OnOrdersApplied();
+            KitData secondOrderKit = Started(1, startTime: 400f);
+            _tally.OnKitReady(secondOrderKit);
+            _tally.OnAtConveyorEnd(secondOrderKit);
+
+            Assert.That(_tally.CompletedCount, Is.EqualTo(2), "순번이 같아도 다른 키트이므로 지난 주문의 센 값에 이어서 센다");
+            Assert.That(_tally.CurrentKit, Is.SameAs(secondOrderKit));
+            Assert.That(_tally.CurrentStage, Is.EqualTo(ProcessStage.Done));
+        }
+
+        [Test]
+        public void TheSameKitSeenAgain_IsStillCountedOnce()
+        {
+            KitData kit = Started(1, startTime: 10f);
+
+            _tally.OnAtConveyorEnd(kit);
+            _tally.OnOrdersApplied();
+            _tally.OnKitShipped(kit);
+
+            Assert.That(_tally.CompletedCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void WhenNewOrdersAreApplied_OnlyTheHeadlineGoesBackToTheStart()
+        {
+            KitData done = Started(1, startTime: 10f);
+            KitData rejected = Started(2, startTime: 20f, isPass: false);
+            _tally.OnAtConveyorEnd(done);
+            _tally.OnInspectionResult(rejected);
+            _tally.OnKitRejected(rejected);
+            _tally.OnStockEmpty();
+            _tally.OnStationStateChanged(StationId.Conveyor, StationState.Fault);
+            _tally.OnWarning("W", "경고");
+
+            _tally.OnOrdersApplied();
+
+            Assert.That(_tally.CurrentKit, Is.Null);
+            Assert.That(_tally.CurrentStage, Is.EqualTo(ProcessStage.None));
+            Assert.That(_tally.CompletedCount, Is.EqualTo(1));
+            Assert.That(_tally.RejectedCount, Is.EqualTo(1));
+            Assert.That(_tally.StockShortageCount, Is.EqualTo(1));
+            Assert.That(_tally.FaultCount, Is.EqualTo(1));
+            Assert.That(_tally.LastWarning, Is.EqualTo("W: 경고"));
+            Assert.That(_tally.StateOf(StationId.Conveyor), Is.EqualTo(StationState.Fault), "설비 상태는 주문과 상관없이 지금 상태 그대로다");
+        }
+
+        [Test]
+        public void ApplyingOrdersWhileNothingIsShown_DoesNotRaiseTheVersion()
+        {
+            int before = _tally.Version;
+
+            _tally.OnOrdersApplied();
+
+            Assert.That(_tally.Version, Is.EqualTo(before), "화면이 바뀌지 않았으면 다시 그리지 않는다");
+        }
+
+        [Test]
+        public void ApplyingOrdersAfterAKit_RaisesTheVersionSoTheScreenRedraws()
+        {
+            _tally.OnAtConveyorEnd(Started(1, startTime: 10f));
+            int before = _tally.Version;
+
+            _tally.OnOrdersApplied();
+
+            Assert.That(_tally.Version, Is.GreaterThan(before));
+        }
+
+        [Test]
+        public void AKitOfANewOrder_TakesOverTheDisplayEvenWithALowerSequence()
+        {
+            KitData old = Started(3, startTime: 100f);
+            _tally.OnKitReady(old);
+
+            // 주문을 적용하는 순간 막 끝나던 지난 주문의 키트가 아직 화면에 있는 경우도 새 주문의 키트가 이어받는다.
+            KitData fresh = Started(1, startTime: 300f);
+            _tally.OnKitReady(fresh);
+
+            Assert.That(_tally.CurrentKit, Is.SameAs(fresh));
+        }
+
+        [Test]
+        public void ALateSignalOfTheOldOrdersKit_CountsButDoesNotMoveTheDisplayBack()
+        {
+            KitData old = Started(3, startTime: 100f);
+            _tally.OnKitReady(old);
+            _tally.OnOrdersApplied();
+            KitData fresh = Started(1, startTime: 300f);
+            _tally.OnKitReady(fresh);
+
+            _tally.OnAtConveyorEnd(old);
+
+            Assert.That(_tally.CompletedCount, Is.EqualTo(1));
+            Assert.That(_tally.CurrentKit, Is.SameAs(fresh));
+            Assert.That(_tally.CurrentStage, Is.EqualTo(ProcessStage.ToInspection));
         }
 
         [Test]

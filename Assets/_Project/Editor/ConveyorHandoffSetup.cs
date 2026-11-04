@@ -261,17 +261,14 @@ namespace MediKitTwin.EditorTools
             // 속도는 참조 없이 컴포넌트 하나로 정한다. 이미 있으면 사람이 인스펙터에서 바꾼 값을 그대로 둔다.
             GetOrAdd<ConveyorSpeedSetter>(host);
 
-            // 속도를 화면에서 조절하는 패널. 속도 조절 컴포넌트는 인터페이스로 찾으므로 연결할 참조가 없다.
-            GetOrAdd<ConveyorSpeedDemoPanel>(host);
+            // 속도를 화면에서 조절하는 패널은 프리팹이고 Setup Dashboard Panels가 캔버스 아래에 놓는다.
 
             // 컨베이어 에셋은 물건 위치만 옮기고 벨트 텍스처는 가만히 두므로, 벨트 무늬를 구간 속도로 밀어 물건과 함께 흐르게 한다.
             // 구간은 씬 시작 때 스스로 모으므로 연결할 참조가 없다.
             GetOrAdd<ConveyorBeltScroller>(host);
 
-            // 공정 전체(키팅부터 컨베이어 끝까지)를 보는 패널. 신호는 이벤트 버스에서 받으므로 연결할 참조가 없다.
-            // 로봇암 A 하나만 보던 키팅 현황 패널과 같은 자리를 쓰므로 그것은 씬에서 뗀다.
-            GetOrAdd<ProcessStatusDemoPanel>(host);
-            RemoveKittingStatusPanels();
+            // 공정 전체(키팅부터 컨베이어 끝까지)를 보는 공정 현황 패널은 프리팹이고 Setup Dashboard Panels가 캔버스 아래에 놓는다.
+            // 로봇암 A 하나만 보던 옛 키팅 현황 패널은 클래스가 지워졌고, 씬에 남은 빈 컴포넌트는 LegacyPanelCleanup이 뗀다.
 
             // 검사 구간 제어는 끝 칸에서 박스를 지우는데, 그 칸이 팩킹 정지 자리라 뚜껑 덮기와 하역까지 가려면 지우는 일을 꺼야 한다.
             bool inspectionLineKept = DisableEndHandlingOfInspectionLines();
@@ -283,16 +280,6 @@ namespace MediKitTwin.EditorTools
                    & SerializedFieldAssigner.SetReference(stop, "_packingSensor", packingSensor)
                    & SerializedFieldAssigner.SetReference(stop, "_stopPoint", stopPoint)
                    & SerializedFieldAssigner.SetReference(endNotifier, "_lastConveyor", last);
-        }
-
-        // 공정 현황 패널이 자리를 이어받은 키팅 현황 패널(로봇암 A 하나만 보여 주던 것)을 씬에서 뗀다. 클래스는 지우지 않는다.
-        private static void RemoveKittingStatusPanels()
-        {
-            foreach (KittingStatusDemoPanel panel in Object.FindObjectsByType<KittingStatusDemoPanel>(FindObjectsInactive.Include))
-            {
-                Debug.Log($"[ConveyorHandoffSetup] {panel.name}에서 키팅 현황 패널(KittingStatusDemoPanel)을 뗐습니다. 공정 현황 패널이 그 자리를 씁니다.");
-                Undo.DestroyObjectImmediate(panel);
-            }
         }
 
         // 씬의 InspectionConveyorLine(PF_InspectionStation에 붙어 있다)의 "끝 칸 처리"를 끈다. 프리팹 원본은 건드리지 않고 씬 인스턴스에만 덮어쓴다.

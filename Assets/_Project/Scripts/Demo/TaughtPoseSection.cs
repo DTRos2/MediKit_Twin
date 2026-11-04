@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using MediKitTwin.ArmA;
 using MediKitTwin.Common;
-using MediKitTwin.Dashboard;
 using UnityEngine;
 
 namespace MediKitTwin.Demo
@@ -10,16 +9,13 @@ namespace MediKitTwin.Demo
     /// <summary>
     /// 로봇암 패널 안에서 "지금 자세를 선반 칸의 집는 자세로 저장"하는 구간. 사람이 ArmA 자리와 관절을 맞춘 뒤 칸 ID를 적고 저장하면,
     /// 팔 베이스 자리·루트 방향·도구 끝점 자세·관절 각도가 파일에 남고, 자동 키팅이 그 칸을 집을 때 탐색 없이 그 자세를 쓴다.
-    /// 저장·삭제·찾기는 IPickPoseLibrary, 값을 읽어 자세로 묶는 일은 TaughtPickPose가 하고 여기서는 화면과 순서만 맡는다.
+    /// 저장·삭제·찾기는 IPickPoseLibrary, 값을 읽어 자세로 묶는 일은 TaughtPickPose가 하고 여기서는 순서와 결과 글만 맡는다.
     /// "불러오기"는 저장된 자세를 찾아 알맞은지 확인한 뒤 onLoad로 넘긴다. 베이스를 놓고 관절을 보내는 일은 로봇을 조작하는 패널이 한다.
     /// ArmA(굴러가는 베이스)가 있는 로봇에서만 만들어진다(서는 자리를 알아야 하기 때문이다).
+    /// 화면은 이 클래스를 모른다(ArmJointPanelView가 계층의 오브젝트로 보여 주고, 동작 코드가 이 구간을 부른다).
     /// </summary>
     public sealed class TaughtPoseSection
     {
-        private const float SlotLabelGap = 6f;
-        private const float SlotFieldWidth = 64f;
-        private const int SlotIdMaxLength = 8;
-
         private readonly IArmState _state;
         private readonly ArmBaseControlSection _baseSection;
         private readonly IPickPoseLibrary _library;
@@ -29,7 +25,7 @@ namespace MediKitTwin.Demo
         // 관절 수는 팔이 준비된 뒤에야 확정되므로(패널은 Awake에서 만들어진다) 저장할 때 맞춰 만든다.
         private float[] _jointsRad;
 
-        private string _slotId = "A-1";
+        private string _slotId = ArmJointPanelTexts.DefaultSlotId;
         private string _message = string.Empty;
         private string _savedText = string.Empty;
 
@@ -57,53 +53,21 @@ namespace MediKitTwin.Demo
             return new TaughtPoseSection(state, baseSection, library, onLoad, robot.name);
         }
 
-        public void Draw()
+        /// <summary>입력칸에 적힌 칸 ID. 저장, 불러오기, 삭제가 이 칸을 대상으로 한다.</summary>
+        public string SlotId
         {
-            DashboardPalette palette = DashboardPalette.Default;
-
-            // 버튼을 누른 이벤트 안에서 메시지가 생기거나 사라지면 같은 OnGUI 안에서 위젯 수가 달라진다.
-            // 그리기 시작 때의 메시지로 고정하면 새 메시지는 다음 그리기부터 보이고 배치는 어긋나지 않는다.
-            string message = _message;
-
-            SectionHeading.Draw("집는 자세 저장");
-            DashboardSpacing.Row();
-            DashboardText.Paragraph("지금 자세를 선반 칸의 집는 자세로 저장한다 (ArmA 자리·방향 + 도구 + 관절)", TextRole.Small, palette.Muted);
-            DashboardSpacing.Block();
-
-            using (DashboardRow.Begin())
-            {
-                DashboardText.Inline("칸", TextRole.Small, palette.Muted, height: DashboardMetrics.ControlHeight);
-                GUILayout.Space(SlotLabelGap);
-                _slotId = DashboardField.TextField(_slotId, SlotIdMaxLength, SlotFieldWidth);
-                DashboardSpacing.Block();
-
-                if (DashboardButton.Draw("저장"))
-                {
-                    Save();
-                }
-
-                DashboardSpacing.Row();
-                if (DashboardButton.Draw("불러오기"))
-                {
-                    Load();
-                }
-
-                DashboardSpacing.Row();
-                if (DashboardButton.Draw("삭제"))
-                {
-                    Remove();
-                }
-            }
-
-            DashboardSpacing.Row();
-            DashboardText.Paragraph(_savedText, TextRole.Small, palette.Muted);
-            if (message.Length > 0)
-            {
-                DashboardText.Paragraph(message, TextRole.Small, palette.InkSoft);
-            }
+            get => _slotId;
+            set => _slotId = value ?? string.Empty;
         }
 
-        private void Save()
+        /// <summary>마지막으로 한 일의 결과나 이유. 한 일이 없으면 빈 글이다.</summary>
+        public string Message => _message;
+
+        /// <summary>저장된 칸 목록 한 줄. 예: "저장된 칸(2): A-1, B-2"</summary>
+        public string SavedText => _savedText;
+
+        /// <summary>지금 자세(ArmA 자리·방향, 도구 끝점, 관절 각도)를 입력칸의 칸 ID로 저장한다.</summary>
+        public void Save()
         {
             string slot = PickSlotKey.Normalize(_slotId);
             if (slot.Length == 0)
@@ -142,7 +106,7 @@ namespace MediKitTwin.Demo
         }
 
         // 저장된 자세를 찾아 로봇에 적용하도록 넘긴다. 로봇이 준비되지 않았거나 관절 수가 다르면 아무것도 움직이지 않는다.
-        private void Load()
+        public void Load()
         {
             string slot = PickSlotKey.Normalize(_slotId);
             if (slot.Length == 0)
@@ -181,7 +145,8 @@ namespace MediKitTwin.Demo
             _message = $"{slot} 불러옴: ArmA x {pose.RootPosition.x:0.00} z {pose.RootPosition.z:0.00}, 방향 {pose.RootYawDeg:0.0}°";
         }
 
-        private void Remove()
+        /// <summary>입력칸의 칸 ID로 저장된 자세를 지운다.</summary>
+        public void Remove()
         {
             string slot = PickSlotKey.Normalize(_slotId);
             bool isRemoved = false;

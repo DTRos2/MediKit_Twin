@@ -18,7 +18,11 @@ namespace MediKitTwin.Demo
         // 공정 현황은 키트 단계, 설비 칩 3줄, 숫자 칸 4개가 들어가 한 설비 패널일 때보다 40px 높다. 오른쪽 열 아래 끝을 맞추려고 관절 제어를 그만큼 줄였다.
         private const float StatusHeight = 400f;
         private const float ConveyorHeight = 152f;
-        private const float JointsHeight = 472f;
+        // 배속 패널: 머리줄 + 버튼 한 줄 + 아래 여백.
+        private const float SimSpeedHeight = DashboardMetrics.HeaderHeight + DashboardMetrics.ControlHeight + DashboardMetrics.CardPadding;
+        // 오른쪽 열에 쌓이는 네 패널(키팅 현황, 컨베이어, 배속, 관절 제어)의 높이 합. 관절 제어가 나머지를 채워 열 아래 끝이 화면 아래 여백에 맞는다.
+        private const float RightColumnPanelsHeight = 1024f;
+        private const float JointsHeight = RightColumnPanelsHeight - StatusHeight - ConveyorHeight - SimSpeedHeight - DashboardMetrics.PanelGap;
         private const float LogWidth = 760f;
         private const float LogHeight = 232f;
 
@@ -45,11 +49,18 @@ namespace MediKitTwin.Demo
                 new Vector2(Margin, Margin + StatusHeight + Gap),
                 new Vector2(RightColumnWidth, ConveyorHeight));
 
-        // 관절 제어는 내용이 길면 안에서 스크롤한다. 컨베이어 패널이 차지한 만큼 높이를 줄여 오른쪽 열이 화면 아래 여백까지만 오게 했다.
-        public static DemoPanelSlot Joints =>
+        // 공정 전체 배속 버튼은 컨베이어 속도 바로 아래에 둔다. 속도를 다루는 패널끼리 모아 두고, 가운데 띠(로봇이 보이는 자리)를 가리지 않는다.
+        public static DemoPanelSlot SimSpeed =>
             new DemoPanelSlot(
                 DemoPanelAnchor.TopRight,
                 new Vector2(Margin, Margin + StatusHeight + Gap + ConveyorHeight + Gap),
+                new Vector2(RightColumnWidth, SimSpeedHeight));
+
+        // 관절 제어는 내용이 길면 안에서 스크롤한다. 위 패널들이 차지한 만큼 높이를 줄여 오른쪽 열이 화면 아래 여백까지만 오게 했다.
+        public static DemoPanelSlot Joints =>
+            new DemoPanelSlot(
+                DemoPanelAnchor.TopRight,
+                new Vector2(Margin, Margin + StatusHeight + Gap + ConveyorHeight + Gap + SimSpeedHeight + Gap),
                 new Vector2(RightColumnWidth, JointsHeight),
                 startsCollapsed: true);
 

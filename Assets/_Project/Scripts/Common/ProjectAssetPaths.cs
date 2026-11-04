@@ -25,6 +25,22 @@ namespace MediKitTwin.Common
         public const string KittingJigPrefab = PrefabsFolder + "/PF_KittingJig.prefab";
         public const string LabelStationPrefab = PrefabsFolder + "/PF_LabelStation.prefab";
         public const string ShelfPrefab = PrefabsFolder + "/PF_Shelf.prefab";
+        public const string UiPrefabsFolderName = "UI";
+        public const string UiPrefabsFolder = PrefabsFolder + "/" + UiPrefabsFolderName;
+        public const string OrderPanelPrefab = UiPrefabsFolder + "/PF_OrderPanel.prefab";
+        public const string SimSpeedPanelPrefab = UiPrefabsFolder + "/PF_SimSpeedPanel.prefab";
+        public const string ProcessStatusPanelPrefab = UiPrefabsFolder + "/PF_ProcessStatusPanel.prefab";
+        public const string ConveyorSpeedPanelPrefab = UiPrefabsFolder + "/PF_ConveyorSpeedPanel.prefab";
+        public const string ShelfStockPanelPrefab = UiPrefabsFolder + "/PF_ShelfStockPanel.prefab";
+        public const string ArmJointPanelPrefab = UiPrefabsFolder + "/PF_ArmJointPanel.prefab";
+        public const string KittingLogPanelPrefab = UiPrefabsFolder + "/PF_KittingLogPanel.prefab";
+        public const string ToolCameraPanelPrefab = UiPrefabsFolder + "/PF_ToolCameraPanel.prefab";
+        public const string RecognitionMarkerPrefab = UiPrefabsFolder + "/PF_RecognitionMarker.prefab";
+        public const string PackingFailureAlertPanelPrefab = UiPrefabsFolder + "/PF_PackingFailureAlertPanel.prefab";
+        public const string UiSpritesFolder = UiPrefabsFolder + "/Sprites";
+        public const string RingSprite = UiSpritesFolder + "/Ring.png";
+        public const string OrderRowItemPrefab = UiPrefabsFolder + "/PF_OrderRowItem.prefab";
+        public const string TextRowPrefab = UiPrefabsFolder + "/PF_TextRow.prefab";
         public const string ShelfLayoutConfig = ConfigFolder + "/ShelfLayoutConfig.asset";
         public const string KitBoxPartitionConfig = ConfigFolder + "/KitBoxPartitionConfig.asset";
 

@@ -49,11 +49,15 @@ namespace MediKitTwin.ArmA
         /// 고정(키네마틱) 상태에서 물리로 움직이는 상태로 바꾼다. 손가락이 닫히는 동안에는 물체가 밀려나지 않게 고정해 두고,
         /// 그리퍼에 붙은 뒤에 이것을 불러 물체가 손을 따라 움직이게 한다.
         /// </summary>
-        public void EnablePhysics(bool useGravity)
+        /// <param name="interpolation">
+        /// 화면 위치를 물리 스텝 사이에서 보간할지. 기본은 보간한다. 손에 쥐고 옮기는 동안에는 보간을 끈다.
+        /// 팔 몸체는 보간이 없어 물리 스텝마다 뚝뚝 움직이는데, 쥔 물건만 보간하면 프레임 시간이 제각각인 에디터에서 물건이 손보다 늦게 따라와 손에서 떨어져 보인다.
+        /// </param>
+        public void EnablePhysics(bool useGravity, RigidbodyInterpolation interpolation = RigidbodyInterpolation.Interpolate)
         {
             Body.isKinematic = false;
             Body.useGravity = useGravity;
-            Body.interpolation = RigidbodyInterpolation.Interpolate;
+            Body.interpolation = interpolation;
             Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         }
 

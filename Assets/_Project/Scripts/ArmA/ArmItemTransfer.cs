@@ -335,10 +335,11 @@ namespace MediKitTwin.ArmA
         }
 
         // 찾기들이 한 프레임의 시간을 나눠 쓰도록 하나만 만든다. 0ms이면 없다(프레임마다 후보 하나씩).
+        // 예산은 배속을 따라 늘어난다(FrameBudget 설명 참고).
         private FrameBudget CreateSearchBudget()
         {
             return _searchBudgetMs > 0f
-                ? new FrameBudget(_searchBudgetMs / 1000.0, () => Time.realtimeSinceStartupAsDouble)
+                ? new FrameBudget(_searchBudgetMs / 1000.0, () => Time.realtimeSinceStartupAsDouble, () => SimClock.Speed)
                 : null;
         }
 
