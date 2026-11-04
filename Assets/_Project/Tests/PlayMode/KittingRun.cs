@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Diagnostics;
 using MediKitTwin.ArmA;
+using MediKitTwin.Common;
 using MediKitTwin.Orders;
 using UnityEngine;
 
@@ -30,6 +31,7 @@ namespace MediKitTwin.PlayMode.Tests
         private readonly ArmPoseSnapshot _poseSnapshot;
         private readonly ToolPathRecorder _toolPath;
         private readonly GraspHoldRecorder _graspHold;
+        private readonly HeldItemLagRecorder _heldLag;
         private readonly string _boxName;
         private readonly float _simTimeoutSeconds;
         private readonly double _wallTimeoutSeconds;
@@ -53,6 +55,10 @@ namespace MediKitTwin.PlayMode.Tests
             _toolPath = new ToolPathRecorder(arm, 0.25f);
             _graspHold = new GraspHoldRecorder(
                 robot.GetComponentInChildren<JointGripper>(), controller, photographer: GraspPhotographer.FromEnvironment());
+            // 쥔 물건이 도구 끝에서 어긋나 보이는지는 환경 변수로 켰을 때만 잰다(카메라가 그리기 직전 자세를 매 프레임 본다).
+            _heldLag = HeldItemLagRecorder.IsEnabled
+                ? new HeldItemLagRecorder(robot.GetComponentInChildren<JointGripper>(), controller)
+                : null;
             Recorder = new KittingProgressRecorder(station);
             _stageLog = new StageBaseLog(controller, _overlapProbe);
             Recorder.StageChanged += _stageLog.Record;
@@ -86,6 +92,8 @@ namespace MediKitTwin.PlayMode.Tests
 
             var wall = Stopwatch.StartNew();
             float startSim = Time.time;
+            int startFrame = Time.frameCount;
+            float startClock = Time.unscaledTime;
 
             while (true)
             {
@@ -118,13 +126,22 @@ namespace MediKitTwin.PlayMode.Tests
             // 마지막 단계(보통 마지막 구성품을 놓은 직후)는 단계 변화로 잡히기 전에 반복이 끝나므로, 끝난 순간을 따로 적는다.
             _stageLog.Record(Time.time - startSim, $"끝({EndReason})");
             Placed = new PlacedItemSnapshot(_boxName);
-            Report = BuildReport(Time.time - startSim, wall.Elapsed.TotalSeconds, kitsToFinish);
+            // 프레임 시간을 고정했으면 프레임 수 × 고정 간격이 화면 시계다(컴퓨터가 빨라도 느려도 같다). 고정하지 않았으면 실제로 흐른 시간이다.
+            float clockSeconds = Time.captureDeltaTime > 0f
+                ? (Time.frameCount - startFrame) * Time.captureDeltaTime
+                : Time.unscaledTime - startClock;
+            Report = BuildReport(Time.time - startSim, wall.Elapsed.TotalSeconds, kitsToFinish, clockSeconds);
             UnityEngine.Debug.Log(Report);
 
             // 쥐는 순간과 쥐고 있는 동안의 움직임은 길어서 환경 변수로 켰을 때만 따로 남긴다.
             if (GraspHoldRecorder.IsEnabled)
             {
                 UnityEngine.Debug.Log($"[E2E] 쥐기 기록:\n{_graspHold.Lines}");
+            }
+
+            if (_heldLag != null)
+            {
+                UnityEngine.Debug.Log($"[E2E] 쥔 물건이 도구 끝에서 어긋난 정도:\n{_heldLag.Describe()}");
             }
         }
 
@@ -135,10 +152,12 @@ namespace MediKitTwin.PlayMode.Tests
             return configs.Length > 0 ? configs[0].StowToleranceRad : ArmBaseApproachConfigSO.DefaultStowToleranceRad;
         }
 
-        private string BuildReport(float simSeconds, double wallSeconds, int kitsToFinish)
+        // clockSeconds는 배속을 반영하지 않는 화면 시계로 잰 시간이다(사람이 보는 소요 시간). 배속에 따라 소요 시간이 얼마나 줄었는지(FR-15)를
+        // 컴퓨터 속도와 상관없이 비교할 수 있도록 프레임 시간을 고정했을 때는 프레임 수로 잰다.
+        private string BuildReport(float simSeconds, double wallSeconds, int kitsToFinish, float clockSeconds)
         {
             string common =
-                $"[E2E] 결과: {EndReason} — 키트 {CompletedKits}/{kitsToFinish}개 (시뮬레이션 {simSeconds:0.0}초, 실제 {wallSeconds:0.0}초)\n" +
+                $"[E2E] 결과: {EndReason} — 키트 {CompletedKits}/{kitsToFinish}개 (시뮬레이션 {simSeconds:0.0}초, 실제 {wallSeconds:0.0}초, 화면 시계 {clockSeconds:0.0}초, 배속 {SimClock.Speed}배)\n" +
                 $"[E2E] 마지막 결과: {_station.Status.LastResult} {_station.Status.LastMessage}\n" +
                 $"[E2E] 진행 기록:\n{Recorder.Timeline}" +
                 $"[E2E] 단계별 팔 베이스 위치와 파고든 곳:\n{_stageLog.Lines}" +

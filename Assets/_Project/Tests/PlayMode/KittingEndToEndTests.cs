@@ -247,6 +247,9 @@ namespace MediKitTwin.PlayMode.Tests
             yield return null;
             yield return null;
 
+            // 배속은 씬을 연 뒤에 건다. 배속 버튼이 부르는 TrySetSpeed와 같은 길이라, 허용하지 않는 배속이면 여기서 알린다.
+            Assert.That(SimClock.TrySetSpeed(timing.Speed), Is.True, $"배속 {timing.Speed}배는 SimClock이 허용하는 배속이 아니다");
+
             var station = CellTestScene.FindOne<IKittingStation>();
             var input = CellTestScene.FindOne<IOrderInput>();
             GameObject robot = GameObject.Find(RobotName);
@@ -259,6 +262,7 @@ namespace MediKitTwin.PlayMode.Tests
                 station, input, robot, Object.FindAnyObjectByType<IkArmTarget>(), watchedCell, BoxName, simTimeoutFor(kits), wallTimeoutFor(kits));
             yield return run.Execute(order, kits);
 
+            SimClock.TrySetSpeed(FrameTimingSettings.DefaultSpeed);
             Time.captureFramerate = 0;
             Application.targetFrameRate = previousTargetFramerate;
             QualitySettings.vSyncCount = previousVSyncCount;
@@ -275,7 +279,7 @@ namespace MediKitTwin.PlayMode.Tests
                 Application.targetFrameRate = timing.TargetFramerate;
             }
 
-            Debug.Log($"[E2E] 시간 설정: 프레임 고정 {timing.CaptureFramerate}fps(0이면 고정 안 함), 프레임 상한 {timing.TargetFramerate}fps(0이면 제한 없음)");
+            Debug.Log($"[E2E] 시간 설정: 프레임 고정 {timing.CaptureFramerate}fps(0이면 고정 안 함), 프레임 상한 {timing.TargetFramerate}fps(0이면 제한 없음), 배속 {timing.Speed}배");
         }
     }
 }

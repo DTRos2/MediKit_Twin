@@ -15,13 +15,18 @@ namespace MediKitTwin.PlayMode.Tests
         // 0이면 제한하지 않는다. 양수면 그 프레임 수로 제한해 에디터처럼 프레임당 물리 스텝 수가 흔들리게 한다.
         public const string TargetVariable = "MEDIKIT_E2E_TARGET_FPS";
 
+        // 공정 전체 배속(SimClock). 배속 버튼이 부르는 길과 같은 TrySetSpeed로 정하므로, 허용하지 않는 값은 시험이 바로 알린다. (FR-15)
+        public const string SpeedVariable = "MEDIKIT_E2E_SPEED";
+
         public const int DefaultCaptureFramerate = 50;
         public const int DefaultTargetFramerate = 0;
+        public const float DefaultSpeed = 1f;
 
-        public FrameTimingSettings(int captureFramerate, int targetFramerate)
+        public FrameTimingSettings(int captureFramerate, int targetFramerate, float speed = DefaultSpeed)
         {
             CaptureFramerate = captureFramerate;
             TargetFramerate = targetFramerate;
+            Speed = speed;
         }
 
         /// <summary>프레임마다 시간을 이 프레임 수 기준으로 고정한다. 0이면 고정하지 않는다.</summary>
@@ -30,18 +35,32 @@ namespace MediKitTwin.PlayMode.Tests
         /// <summary>프레임 수 상한. 0이면 제한하지 않는다.</summary>
         public int TargetFramerate { get; }
 
+        /// <summary>공정 전체 배속. 1이면 보통 속도다.</summary>
+        public float Speed { get; }
+
         public static FrameTimingSettings FromEnvironment()
         {
-            return Parse(Environment.GetEnvironmentVariable(CaptureVariable), Environment.GetEnvironmentVariable(TargetVariable));
+            return Parse(
+                Environment.GetEnvironmentVariable(CaptureVariable),
+                Environment.GetEnvironmentVariable(TargetVariable),
+                Environment.GetEnvironmentVariable(SpeedVariable));
         }
 
         /// <param name="captureText">고정 프레임 수 글. 0 이상의 정수. 비었거나 음수이거나 정수가 아니면 기본값.</param>
         /// <param name="targetText">프레임 수 상한 글. 0 이상의 정수. 비었거나 음수이거나 정수가 아니면 제한하지 않는다.</param>
-        public static FrameTimingSettings Parse(string captureText, string targetText)
+        /// <param name="speedText">배속 글. 0보다 큰 수. 비었거나 수가 아니면 1배속.</param>
+        public static FrameTimingSettings Parse(string captureText, string targetText, string speedText = null)
         {
             return new FrameTimingSettings(
                 ParseNonNegative(captureText, DefaultCaptureFramerate),
-                ParseNonNegative(targetText, DefaultTargetFramerate));
+                ParseNonNegative(targetText, DefaultTargetFramerate),
+                ParsePositive(speedText, DefaultSpeed));
+        }
+
+        private static float ParsePositive(string text, float fallback)
+        {
+            bool isNumber = float.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float value);
+            return isNumber && value > 0f ? value : fallback;
         }
 
         private static int ParseNonNegative(string text, int fallback)
