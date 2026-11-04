@@ -13,8 +13,18 @@ namespace MediKitTwin.Common
         /// <summary>카메라가 지금 찍은 화면. 화면을 그리지 않는 설정이면 null이다.</summary>
         Texture Image { get; }
 
-        /// <summary>카메라의 월드 자세. +Z가 보는 방향이다.</summary>
+        /// <summary>
+        /// 화면에 보이는 카메라의 월드 자세. +Z가 보는 방향이다. 화면이 흔들리지 않게 손을 조금 늦게 따라가므로,
+        /// 손이 빨리 움직인 직후에는 손의 실제 자세와 다르다. 화면과 같은 자세가 필요한 표식 그리기에 쓴다.
+        /// </summary>
         Pose CameraPose { get; }
+
+        /// <summary>
+        /// 손에 붙은 카메라의 지금 실제 월드 자세. CameraPose와 달리 걸러지지 않아 늦지 않는다.
+        /// 물건이 시야에 들어오는지, 다른 물체에 가려지는지 가리는 인식은 화면이 아니라 이 자세로 해야 한다.
+        /// 늦게 따라오는 자세로 가리면 손이 막 도착했을 때 시야 가장자리의 물건이 시야 밖으로 판정된다.
+        /// </summary>
+        Pose SensorPose { get; }
 
         /// <summary>카메라의 시야 모델(시야각, 비율, 최소·최대 거리).</summary>
         PinholeCamera Model { get; }

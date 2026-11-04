@@ -11,11 +11,15 @@ namespace MediKitTwin.ArmA.Tests
     {
         internal bool Ready = true;
         internal Pose At = new Pose(Vector3.zero, Quaternion.identity);
+
+        // 손의 실제 자세. 정하지 않으면 화면 자세(At)와 같다. 화면 자세가 늦게 따라오는 경우를 흉내 낼 때 따로 정한다.
+        internal Pose? SensorAt;
         internal PinholeCamera View = new PinholeCamera(90f, 1f, 0.05f, 3f);
 
         public bool IsReady => Ready;
         public Texture Image => null;
         public Pose CameraPose => At;
+        public Pose SensorPose => SensorAt ?? At;
         public PinholeCamera Model => View;
         public ItemObservation LastObservation { get; private set; } = ItemObservation.None;
         public int ObservationCount { get; private set; }

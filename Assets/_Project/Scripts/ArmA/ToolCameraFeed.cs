@@ -9,6 +9,7 @@ namespace MediKitTwin.ArmA
     /// 설정(RenderImage, 기본 켬)이 켜져 있을 때만 화면을 RenderTexture로 그린다. 꺼져 있으면 화면 없이 자세와 시야만 쓴다.
     /// 도구 링크에는 목표 자세 오브젝트만 달고, 카메라는 그 자세를 조금 늦게 부드럽게 따라간다(ToolCameraSettings.SmoothingSeconds).
     /// 팔이 물리 스텝마다 끊겨 움직이고 손끝이 잔떨림해도 화면이 흔들리지 않게 하기 위해서다. CameraPose도 걸러진 자세라 화면과 인식 표식이 같은 자세를 쓴다.
+    /// 다만 물건이 시야에 들어오는지 가리는 인식은 늦지 않은 손의 실제 자세(SensorPose)로 한다.
     /// 어디에 달지는 모른다(ToolCameraMounter가 정해서 넘긴다).
     /// 화면을 어디에 어떻게 보여 줄지는 모른다(화면 패널이 IToolCameraView만 읽는다).
     /// </summary>
@@ -30,6 +31,9 @@ namespace MediKitTwin.ArmA
         public Texture Image => _texture;
 
         public Pose CameraPose => new Pose(transform.position, transform.rotation);
+
+        // 손에 붙은 목표 자세가 걸러지지 않은 실제 자세다. 카메라가 이미 정리돼 목표가 없으면 카메라 자세를 대신 준다.
+        public Pose SensorPose => _target != null ? new Pose(_target.position, _target.rotation) : CameraPose;
 
         public PinholeCamera Model => _model;
 

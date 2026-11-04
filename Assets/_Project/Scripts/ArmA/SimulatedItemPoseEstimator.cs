@@ -41,7 +41,10 @@ namespace MediKitTwin.ArmA
             }
 
             Pose actual = _actualPose(item);
-            Pose cameraPose = _camera.CameraPose;
+
+            // 화면용 CameraPose가 아니라 손의 실제 자세로 본다. 화면 자세는 손을 조금 늦게 따라와서, 손이 막 도착한 때에는
+            // 시야 가장자리의 물건이 시야 밖으로 잘못 판정된다.
+            Pose cameraPose = _camera.SensorPose;
 
             if (!_camera.Model.TryProject(cameraPose, actual.position, out Vector2 viewport, out float depthM))
             {
