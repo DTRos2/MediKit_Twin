@@ -101,6 +101,16 @@ namespace MediKitTwin.ArmA.Tests
         }
 
         [Test]
+        public void HandCenter_PitchUp_TiltsTheViewTowardPlusY()
+        {
+            Pose pose = ToolCameraPlacement.AtHandCenter(Body, 1f, Vector3.zero, 20f);
+
+            Vector3 forward = pose.rotation * Vector3.forward;
+            Assert.That(forward.y, Is.EqualTo(Mathf.Sin(20f * Mathf.Deg2Rad)).Within(1e-4f), "위로 20도 든다");
+            Assert.That(forward.x, Is.EqualTo(0f).Within(1e-5f));
+        }
+
+        [Test]
         public void HandCenter_TheFractionMovesItAlongTheBody_AndNudgeMovesItFurther()
         {
             Pose half = ToolCameraPlacement.AtHandCenter(Body, 0.5f, Vector3.zero);

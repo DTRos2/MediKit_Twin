@@ -7,11 +7,15 @@ namespace MediKitTwin.ArmA
     /// <summary>
     /// 로봇 도구 링크에 다는 카메라. 카메라 자세와 시야 모델, 가장 최근 인식 결과를 알려 준다(IToolCameraView).
     /// 설정(RenderImage, 기본 켬)이 켜져 있을 때만 화면을 RenderTexture로 그린다. 꺼져 있으면 화면 없이 자세와 시야만 쓴다.
-    /// 도구 링크의 자식으로 만들어져 팔이 움직이면 함께 움직인다. 어디에 달지는 모른다(ToolCameraMounter가 정해서 넘긴다).
+    /// 도구 링크에는 목표 자세 오브젝트만 달고, 카메라는 그 자세를 조금 늦게 부드럽게 따라간다(ToolCameraSettings.SmoothingSeconds).
+    /// 팔이 물리 스텝마다 끊겨 움직이고 손끝이 잔떨림해도 화면이 흔들리지 않게 하기 위해서다. CameraPose도 걸러진 자세라 화면과 인식 표식이 같은 자세를 쓴다.
+    /// 어디에 달지는 모른다(ToolCameraMounter가 정해서 넘긴다).
     /// 화면을 어디에 어떻게 보여 줄지는 모른다(화면 패널이 IToolCameraView만 읽는다).
     /// </summary>
     public sealed class ToolCameraFeed : MonoBehaviour, IToolCameraView
     {
+        private Transform _target;
+        private float _smoothingSeconds;
         private Camera _camera;
         private RenderTexture _texture;
         private PinholeCamera _model;
@@ -42,13 +46,20 @@ namespace MediKitTwin.ArmA
         /// </summary>
         public static ToolCameraFeed Mount(Transform toolLink, Pose tcp, Pose localToTcp, ToolCameraSettings settings, IEnumerable<Renderer> hiddenFromCamera = null)
         {
+            Vector3 position = tcp.position + tcp.rotation * localToTcp.position;
+            Quaternion rotation = tcp.rotation * localToTcp.rotation;
+
+            // 손에 붙은 목표 자세. 팔 물리는 물리 스텝마다 움직이고 손끝이 잔떨림하므로, 카메라는 여기에 직접 붙이지 않고 따라가게 한다.
+            var target = new GameObject("ToolCameraTarget");
+            target.transform.SetParent(toolLink, false);
+            target.transform.SetPositionAndRotation(position, rotation);
+
             var host = new GameObject("ToolCamera");
-            host.transform.SetParent(toolLink, false);
-            host.transform.SetPositionAndRotation(
-                tcp.position + tcp.rotation * localToTcp.position,
-                tcp.rotation * localToTcp.rotation);
+            host.transform.SetPositionAndRotation(position, rotation);
 
             var feed = host.AddComponent<ToolCameraFeed>();
+            feed._target = target.transform;
+            feed._smoothingSeconds = settings.SmoothingSeconds;
             feed.Initialize(settings);
 
             // 화면을 그리지 않으면 보이는 본체도, 숨길 몸도 필요 없다. 자세와 시야만 남는다.
@@ -138,10 +149,32 @@ namespace MediKitTwin.ArmA
             _camera.enabled = false;
         }
 
-        // 팔은 물리 단계에서 움직이므로, 그 결과가 반영된 뒤에 그린다.
+        // 팔은 물리 단계에서 움직이므로, 그 결과가 반영된 뒤에 따라가고 그린다.
         private void LateUpdate()
         {
+            if (_target == null)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Follow(Time.unscaledDeltaTime);
             RenderNow();
+        }
+
+        // 지수 필터로 목표 자세를 따라간다. 프레임 시간에 맞춰 계수를 정하므로 프레임레이트가 달라도 같은 지연이다.
+        private void Follow(float deltaSeconds)
+        {
+            if (_smoothingSeconds <= 0f)
+            {
+                transform.SetPositionAndRotation(_target.position, _target.rotation);
+                return;
+            }
+
+            float blend = 1f - Mathf.Exp(-deltaSeconds / _smoothingSeconds);
+            transform.SetPositionAndRotation(
+                Vector3.Lerp(transform.position, _target.position, blend),
+                Quaternion.Slerp(transform.rotation, _target.rotation, blend));
         }
 
         private void OnDisable()
@@ -151,6 +184,11 @@ namespace MediKitTwin.ArmA
 
         private void OnDestroy()
         {
+            if (_target != null)
+            {
+                Destroy(_target.gameObject);
+            }
+
             _gpuDrivenOptOut?.Restore();
 
             if (_camera != null)
