@@ -69,7 +69,7 @@ namespace MediKitTwin.ArmA
             float lift = LiftFor(request);
             string liftNote = lift > 0f ? $", 손가락이 판에 닿지 않게 물건 중심보다 {lift * 100f:0.0}cm 높게 겨냥" : string.Empty;
             string seenText = $"칸 {slotId}: 카메라로 물건을 확인했다(거리 {seen.DistanceM:0.00}m{liftNote})";
-            Vector3 aim = seen.EstimatedPose.position + Vector3.up * lift;
+            Vector3 aim = AimAt(seen.EstimatedPose.position, lift, planned.Rotation);
             Vector3 shift = GraspCorrection.Compute(planned.Grasp, aim, _settings.MinCorrectionM, _settings.MaxCorrectionM, out bool isClamped);
             float tiltDeg = _settings.GraspTiltDeg;
             if (shift == Vector3.zero && tiltDeg <= 0f)
@@ -113,7 +113,7 @@ namespace MediKitTwin.ArmA
                 return GraspRefinement.Keep(current, $"칸 {slotId}: 쥐는 자리 마무리 — 물건을 다시 확인하지 못해 그대로 쥔다.");
             }
 
-            Vector3 aim = seen.EstimatedPose.position + Vector3.up * LiftFor(request);
+            Vector3 aim = AimAt(seen.EstimatedPose.position, LiftFor(request), current.Rotation);
             Vector3 actual = _toolPose().position;
             Vector3 error = GraspCorrection.Compute(actual, aim, _settings.SettleToleranceM, _settings.MaxSettleM, out bool isClamped);
             if (error == Vector3.zero)
@@ -132,6 +132,14 @@ namespace MediKitTwin.ArmA
             string note = $"칸 {slotId}: 쥐는 자리 마무리 — 도구 끝점이 겨냥에서 ({error.x * 100f:+0.0;-0.0}, {error.y * 100f:+0.0;-0.0}, {error.z * 100f:+0.0;-0.0})cm 모자라 그만큼 더 보내 메운다{clampNote}{backoffNote}.";
             _log?.Invoke(note);
             return GraspRefinement.Corrected(settled, note);
+        }
+
+        // 도구 끝점이 가야 할 겨냥 자리: 물건 중심에서 판에 눌리지 않을 만큼 높이고, 손가락 쌍의 가운데가 물건 가운데에 오도록
+        // 손가락이 닫히는 축(도구 y축)으로 어긋난 만큼 반대쪽으로 옮긴다. 도구 끝점 기준으로 맞추면 한쪽 손가락이 먼저 물건에 닿기 때문이다.
+        private Vector3 AimAt(Vector3 itemCenter, float lift, Quaternion toolRotation)
+        {
+            Vector3 closingAxis = toolRotation * Vector3.up;
+            return itemCenter + Vector3.up * lift - closingAxis * _settings.GripCenterOffsetM;
         }
 
         // 물건 중심보다 얼마나 높게 겨냥할지(m). 손가락 뿌리가 판에 눌리지 않게 하는 여유다.

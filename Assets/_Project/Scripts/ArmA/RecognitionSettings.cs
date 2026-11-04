@@ -29,6 +29,9 @@ namespace MediKitTwin.ArmA
                  "끝을 숙이면 뿌리는 올라가고 패드 끝이 판 가까이 내려가 얇은 물건도 패드 사이에 들어온다. 0이면 알려 준 방향 그대로 쥔다. " +
                  "숙이면 뿌리가 올라가므로 위 '손가락 끝이 내려오는 깊이'도 그만큼 줄여 잡는다.")]
         [SerializeField, Range(0f, 30f)] private float _graspTiltDeg;
+        [Tooltip("손가락 한 쌍의 가운데가 도구 끝점에서 손가락이 닫히는 축(도구 y축) 쪽으로 벗어난 거리(m). 물건을 도구 끝점이 아니라 손가락 가운데에 맞추려고 겨냥을 반대쪽으로 이만큼 옮긴다. " +
+                 "안 옮기면 한쪽 손가락이 먼저 물건에 닿아 서고, 다른 쪽은 덜 닫힌 채 굳어 물건이 한쪽에만 닿는다. 0이면 옮기지 않는다.")]
+        [SerializeField, Range(-0.03f, 0.03f)] private float _gripCenterOffsetM;
 
         [Header("쥐는 자리 마무리")]
         [Tooltip("쥐는 자리에 닿은 뒤 도구 끝점이 겨냥한 자리와 어긋난 만큼 한 번 더 움직여 메우는 최대 횟수. 관절 각도가 허용 오차 안에 들면 \"닿았다\"고 끝나는데, " +
@@ -56,6 +59,8 @@ namespace MediKitTwin.ArmA
         public float FingerDropBelowToolM => _fingerDropBelowToolM;
 
         public float GraspTiltDeg => _graspTiltDeg;
+
+        public float GripCenterOffsetM => _gripCenterOffsetM;
 
         public int SettleAttempts => _settleAttempts;
 
