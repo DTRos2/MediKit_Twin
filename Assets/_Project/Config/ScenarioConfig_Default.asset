@@ -15,6 +15,7 @@ MonoBehaviour:
   _missingProbabilityPercent: 10
   _fixedMissingKitSequence: 3
   _fixedMissingSlotNumber: 0
+  _fixedLidFailKitSequence: 2
   _randomSeed: 1234
   _defaultStock: 5
   _stockOverrides: []

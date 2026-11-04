@@ -11,7 +11,7 @@ namespace MediKitTwin.ArmA
     /// 누락은 IMissingRule이 맡고 이 클래스는 협력자를 조립하고 반복 순서만 다룬다.
     /// 협력자는 모두 인터페이스로 받으므로 Inspector에서 같은 인터페이스를 구현한 컴포넌트를 연결한다.
     /// </summary>
-    public sealed class KittingController : MonoBehaviour, IKittingStation, IStationPause
+    public sealed class KittingController : MonoBehaviour, IKittingStation, IStationPause, IStationFreeze
     {
         [Header("협력자 (인터페이스를 구현한 컴포넌트)")]
         [Tooltip("다음에 만들 키트를 주는 쪽(IKitSource, 보통 OrderSessionBehaviour).")]
@@ -58,6 +58,19 @@ namespace MediKitTwin.ArmA
         public void Resume()
         {
             _isPauseRequested = false;
+        }
+
+        public bool IsFrozen { get; private set; }
+
+        /// <summary>하던 키트의 동작도 다음 단계에서 바로 멈춘다. 팔은 마지막으로 받은 목표를 지키며 그 자리에 선다.</summary>
+        public void Freeze()
+        {
+            IsFrozen = true;
+        }
+
+        public void Unfreeze()
+        {
+            IsFrozen = false;
         }
 
         /// <summary>지금 만들고 있는 키트. 쉬는 중이면 null이다.</summary>
@@ -130,13 +143,39 @@ namespace MediKitTwin.ArmA
 
                 if (_source.TryGetNext(out KitData kit, out RecipeSO recipe))
                 {
-                    yield return MakeKit(kit, recipe);
+                    yield return Gate(MakeKit(kit, recipe));
                 }
                 else
                 {
                     // 모든 주문이 보류되었거나 끝났다. 대기 자세로 기다리며 다시 묻는다. (FR-13 예외 처리)
                     _station.Set(StationState.Idle);
                     yield return new WaitForSeconds(_idlePollSeconds);
+                }
+            }
+        }
+
+        // 안쪽 코루틴을 한 단계씩 돌리며, 얼려 있는 동안은 다음 단계로 넘어가지 않는다. 안쪽에서 또 코루틴을 yield하면 그것도 같은 방식으로 감싼다.
+        private IEnumerator Gate(IEnumerator inner)
+        {
+            while (true)
+            {
+                while (IsFrozen)
+                {
+                    yield return null;
+                }
+
+                if (!inner.MoveNext())
+                {
+                    yield break;
+                }
+
+                if (inner.Current is IEnumerator nested)
+                {
+                    yield return Gate(nested);
+                }
+                else
+                {
+                    yield return inner.Current;
                 }
             }
         }

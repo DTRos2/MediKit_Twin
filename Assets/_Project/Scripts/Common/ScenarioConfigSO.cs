@@ -33,6 +33,10 @@ namespace MediKitTwin.Common
         [Tooltip("고정 누락 키트에서 빠뜨릴 슬롯 번호. 0이면 무작위로 고른다. 시연에서 빠지는 슬롯을 미리 알리고 싶을 때 쓴다.")]
         [SerializeField, Min(0)] private int _fixedMissingSlotNumber;
 
+        [Header("설비 실패 시연 (FR-10)")]
+        [Tooltip("팔 B가 뚜껑 덮기에 일부러 실패할 키트 순번. 0이면 쓰지 않는다. 고정 누락 키트(불량으로 격리되어 팩킹에 오지 않음)와 다른 순번을 고른다.")]
+        [SerializeField, Min(0)] private int _fixedLidFailKitSequence;
+
         [Tooltip("난수 시드. 같은 시드와 같은 주문 파일은 같은 결과를 낸다. (NFR-06)")]
         [SerializeField] private int _randomSeed = 1234;
 
@@ -54,6 +58,8 @@ namespace MediKitTwin.Common
         public int FixedMissingKitSequence => _fixedMissingKitSequence;
 
         public int FixedMissingSlotNumber => _fixedMissingSlotNumber;
+
+        public int FixedLidFailKitSequence => _fixedLidFailKitSequence;
 
         public int RandomSeed => _randomSeed;
 

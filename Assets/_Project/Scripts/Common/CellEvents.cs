@@ -33,6 +33,15 @@ namespace MediKitTwin.Common
         /// <summary>뚜껑이 박스에 닫혔다. (FR-10)</summary>
         public static event Action<KitData> LidClosed;
 
+        /// <summary>
+        /// 팔 B가 뚜껑 덮기에 실패했다. 인자는 (키트, 실패 이유). 박스는 팩킹 구역에 선 채로 남는다.
+        /// 컨베이어와 팔 A는 이 신호로 멈추고, 사용자가 확인하면 PackingRetryRequested로 다시 덮는다. (FR-10)
+        /// </summary>
+        public static event Action<KitData, string> PackingFailed;
+
+        /// <summary>사용자가 팩킹 실패를 확인했고 팔 B가 뚜껑 덮기를 다시 시도해야 한다. 인자는 실패한 키트. (FR-10)</summary>
+        public static event Action<KitData> PackingRetryRequested;
+
         /// <summary>박스가 컨베이어 끝에 도착했다. (FR-05)</summary>
         public static event Action<KitData> AtConveyorEnd;
 
@@ -91,6 +100,10 @@ namespace MediKitTwin.Common
 
         public static void RaiseLidClosed(KitData kit) => LidClosed?.Invoke(kit);
 
+        public static void RaisePackingFailed(KitData kit, string reason) => PackingFailed?.Invoke(kit, reason);
+
+        public static void RaisePackingRetryRequested(KitData kit) => PackingRetryRequested?.Invoke(kit);
+
         public static void RaiseAtConveyorEnd(KitData kit) => AtConveyorEnd?.Invoke(kit);
 
         public static void RaiseKitShipped(KitData kit) => KitShipped?.Invoke(kit);
@@ -121,6 +134,8 @@ namespace MediKitTwin.Common
             RejectBinCleared = null;
             AtPacking = null;
             LidClosed = null;
+            PackingFailed = null;
+            PackingRetryRequested = null;
             AtConveyorEnd = null;
             KitShipped = null;
             StockEmpty = null;
