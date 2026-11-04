@@ -37,7 +37,7 @@ namespace MediKitTwin.Dashboard
         {
             get
             {
-                if (!_isSansResolved)
+                if (!_isSansResolved || IsDestroyed(_sans))
                 {
                     _sans = Pick(SansNames);
                     _isSansResolved = true;
@@ -52,7 +52,7 @@ namespace MediKitTwin.Dashboard
         {
             get
             {
-                if (!_isMonoResolved)
+                if (!_isMonoResolved || IsDestroyed(_mono))
                 {
                     _mono = Pick(MonoNames);
                     _isMonoResolved = true;
@@ -66,6 +66,34 @@ namespace MediKitTwin.Dashboard
         public static Font For(DashboardFontRole role)
         {
             return role == DashboardFontRole.Mono ? Mono : Sans;
+        }
+
+        /// <summary>
+        /// 캐시한 글꼴을 버리고 다음에 쓸 때 다시 고르게 한다. Play를 시작할 때 부르며, 시험도 쓴다.
+        /// Domain Reload를 끈 에디터에서는 정적 변수가 Play가 끝나도 남는다. 이전 Play에서 만든 글꼴 객체만 캐시에 남으면
+        /// 두 번째 Play부터 글자가 모두 비어 그려지는 증상이 나서, 매 Play를 처음 실행처럼 새 글꼴로 시작한다.
+        /// </summary>
+        public static void ResetCache()
+        {
+            Discard(_sans);
+            Discard(_mono);
+            _sans = null;
+            _mono = null;
+            _isSansResolved = false;
+            _isMonoResolved = false;
+        }
+
+        // CellEvents·SimClock처럼 Play를 시작할 때 이전 Play의 상태를 비운다.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetWhenPlayStarts()
+        {
+            ResetCache();
+        }
+
+        // 이미 파괴된 글꼴이 캐시에 남았는지 본다. 처음부터 null인 것(쓸 수 있는 글꼴이 없음)은 파괴된 것이 아니다.
+        private static bool IsDestroyed(UnityEngine.Object unityObject)
+        {
+            return !object.ReferenceEquals(unityObject, null) && unityObject == null;
         }
 
         private static Font Pick(string[] names)
@@ -122,6 +150,11 @@ namespace MediKitTwin.Dashboard
 
         private static void Discard(UnityEngine.Object unityObject)
         {
+            if (unityObject == null)
+            {
+                return;
+            }
+
             if (Application.isPlaying)
             {
                 UnityEngine.Object.Destroy(unityObject);
