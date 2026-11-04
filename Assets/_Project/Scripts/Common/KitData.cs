@@ -19,7 +19,11 @@ namespace MediKitTwin.Common
             KitCode = kitCode?.Trim().ToUpperInvariant();
         }
 
-        /// <summary>셀에 투입되는 순서(1, 2, 3, ...). 실행 안에서 유일하며, IKitSource가 키트를 내줄 때 부여한다(등록 순서가 아니다).</summary>
+        /// <summary>
+        /// 셀에 투입되는 순서(1, 2, 3, ...). IKitSource가 키트를 내줄 때 부여한다(등록 순서가 아니다).
+        /// 주문을 다시 불러오면 1부터 다시 세므로 실행 전체에서는 겹칠 수 있다(같은 주문이면 같은 키트에서 누락이 나야 해서다, NFR-06).
+        /// 실행 안에서 키트를 구분할 때는 LotNumber나 객체 자체를 쓰고, 어느 쪽이 먼저 투입됐는지는 StartTime으로 가른다.
+        /// </summary>
         public int KitSequence { get; }
 
         public int OrderSequence { get; }
