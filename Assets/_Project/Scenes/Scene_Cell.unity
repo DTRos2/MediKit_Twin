@@ -25323,6 +25323,7 @@ MonoBehaviour:
   gripper: {fileID: 3771495649133811532}
   dispenser: {fileID: 832185623}
   kitBoxSearchRoot: {fileID: 1527695083}
+  scenario: {fileID: 11400000, guid: 1e38135bb5e9457481bd18b4095cfc28, type: 2}
   linearStepM: 0.01
   approachHeight: 0.1
   liftHeight: 0.16

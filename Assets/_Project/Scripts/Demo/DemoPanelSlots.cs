@@ -64,6 +64,10 @@ namespace MediKitTwin.Demo
                 new Vector2(RightColumnWidth, JointsHeight),
                 startsCollapsed: true);
 
+        // 팩킹 실패 경고는 평소에는 없다가 뜨므로 로그 위, 가운데 띠에 띄워 눈에 띄게 한다.
+        public static DemoPanelSlot PackingAlert =>
+            new DemoPanelSlot(DemoPanelAnchor.BottomCenter, new Vector2(0f, 300f), new Vector2(520f, 220f));
+
         public static DemoPanelSlot Log =>
             new DemoPanelSlot(DemoPanelAnchor.BottomCenter, new Vector2(0f, Margin), new Vector2(LogWidth, LogHeight), startsCollapsed: true);
     }
