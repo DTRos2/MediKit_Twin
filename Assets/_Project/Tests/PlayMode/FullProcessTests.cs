@@ -21,6 +21,8 @@ namespace MediKitTwin.PlayMode.Tests
     /// 한 공정을 처음부터 끝까지 한 번에 본다: 주문 → 팔 A 키팅 → 컨베이어 → 검사 → 정상은 팩킹(팔 B 뚜껑) → 컨베이어 끝, 불량은 푸셔 → 불량 박스.
     /// 주문은 키트 3개다. 누락 규칙(FR-04)이 3번 키트에서만 구성품 하나를 빠뜨리도록 시나리오에 정해져 있으므로,
     /// 1·2번은 정상(2개 성공), 3번은 불량(1개 불량)이 나와야 한다. 키트는 검사·푸셔·팩킹으로 가는 길이 서로 다르므로 키트별로 지나간 알림과 그 순서를 본다.
+    /// 시나리오(ScenarioConfig_Default)가 정한 키트의 뚜껑 덮기는 일부러 한 번 실패한다(FR-10). 그때는 컨베이어와 팔 A가 멈추고 경고 패널이 떠서 사용자가 확인해야 이어지므로,
+    /// 시험은 PackingFailureUser로 사용자 대신 패널 버튼을 눌러 정지, 패널, 재시도, 재개까지 본다.
     /// 하역 로봇이 아직 없어서 컨베이어 끝에 닿은 박스는 EndOfLineUnloaderStub이 치운다.
     /// 배치 모드(그래픽 없음)에서는 검사 카메라를 그릴 수 없어 검사는 슬롯 센서 규칙 판정으로 대체된다. CNN 판정은 이 시험이 보지 않는다.
     /// </summary>
@@ -72,6 +74,8 @@ namespace MediKitTwin.PlayMode.Tests
                     var labels = new LabelRecorder();
                     var labelStation = Object.FindAnyObjectByType<LabelStation>();
                     Assert.That(labelStation, Is.Not.Null, "씬에서 라벨 설비(LabelStation)를 찾을 수 없다(Tools/MediKit/Setup Label Station으로 놓는다)");
+                    // 팩킹 실패는 사용자가 확인해야 이어지므로(FR-10), 사용자 대신 경고 패널의 버튼을 누르는 도구를 둔다.
+                    using var user = new PackingFailureUser();
 
                     OrderIntakeResult intake = input.LoadText(ThreeKitOrder);
                     Debug.Log($"[FullProcess] 주문 적용: 주문 {intake.Orders.Count}건, 키트 {intake.KitRequests.Count}개");
@@ -82,6 +86,7 @@ namespace MediKitTwin.PlayMode.Tests
                     while (true)
                     {
                         unloader.Tick(events);
+                        user.Tick();
                         trace.Sample(Time.time);
                         labels.Sample(Time.time);
                         if (IsProcessFinished(events))
@@ -105,6 +110,7 @@ namespace MediKitTwin.PlayMode.Tests
                     }
 
                     string report = BuildReport(endReason, Time.time - startSim, wall.Elapsed.TotalSeconds, events, station, trace, labels);
+                    report += "\n" + user.Describe();
                     Debug.Log(report);
 
                     // 더 나오는 알림이 없는지(예: 불량 키트가 팩킹으로도 가는지) 보려고 잠시 더 돌린다.
@@ -112,12 +118,14 @@ namespace MediKitTwin.PlayMode.Tests
                     while (Time.time < quietUntil)
                     {
                         unloader.Tick(events);
+                        user.Tick();
                         yield return null;
                     }
 
                     Assert.That(endReason, Is.EqualTo("공정 끝"), report);
                     AssertKitsWereMadeAsPlanned(events, report);
                     AssertGoodKitsWentThroughPacking(events, report);
+                    AssertPackingFailureWasHandledLikeAUser(user, report);
                     AssertDefectiveKitWasRejected(events, rejectBin, rejectedBefore, report);
                     AssertLabelsWereAttached(events, labels, labelStation, report);
                     Assert.That(unloader.ShippedCount, Is.EqualTo(GoodKitCount), "끝에 닿은 정상 키트를 모두 하역하지 못했다\n" + report);
@@ -127,6 +135,38 @@ namespace MediKitTwin.PlayMode.Tests
                     Time.captureFramerate = 0;
                 }
             }
+        }
+
+        // 팩킹 실패가 나면 사용자가 하듯 처리됐는지(FR-10): 컨베이어와 팔 A가 멈추고, 경고 패널이 뜨고, 버튼을 누르면 다시 덮여 이어서 움직인다.
+        // 시나리오가 정한 고의 실패 키트(FixedLidFailKitSequence)가 정상 키트이면 그 키트에서 정확히 한 번 나야 하고, 아니면 한 번도 나지 않아야 한다.
+        private static void AssertPackingFailureWasHandledLikeAUser(PackingFailureUser user, string report)
+        {
+            int plannedFailKit = Resources.FindObjectsOfTypeAll<ScenarioConfigSO>().Select(scenario => scenario.FixedLidFailKitSequence).DefaultIfEmpty(0).Max();
+            bool shouldFail = plannedFailKit > 0 && GoodKitSequences.Contains(plannedFailKit);
+            if (!shouldFail)
+            {
+                Assert.That(user.Cases, Is.Empty, "정해 두지 않은 팩킹 실패가 났다\n" + report);
+                return;
+            }
+
+            Assert.That(user.Cases.Select(c => c.Kit.KitSequence), Is.EqualTo(new[] { plannedFailKit }), $"고의 실패는 키트 {plannedFailKit}번에서 한 번만 나야 한다\n{report}");
+
+            foreach (PackingFailureUser.Case failure in user.Cases)
+            {
+                Assert.That(failure.PanelMissing, Is.False, "씬에 경고 패널(PackingFailureAlertPanelPresenter)이 없거나 다시 덮기 버튼이 없다\n" + report);
+                Assert.That(failure.PanelShown, Is.True, "팩킹 실패가 났는데 경고 패널이 뜨지 않았다\n" + report);
+                Assert.That(failure.ConveyorCount, Is.GreaterThan(0), "씬에서 컨베이어를 찾지 못했다\n" + report);
+                Assert.That(failure.MovingConveyors, Is.EqualTo(0), "팩킹 실패 뒤에도 움직이는 컨베이어가 있다\n" + report);
+                Assert.That(failure.ArmAFrozen, Is.True, "팩킹 실패 뒤에도 팔 A가 멈추지 않았다\n" + report);
+                Assert.That(failure.Clicked, Is.True, report);
+            }
+
+            PackingFailureUser.Case last = user.Cases[user.Cases.Count - 1];
+            Assert.That(last.ClosedAt, Is.GreaterThanOrEqualTo(0f), "버튼을 눌러도 뚜껑이 다시 덮이지 않았다\n" + report);
+            Assert.That(last.ResumeObserved, Is.True, "뚜껑이 덮인 뒤 재개한 모습을 보기 전에 시험이 끝났다\n" + report);
+            Assert.That(last.PanelHiddenAfter, Is.True, "뚜껑이 덮인 뒤에도 경고 패널이 그대로 떠 있다\n" + report);
+            Assert.That(last.MovingConveyorsAfter, Is.GreaterThan(0), "뚜껑이 덮인 뒤에도 컨베이어가 다시 돌지 않았다\n" + report);
+            Assert.That(last.ArmAFrozenAfter, Is.False, "뚜껑이 덮인 뒤에도 팔 A가 멈춘 채다\n" + report);
         }
 
         // 그래픽이 없는 배치 모드에서는 도구 카메라가 화면을 그릴 때마다 RenderTexture 오류를 남긴다. 끝날 때 그리기를 멈춘다.
