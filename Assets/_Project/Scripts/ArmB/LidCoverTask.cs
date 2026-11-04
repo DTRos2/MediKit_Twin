@@ -39,6 +39,8 @@ namespace MediKitTwin.ArmB
         [SerializeField] private LidDispenser dispenser;
         [Tooltip("덮을 키트 박스를 찾을 부모(Sensor_Packing). 이름에 KitBox가 들어간 첫 자손을 박스로 쓴다.")]
         [SerializeField] private Transform kitBoxSearchRoot;
+        [Tooltip("시연용 고의 실패 순번(FixedLidFailKitSequence)을 읽는 시나리오. 비워 두면 고의 실패를 쓰지 않는다.")]
+        [SerializeField] private ScenarioConfigSO scenario;
 
         [Header("동작")]
         [Tooltip("위아래로 움직일 때 끊어서 이동하는 간격(m). 관절은 관절 공간에서 직선으로 움직이므로 한 번에 크게 내려가면 끝점이 옆으로 휘어 손가락이 뚜껑 윗판에 얹힌다.")]
@@ -93,6 +95,9 @@ namespace MediKitTwin.ArmB
         private bool _stepReached;
         private string _stepNote = string.Empty;
         private Transform _heldLid;
+        private KitData _kit;
+        private KitData _failedKit;
+        private int _injectedKitSequence;
 
         public bool IsRunning => _running != null;
 
@@ -118,11 +123,19 @@ namespace MediKitTwin.ArmB
         private void OnEnable()
         {
             CellEvents.AtPacking += Begin;
+            CellEvents.PackingRetryRequested += OnRetryRequested;
         }
 
         private void OnDisable()
         {
             CellEvents.AtPacking -= Begin;
+            CellEvents.PackingRetryRequested -= OnRetryRequested;
+        }
+
+        // 사용자가 팩킹 실패를 확인했다. 실패한 키트의 박스는 아직 팩킹 구역에 서 있으므로 같은 키트로 처음부터 다시 덮는다.
+        private void OnRetryRequested(KitData kit)
+        {
+            Begin(kit ?? _failedKit);
         }
 
         private void Update()
@@ -151,6 +164,7 @@ namespace MediKitTwin.ArmB
 
         private IEnumerator Run(KitData kit)
         {
+            _kit = kit;
             _station.Set(StationState.Running);
 
             Transform kitBox = FindKitBox(kitBoxSearchRoot);
@@ -200,6 +214,14 @@ namespace MediKitTwin.ArmB
             if (!_stepReached)
             {
                 Fail("뚜껑을 쥘 높이까지 내려가지 못했습니다.");
+                yield break;
+            }
+
+            if (ShouldInjectFailure(kit))
+            {
+                // 시연: 뚜껑을 쥐기 전에 실패시킨다. 뚜껑은 공급대에 그대로 있어 다시 시도할 수 있다. 같은 키트에서는 한 번만 실패한다.
+                _injectedKitSequence = kit.KitSequence;
+                Fail($"[시연] 키트 {kit.KitSequence}번에서 일부러 실패시켰습니다. 뚜껑을 쥘 자리에서 멈췄습니다.");
                 yield break;
             }
 
@@ -701,15 +723,38 @@ namespace MediKitTwin.ArmB
             body.useGravity = true;
         }
 
+        private bool ShouldInjectFailure(KitData kit)
+        {
+            return scenario != null && kit != null && scenario.FixedLidFailKitSequence > 0 && kit.KitSequence == scenario.FixedLidFailKitSequence
+                && _injectedKitSequence != kit.KitSequence;
+        }
+
         private void Fail(string reason)
         {
             string detail = string.IsNullOrEmpty(_stepNote) ? string.Empty : $" [{_stepNote}]";
             Debug.LogWarning($"[LidCoverTask] 뚜껑 덮기 실패: {reason}{detail}", this);
+            // 대시보드와 로거는 Debug.Log를 보지 않고 CellEvents 경고만 본다.
+            CellEvents.RaiseWarning(ArmBWarningCodes.LidCoverFailed, $"팔 B 뚜껑 덮기 실패: {reason}{detail}");
             _stepNote = string.Empty;
+
+            // 어느 단계에서 실패하든 뚜껑을 쥔 채 Fault로 멈추지 않도록 그리퍼를 열고 뚜껑을 떨어뜨린다.
+            if (_grip.IsHolding || _heldLid != null)
+            {
+                _grip.Open();
+                Rigidbody lidBody = _heldLid != null ? _heldLid.GetComponent<Rigidbody>() : null;
+                if (lidBody != null)
+                {
+                    lidBody.isKinematic = false;
+                    lidBody.useGravity = true;
+                }
+            }
+
             _heldLid = null;
             _tool.ClearToolTarget();
+            _failedKit = _kit;
             _station.Set(StationState.Fault);
             _running = null;
+            CellEvents.RaisePackingFailed(_kit, reason);
             Finished?.Invoke(false);
         }
 
