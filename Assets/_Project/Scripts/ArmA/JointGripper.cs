@@ -50,6 +50,7 @@ namespace MediKitTwin.ArmA
         // 물건을 쥐고 있는 동안 손가락 관절이 향할 목표. 쥐고 있지 않으면 null이라 개폐 정도(_opening)를 따른다.
         private float[] _holdTargets;
         private readonly GraspAttachment _attachment = new GraspAttachment();
+        private IMountMotionSource _mountMotion;
         private float _opening = 1f;
         private float _targetOpening = 1f;
         private float _settleTimer;
@@ -118,7 +119,33 @@ namespace MediKitTwin.ArmA
 
             BuildGripLogic();
             ApplyOpening();
+            FollowMountMotion();
             _ready = true;
+        }
+
+        private void OnDestroy()
+        {
+            if (_mountMotion != null)
+            {
+                _mountMotion.Moved -= CarryHeld;
+            }
+        }
+
+        // 팔이 얹힌 베이스가 팔을 통째로 옮기면, 쥔 물건도 같은 만큼 바로 옮긴다. 팔 몸체는 한꺼번에 옮겨지지만
+        // 조인트로만 붙은 물건은 물리가 다음 단계에서야 따라와서, 베이스가 가거나 돌 때 손에서 처져 보이기 때문이다.
+        // 팔이 베이스에 얹혀 있지 않으면(찾지 못하면) 아무것도 하지 않는다.
+        private void FollowMountMotion()
+        {
+            _mountMotion = GetComponentInParent<IMountMotionSource>();
+            if (_mountMotion != null)
+            {
+                _mountMotion.Moved += CarryHeld;
+            }
+        }
+
+        private void CarryHeld(Matrix4x4 motion)
+        {
+            _attachment.Carry(motion);
         }
 
         // 손가락 판정과 쥔 자리 계산에 쓰는 객체를 한 번만 만든다. 수치는 인스펙터 값을 따른다.

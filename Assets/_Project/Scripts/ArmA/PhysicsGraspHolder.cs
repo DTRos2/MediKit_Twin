@@ -137,7 +137,8 @@ namespace MediKitTwin.ArmA
             }
 
             IgnoreEverythingWhileHeld();
-            _held.EnablePhysics(useGravity: true);
+            // 손에 쥐고 있는 동안에는 보간하지 않는다(팔 몸체처럼 물리 스텝마다 움직여 손과 같이 보이게). 놓을 때(PlacedItemLanding)는 기본대로 보간한다.
+            _held.EnablePhysics(useGravity: true, RigidbodyInterpolation.None);
             done(true);
         }
 
