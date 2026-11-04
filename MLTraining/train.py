@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import ConcatDataset, DataLoader
 
 from data import SlotCropDataset, build_classes, read_labels
 from metrics import box_metrics, slot_accuracy
@@ -37,6 +37,9 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--device", default="auto", help="auto, cpu, cuda")
     parser.add_argument("--no-augment", action="store_true", help="학습 때 밝기와 잡음 보강을 끈다")
+    parser.add_argument("--real", default=None, help="build_real_set.py가 만든 실제 크롭 폴더. train 분할을 합성 학습 데이터에 섞는다")
+    parser.add_argument("--real-repeat", type=int, default=8, help="실제 크롭을 학습에서 몇 번 반복해 넣을지(수가 적어서 늘린다)")
+    parser.add_argument("--real-test", default=None, help="평가에만 쓰는 실제 크롭 폴더(보통 --real과 같은 폴더의 test 분할). 학습에는 쓰지 않는다")
     return parser.parse_args()
 
 
@@ -84,6 +87,28 @@ def evaluate(model, dataset, classes, device, batch_size):
     return result
 
 
+def evaluate_real(model, dataset, classes, device, batch_size):
+    """실제 크롭의 슬롯 정확도와 로트별 통과 여부(모든 슬롯이 정답이면 통과). 박스 단위 NFR-04와는 다른, 실제 씬 확인용 지표이다."""
+    predictions, confidences = predict(model, dataset, device, batch_size)
+    labels = [classes[i] for i in predictions]
+    lots, errors = {}, {}
+    for row, label, confidence in zip(dataset.rows, labels, confidences):
+        lot = lots.setdefault(row["case_index"], {"kit": row["kit_code"], "pass": True, "wrong": []})
+        if row["label"] != label:
+            lot["pass"] = False
+            lot["wrong"].append(f"s{row['slot_number']}: {row['label']} -> {label} ({confidence:.2f})")
+            key = f"{row['label']} -> {label}"
+            errors[key] = errors.get(key, 0) + 1
+
+    return {
+        "slot_accuracy": float(np.mean([r["label"] == l for r, l in zip(dataset.rows, labels)])),
+        "lots": len(lots),
+        "lots_passed": sum(1 for lot in lots.values() if lot["pass"]),
+        "failed_lots": {k: v["wrong"] for k, v in sorted(lots.items()) if not v["pass"]},
+        "slot_errors": dict(sorted(errors.items(), key=lambda kv: -kv[1])),
+    }
+
+
 def export_onnx(model, classes, path):
     """Sentis가 읽는 ONNX로 내보내고, onnxruntime으로 PyTorch와 같은 출력인지 확인한다."""
     model.eval().cpu()
@@ -129,6 +154,11 @@ def main():
     test_set = SlotCropDataset(dataset_dir, "test", classes)
     print(f"크롭 수: 학습 {len(train_set)}, 검증 {len(val_set)}, 테스트 {len(test_set)}")
 
+    if args.real:
+        real_train = SlotCropDataset(args.real, "train", classes, augment=not args.no_augment)
+        train_set = ConcatDataset([train_set] + [real_train] * max(1, args.real_repeat))
+        print(f"실제 크롭 {len(real_train)}장 x {max(1, args.real_repeat)}을 학습에 섞었다 (학습 합계 {len(train_set)})")
+
     out_dir = Path(args.out) if args.out else Path("runs") / time.strftime("%Y%m%d-%H%M%S")
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -166,6 +196,15 @@ def main():
         "validation": evaluate(model, val_set, classes, device, args.batch),
         "test": evaluate(model, test_set, classes, device, args.batch),
     }
+    if args.real_test:
+        real_test = SlotCropDataset(args.real_test, "test", classes)
+        results["real_test"] = evaluate_real(model, real_test, classes, device, args.batch)
+        r = results["real_test"]
+        print("\n=== 실제 크롭 평가 (학습에 쓰지 않은 세션) ===")
+        print(f"슬롯 정확도 {r['slot_accuracy']:.4f}, 로트 통과 {r['lots_passed']}/{r['lots']}")
+        for lot, wrong in r["failed_lots"].items():
+            print(f"  실패 {lot}: {'; '.join(wrong)}")
+
     test_box = results["test"]["box"]
     results["nfr04_passed"] = bool(
         test_box["accuracy"] >= TARGET_METRIC and test_box["defect_recall"] >= TARGET_METRIC
