@@ -50,6 +50,7 @@ namespace MediKitTwin.ArmA
         private IGripContact _contact;
         private GraspableItemFactory _factory;
         private PlacedItemLanding _landing;
+        private readonly GraspClosingTrace _trace = new GraspClosingTrace();
         private Graspable _held;
         private Quaternion _restingRotation = Quaternion.identity;
 
@@ -103,6 +104,7 @@ namespace MediKitTwin.ArmA
             // 선반에 얹혀 있던 방향을 기억해 둔다. 박스에 놓을 때 물건이 같은 방향으로 놓이게 도구 방향을 잡는 기준이다.
             _restingRotation = item.Pose.rotation;
             KeepOnlyArmCollisionWhileClosing();
+            _trace.Reset();
             _grip.Close();
 
             float elapsed = 0f;
@@ -110,14 +112,24 @@ namespace MediKitTwin.ArmA
             {
                 yield return new WaitForFixedUpdate();
                 elapsed += Time.fixedDeltaTime;
+                _trace.Sample(_contact?.FingerColliders, _held.Colliders, _grip.Opening);
             }
 
             string reason = PhysicalGraspVerdict.FailureReason(
                 _grip.IsHolding, _contact != null, _contact != null && _contact.IsBlockedByObject);
+            if (_contact != null)
+            {
+                // 얇은 물건은 손가락이 기준에 아슬아슬하게 못 미치거나 넘으므로, 판정이 얼마나 여유 있었는지 남긴다.
+                Debug.Log(
+                    $"{name}: 쥐기 마침 — {item.Prototype.name}: 손가락 닫힘 {_contact.LeastClosedRatio:0.000}" +
+                    $"(기준 {_contact.FullyClosedRatio:0.00} 이상이면 끝까지 닫혀 물건이 없다고 본다), 쥠 {_grip.IsHolding}", this);
+            }
+
             if (reason.Length > 0)
             {
                 LastFailureReason = $"{reason} — {DescribeDistance()}";
                 Debug.LogWarning($"{name}: 물리로 쥐지 못했다 — {LastFailureReason}", this);
+                Debug.LogWarning($"{name}: 쥐기 실패 진단 — {_trace.Describe(_contact?.FingerColliders, _held.Colliders)}", this);
                 _grip.Open();
                 DestroyHeld();
                 done(false);

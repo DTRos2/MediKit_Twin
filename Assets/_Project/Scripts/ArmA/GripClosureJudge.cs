@@ -26,10 +26,22 @@ namespace MediKitTwin.ArmA
             _fullyClosedRatio = fullyClosedRatio;
         }
 
+        /// <summary>이 비율 이상 닫혔으면 끝까지 닫힌 것으로 본다.</summary>
+        public float FullyClosedRatio => _fullyClosedRatio;
+
         /// <param name="positions">손가락 관절의 지금 위치(프로필 값과 같은 단위).</param>
         /// <param name="openValues">손가락 관절의 열린 값.</param>
         /// <param name="closedValues">손가락 관절의 닫힌 값.</param>
         public bool IsBlocked(IReadOnlyList<float> positions, IReadOnlyList<float> openValues, IReadOnlyList<float> closedValues)
+        {
+            return LeastClosedRatio(positions, openValues, closedValues) < _fullyClosedRatio;
+        }
+
+        /// <summary>
+        /// 손가락 중 가장 덜 닫힌 것의 닫힌 정도(0 열림 ~ 1 끝까지 닫힘). 움직임이 없는 관절은 빼고, 잴 손가락이 없으면 1이다.
+        /// 얇은 물건을 쥔 손가락은 이 값이 기준(FullyClosedRatio)에 얼마나 가까운지로 판정이 아슬아슬했는지 알 수 있다.
+        /// </summary>
+        public float LeastClosedRatio(IReadOnlyList<float> positions, IReadOnlyList<float> openValues, IReadOnlyList<float> closedValues)
         {
             if (positions == null || openValues == null || closedValues == null
                 || positions.Count != openValues.Count || positions.Count != closedValues.Count)
@@ -37,6 +49,7 @@ namespace MediKitTwin.ArmA
                 throw new ArgumentException("위치, 열린 값, 닫힌 값의 개수가 같아야 한다.");
             }
 
+            float least = 1f;
             for (int i = 0; i < positions.Count; i++)
             {
                 float span = closedValues[i] - openValues[i];
@@ -45,14 +58,10 @@ namespace MediKitTwin.ArmA
                     continue;
                 }
 
-                float closedRatio = (positions[i] - openValues[i]) / span;
-                if (closedRatio < _fullyClosedRatio)
-                {
-                    return true;
-                }
+                least = Math.Min(least, (positions[i] - openValues[i]) / span);
             }
 
-            return false;
+            return least;
         }
     }
 }

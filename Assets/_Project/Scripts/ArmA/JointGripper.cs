@@ -27,8 +27,10 @@ namespace MediKitTwin.ArmA
 
         [SerializeField] private LayerMask _graspMask = ~0;
 
-        [Tooltip("손가락이 열린 값에서 닫힌 값까지 이 비율 이상 닫혔으면 끝까지 닫힌 것으로 본다. 이보다 덜 닫힌 채 멈췄으면 손가락 사이에 물체가 걸린 것이다.")]
-        [SerializeField, Range(0.5f, 0.99f)] private float _fullyClosedRatio = 0.85f;
+        [Tooltip("손가락이 열린 값에서 닫힌 값까지 이 비율 이상 닫혔으면 끝까지 닫힌 것으로 본다. 이보다 덜 닫힌 채 멈췄으면 손가락 사이에 물체가 걸린 것이다. " +
+                 "아무것도 쥐지 않고 닫으면 0.998 이상(GripperEmptyClosureTests), 가장 얇은 물건(채혈관 1cm)을 쥐면 0.83~0.86까지 닫히므로 그 사이인 0.95로 둔다. " +
+                 "0.85였을 때는 채혈관을 제대로 쥐고도 0.857이 나와 쥐지 못한 것으로 잘못 판정했다.")]
+        [SerializeField, Range(0.5f, 0.99f)] private float _emptyClosedRatio = 0.95f;
 
         [Tooltip("물건을 쥔 뒤 손가락이 쥔 자리에서 닫히는 쪽으로 더 가려는 양(열린 값에서 닫힌 값까지 거리의 비율). " +
                  "0이면 물건에 닿은 자리를 지키기만 한다. 쥔 뒤에는 물건과 손가락의 충돌이 꺼져 있어서 0보다 크면 그만큼 손가락이 물건에 파고든 모습이 된다. " +
@@ -65,6 +67,22 @@ namespace MediKitTwin.ArmA
         public Vector3 GraspCenter => _host != null ? _host.ToolPose.position : transform.position;
 
         public float GraspRadius => _graspRadius;
+
+        public float FullyClosedRatio => _emptyClosedRatio;
+
+        public float LeastClosedRatio
+        {
+            get
+            {
+                if (!_ready)
+                {
+                    return 1f;
+                }
+
+                _fingers.ReadPositions(_positions);
+                return _closureJudge.LeastClosedRatio(_positions, _fingers.OpenValues, _fingers.ClosedValues);
+            }
+        }
 
         /// <summary>손가락이 열린 값에서 닫힌 값까지 충분히 닫히지 못하고 멈췄으면 true. 닫는 명령을 내리고 기다린 뒤에 읽는다.</summary>
         public bool IsBlockedByObject
@@ -107,7 +125,7 @@ namespace MediKitTwin.ArmA
         private void BuildGripLogic()
         {
             _positions = new float[_fingers.Count];
-            _closureJudge = new GripClosureJudge(_fullyClosedRatio);
+            _closureJudge = new GripClosureJudge(_emptyClosedRatio);
             _holdPlanner = new GripHoldTargets(_holdPreloadRatio);
             _driveBooster = new FingerDriveBooster(_fingers.Joints, _holdDriveMultiplier);
         }
