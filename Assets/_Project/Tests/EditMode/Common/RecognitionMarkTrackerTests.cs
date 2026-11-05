@@ -63,5 +63,53 @@ namespace MediKitTwin.Common.Tests
 
             Assert.That(tracker.TryGetMark(10.6f, out _), Is.False);
         }
+
+        [Test]
+        public void Dismiss_HidesTheMarkAtOnce_EvenWithTimeLeft()
+        {
+            var tracker = new RecognitionMarkTracker(3f);
+            tracker.Observe(Seen("A-1", 1f), 10f);
+
+            tracker.Dismiss();
+
+            Assert.That(tracker.TryGetMark(10.1f, out _), Is.False);
+        }
+
+        [Test]
+        public void AfterDismiss_TheSameResultPassedEveryFrame_StaysHidden()
+        {
+            var tracker = new RecognitionMarkTracker(3f);
+            ItemObservation seen = Seen("A-1", 1f);
+            tracker.Observe(seen, 10f);
+            tracker.Dismiss();
+
+            tracker.Observe(seen, 10.2f);
+
+            Assert.That(tracker.TryGetMark(10.3f, out _), Is.False);
+        }
+
+        [Test]
+        public void AfterDismiss_ANewResult_ShowsAgain()
+        {
+            var tracker = new RecognitionMarkTracker(3f);
+            tracker.Observe(Seen("A-1", 1f), 10f);
+            tracker.Dismiss();
+
+            tracker.Observe(Seen("A-2", 2f), 12f);
+
+            Assert.That(tracker.TryGetMark(12.1f, out ItemObservation mark), Is.True);
+            Assert.That(mark.SlotId, Is.EqualTo("A-2"));
+        }
+
+        [Test]
+        public void DismissBeforeAnythingIsFound_DoesNotHideTheNextFind()
+        {
+            var tracker = new RecognitionMarkTracker(3f);
+            tracker.Dismiss();
+
+            tracker.Observe(Seen("A-1", 1f), 10f);
+
+            Assert.That(tracker.TryGetMark(10.1f, out _), Is.True);
+        }
     }
 }

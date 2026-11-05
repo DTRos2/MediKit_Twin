@@ -41,6 +41,8 @@ namespace MediKitTwin.ArmA
 
         public int ObservationCount { get; private set; }
 
+        public int TargetTakenCount { get; private set; }
+
         /// <summary>카메라 화면에서 숨기려고 GPU Resident Drawer에서 뺀 렌더러의 수(알림용).</summary>
         public int GpuDrivenOptOutCount => _gpuDrivenOptOut != null ? _gpuDrivenOptOut.AppliedCount : 0;
 
@@ -121,6 +123,12 @@ namespace MediKitTwin.ArmA
         {
             _lastObservation = observation;
             ObservationCount++;
+        }
+
+        /// <summary>노리던 물건을 쥐었다고 남긴다. 표시를 그리는 쪽이 TargetTakenCount가 늘어난 것으로 알아채고 표시를 거둔다.</summary>
+        public void MarkTargetTaken()
+        {
+            TargetTakenCount++;
         }
 
         private void Initialize(ToolCameraSettings settings)

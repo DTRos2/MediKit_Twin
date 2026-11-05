@@ -23,6 +23,9 @@ namespace MediKitTwin.ArmA.Tests
         public PinholeCamera Model => View;
         public ItemObservation LastObservation { get; private set; } = ItemObservation.None;
         public int ObservationCount { get; private set; }
+        public int TargetTakenCount { get; private set; }
+
+        internal void TakeTarget() => TargetTakenCount++;
 
         internal void Record(ItemObservation observation)
         {

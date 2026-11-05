@@ -37,6 +37,24 @@ namespace MediKitTwin.ArmA.Tests
 
         private static ItemPickRequest Request() => new ItemPickRequest(PerceptionTestData.Item(ItemAt), () => true);
 
+        [Test]
+        public void WhenTheItemIsGrasped_TheGraspedCallbackIsCalledOnce()
+        {
+            int told = 0;
+            var refiner = new ObservationGraspRefiner(
+                _estimator, PerceptionTestData.Recognition(false, 0.004f, 0.03f), null, null, _log.Add, onItemGrasped: () => told++);
+
+            refiner.ItemGrasped(Request());
+
+            Assert.That(told, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void WhenNoCallbackIsGiven_GraspingTheItemDoesNothingAndDoesNotThrow()
+        {
+            Assert.DoesNotThrow(() => Create().ItemGrasped(Request()));
+        }
+
         private static GraspTargets Planned(TaughtJointRoute route = null) =>
             new GraspTargets(Quaternion.identity, ItemAt + Vector3.back * 0.15f, ItemAt, ItemAt + Vector3.back * 0.1f, route);
 

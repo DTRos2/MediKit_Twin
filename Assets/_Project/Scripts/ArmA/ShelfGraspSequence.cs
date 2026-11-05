@@ -107,6 +107,9 @@ namespace MediKitTwin.ArmA
                 yield break;
             }
 
+            // 쥔 물건은 더 이상 노리는 대상이 아니다. 후퇴하는 동안 인식 표시가 남지 않도록 쥔 순간에 알린다.
+            (_refiner as IGraspListener)?.ItemGrasped(request);
+
             yield return _steps.MoveTravel(targets.RetreatPose, targets.Route?.Retreat, TransferSteps.ShelfRetreat, result, ok => isOk = ok);
             if (!isOk)
             {

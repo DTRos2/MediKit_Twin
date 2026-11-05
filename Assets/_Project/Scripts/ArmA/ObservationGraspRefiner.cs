@@ -18,7 +18,7 @@ namespace MediKitTwin.ArmA
     ///    줄여도 겹치거나 관절 각도를 못 풀면 고치지 않는다.
     /// 인식기, 길을 푸는 쪽, 겹침 판정은 모두 주입받으므로 씬 없이 시험한다.
     /// </summary>
-    public sealed class ObservationGraspRefiner : IGraspRefiner, IGraspSettler
+    public sealed class ObservationGraspRefiner : IGraspRefiner, IGraspSettler, IGraspListener
     {
         private readonly IItemPoseEstimator _estimator;
         private readonly RecognitionSettings _settings;
@@ -27,12 +27,14 @@ namespace MediKitTwin.ArmA
         private readonly Action<string> _log;
         private readonly ShiftBackoff _backoff;
         private readonly Func<Pose> _toolPose;
+        private readonly Action _onItemGrasped;
 
         /// <param name="routes">고친 자리의 관절 각도 길을 푸는 쪽. 관절 각도 길로 가지 않으면 null이어도 된다.</param>
         /// <param name="isClear">세 자리가 장애물과 겹치지 않으면 true. 겹침을 따지지 않으면 null.</param>
         /// <param name="log">진행을 알리는 쪽. 필요 없으면 null.</param>
         /// <param name="backoff">고칠 양을 그대로 못 옮길 때(장애물에 닿거나 관절 각도를 못 풀 때) 줄여 보는 방식. null이면 기본(전부, 3/4, 1/2, 1/4)이다.</param>
         /// <param name="toolPose">지금 도구 끝점 자세(월드). 주면 쥐는 자리에 닿은 뒤 실제 오차를 메운다(IGraspSettler). 없으면 메우지 않는다.</param>
+        /// <param name="onItemGrasped">노리던 물건을 쥐었을 때 부른다(IGraspListener). 인식 표시를 거두는 쪽이 건다. 필요 없으면 null.</param>
         public ObservationGraspRefiner(
             IItemPoseEstimator estimator,
             RecognitionSettings settings,
@@ -40,7 +42,8 @@ namespace MediKitTwin.ArmA
             Func<GraspTargets, bool> isClear,
             Action<string> log,
             ShiftBackoff backoff = null,
-            Func<Pose> toolPose = null)
+            Func<Pose> toolPose = null,
+            Action onItemGrasped = null)
         {
             _estimator = estimator ?? throw new ArgumentNullException(nameof(estimator));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -49,6 +52,12 @@ namespace MediKitTwin.ArmA
             _log = log;
             _backoff = backoff ?? ShiftBackoff.Default;
             _toolPose = toolPose;
+            _onItemGrasped = onItemGrasped;
+        }
+
+        public void ItemGrasped(ItemPickRequest request)
+        {
+            _onItemGrasped?.Invoke();
         }
 
         public int SettleAttempts => _toolPose != null ? _settings.SettleAttempts : 0;

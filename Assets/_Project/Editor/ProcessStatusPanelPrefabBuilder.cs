@@ -35,6 +35,7 @@ namespace MediKitTwin.EditorTools
             UiPrimitives.AddColumn(currentKit, 0f);
             UiPrimitives.AddLabel(currentKit, "Caption", ProcessStatusPanelTexts.CurrentKit, TextRole.Small, palette.Muted);
             Text headline = UiPrimitives.AddLabel(currentKit, "Headline", string.Empty, TextRole.State, palette.Muted);
+            UiPrimitives.SetLayout(headline.rectTransform, preferredHeight: DashboardMetrics.StateLineHeight);
             Text kitSummary = UiPrimitives.AddLabel(
                 currentKit, "KitSummary", string.Empty, TextRole.Small, palette.Muted, TextAnchor.UpperLeft, isWrapped: true);
 

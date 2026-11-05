@@ -34,5 +34,8 @@ namespace MediKitTwin.Common
 
         /// <summary>물건을 찾아본 횟수. 찾아볼 때마다 늘어나서, 같은 결과가 다시 나와도 새로 찾아봤는지 알 수 있다.</summary>
         int ObservationCount { get; }
+
+        /// <summary>노리던 물건을 쥔 횟수. 쥘 때마다 늘어나서, 표시를 그리는 쪽이 이 숫자가 바뀐 것으로 "쥐었다"를 알아챈다.</summary>
+        int TargetTakenCount { get; }
     }
 }
