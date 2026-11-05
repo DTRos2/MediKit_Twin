@@ -78,7 +78,7 @@ namespace MediKitTwin.Demo
             }
 
             // 알려 준 집는 자세를 저장하는 파일. 자동 키팅(ArmItemTransfer)이 같은 파일을 읽는다.
-            _pickPoses = new TaughtPickPoseRepository(FilePickPoseStorage.CreateDefault());
+            _pickPoses = new TaughtPickPoseRepository(DefaultPickPoseStorage.Create());
 
             SelectRobot(_robots.Current);
         }

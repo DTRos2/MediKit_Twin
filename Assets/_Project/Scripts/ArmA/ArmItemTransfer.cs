@@ -278,7 +278,7 @@ namespace MediKitTwin.ArmA
                 _rememberPlacements ? new PlacementMemory(_placementMemoryRadiusM) : null);
 
             _taughtFinder = new TaughtPoseFinder(
-                _useTaughtPoses ? new TaughtPickPoseRepository(FilePickPoseStorage.CreateDefault()) : null,
+                _useTaughtPoses ? new TaughtPickPoseRepository(DefaultPickPoseStorage.Create()) : null,
                 message => Debug.LogError($"{name}: {message}", this));
         }
 

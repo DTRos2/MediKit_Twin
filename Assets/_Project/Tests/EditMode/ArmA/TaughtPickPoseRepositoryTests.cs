@@ -6,22 +6,6 @@ namespace MediKitTwin.ArmA.Tests
 {
     public sealed class TaughtPickPoseRepositoryTests
     {
-        // 글자를 메모리에 들고 있는 저장소. 몇 번 썼는지도 센다.
-        private sealed class InMemoryStorage : IPickPoseStorage
-        {
-            public string Text { get; set; } = string.Empty;
-
-            public int WriteCount { get; private set; }
-
-            public string Read() => Text;
-
-            public void Write(string text)
-            {
-                Text = text;
-                WriteCount++;
-            }
-        }
-
         private static TaughtPickPose Pose(string slotId, float armBaseX = 1f) => TaughtPickPose.Capture(
             slotId,
             new Vector3(armBaseX - 0.03f, 0f, 1.98f),
@@ -33,7 +17,7 @@ namespace MediKitTwin.ArmA.Tests
         [Test]
         public void ASavedPoseCanBeReadBack()
         {
-            var repository = new TaughtPickPoseRepository(new InMemoryStorage());
+            var repository = new TaughtPickPoseRepository(new InMemoryPickPoseStorage());
 
             repository.Save(Pose("A-1", armBaseX: 1.88f));
 
@@ -45,7 +29,7 @@ namespace MediKitTwin.ArmA.Tests
         public void AnotherRepositoryOnTheSameStorageSeesTheSave()
         {
             // 패널이 저장한 것을 집으러 가는 쪽이 같은 파일을 통해 바로 본다.
-            var storage = new InMemoryStorage();
+            var storage = new InMemoryPickPoseStorage();
             var panelSide = new TaughtPickPoseRepository(storage);
             var transferSide = new TaughtPickPoseRepository(storage);
 
@@ -58,7 +42,7 @@ namespace MediKitTwin.ArmA.Tests
         [Test]
         public void SavingASecondSlot_KeepsTheFirst()
         {
-            var repository = new TaughtPickPoseRepository(new InMemoryStorage());
+            var repository = new TaughtPickPoseRepository(new InMemoryPickPoseStorage());
 
             repository.Save(Pose("A-1"));
             repository.Save(Pose("A-2"));
@@ -69,7 +53,7 @@ namespace MediKitTwin.ArmA.Tests
         [Test]
         public void SavingTheSameSlotAgain_ReplacesIt()
         {
-            var repository = new TaughtPickPoseRepository(new InMemoryStorage());
+            var repository = new TaughtPickPoseRepository(new InMemoryPickPoseStorage());
 
             repository.Save(Pose("A-1", armBaseX: 1f));
             repository.Save(Pose("A-1", armBaseX: 2f));
@@ -82,7 +66,7 @@ namespace MediKitTwin.ArmA.Tests
         [Test]
         public void Remove_DeletesTheSlotAndWritesOnce()
         {
-            var storage = new InMemoryStorage();
+            var storage = new InMemoryPickPoseStorage();
             var repository = new TaughtPickPoseRepository(storage);
             repository.Save(Pose("A-1"));
             int writesBefore = storage.WriteCount;
@@ -96,7 +80,7 @@ namespace MediKitTwin.ArmA.Tests
         [Test]
         public void RemovingAMissingSlot_DoesNotWriteAnything()
         {
-            var storage = new InMemoryStorage();
+            var storage = new InMemoryPickPoseStorage();
             var repository = new TaughtPickPoseRepository(storage);
 
             Assert.That(repository.Remove("A-1"), Is.False);
@@ -106,7 +90,7 @@ namespace MediKitTwin.ArmA.Tests
         [Test]
         public void WhenTheStorageIsBroken_SavingThrowsAndKeepsTheOldText()
         {
-            var storage = new InMemoryStorage { Text = "{ broken" };
+            var storage = new InMemoryPickPoseStorage { Text = "{ broken" };
             var repository = new TaughtPickPoseRepository(storage);
 
             Assert.Throws<ArgumentException>(() => repository.Save(Pose("A-1")));
@@ -118,7 +102,7 @@ namespace MediKitTwin.ArmA.Tests
         [Test]
         public void WhenTheStorageIsBroken_ReadingThrows()
         {
-            var repository = new TaughtPickPoseRepository(new InMemoryStorage { Text = "{ broken" });
+            var repository = new TaughtPickPoseRepository(new InMemoryPickPoseStorage { Text = "{ broken" });
 
             Assert.Throws<ArgumentException>(() => repository.TryGet("A-1", out _));
         }
