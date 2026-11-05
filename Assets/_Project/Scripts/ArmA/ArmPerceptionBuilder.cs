@@ -233,7 +233,8 @@ namespace MediKitTwin.ArmA
                 solver != null ? new SeededRouteBuilder(solver) : null,
                 current != null ? (Func<GraspTargets, bool>)(targets => current.IsClear(targets)) : null,
                 log,
-                toolPose: () => host.ToolPose);
+                toolPose: () => host.ToolPose,
+                onItemGrasped: feed.MarkTargetTaken);
         }
     }
 }

@@ -9,7 +9,7 @@ namespace MediKitTwin.ArmA
     /// 준비된 뒤에야 만들 수 있다. 그래서 먼저 빈 채로 순서 객체에 건네 두고, 준비되면 채운다(Attach).
     /// 채우기 전에는 아무것도 고치지 않고 모든 자세를 "겹치지 않음"으로 답해, 인식과 회피가 없는 때와 똑같이 동작한다.
     /// </summary>
-    public sealed class ArmPerception : IGraspRefiner, IGraspSettler
+    public sealed class ArmPerception : IGraspRefiner, IGraspSettler, IGraspListener
     {
         private IGraspRefiner _refiner;
         private Func<Pose, bool> _isClear;
@@ -61,6 +61,12 @@ namespace MediKitTwin.ArmA
             return _refiner is IGraspSettler settler
                 ? settler.Settle(request, current)
                 : GraspRefinement.Keep(current, string.Empty);
+        }
+
+        // 쥔 것을 알아듣는 것은 인식을 채운 refiner가 할 수 있을 때만이다. 채우기 전이거나 들을 수 없으면 아무것도 하지 않는다.
+        public void ItemGrasped(ItemPickRequest request)
+        {
+            (_refiner as IGraspListener)?.ItemGrasped(request);
         }
 
         /// <summary>지금 서 있는 자리에서 이 도구 자세가 장애물과 겹치지 않으면 true. 회피를 쓰지 않으면 항상 true.</summary>

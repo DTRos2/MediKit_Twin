@@ -116,6 +116,23 @@ namespace MediKitTwin.ArmA.Tests
             }
         }
 
+        // 쥐었다는 알림을 받는 쪽까지 흉내 낸다. 알림이 쥔 뒤(후퇴 전)에 왔는지 보려고 알림 때의 로그를 남긴다.
+        private sealed class FakeListeningRefiner : IGraspRefiner, IGraspListener
+        {
+            internal readonly List<string> Log;
+            internal int Told;
+
+            internal FakeListeningRefiner(List<string> log) => Log = log;
+
+            public GraspRefinement Refine(ItemPickRequest request, GraspTargets planned) => GraspRefinement.Keep(planned, string.Empty);
+
+            public void ItemGrasped(ItemPickRequest request)
+            {
+                Told++;
+                Log.Add("told");
+            }
+        }
+
         private ShelfGraspSequence Create(IGraspRefiner refiner = null)
         {
             var diagnostics = new TransferDiagnostics(_tool, null, null, () => false, 0.01f);
@@ -315,6 +332,28 @@ namespace MediKitTwin.ArmA.Tests
             Run(Create(refiner), Request(), new TransferResult());
 
             Assert.That(_log, Does.Not.Contain("settle"));
+        }
+
+        [Test]
+        public void TellsTheListenerRightAfterGrasping_AndBeforeRetreating()
+        {
+            var refiner = new FakeListeningRefiner(_log);
+
+            Run(Create(refiner), Request(), new TransferResult());
+
+            Assert.That(_log, Is.EqualTo(new[] { "open", "move", "move", "commit", "grasp", "told", "move" }));
+            Assert.That(refiner.Told, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DoesNotTellTheListener_WhenTheGripperDoesNotCatchTheItem()
+        {
+            _holder.GraspSucceeds = false;
+            var refiner = new FakeListeningRefiner(_log);
+
+            Run(Create(refiner), Request(), new TransferResult());
+
+            Assert.That(refiner.Told, Is.EqualTo(0));
         }
 
         [Test]
