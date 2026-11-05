@@ -44,8 +44,8 @@ namespace MediKitTwin.Dashboard
 
         // 슬라이더
         public const float SliderHeight = 34f;
-        public const float SliderTrackHeight = 6f;
-        public const float SliderThumbSize = 20f;
+        public const float SliderTrackHeight = 4f;
+        public const float SliderThumbSize = 16f;
         public const float SliderThumbBorder = 3f;
         public const float SliderNameWidth = 44f;
         public const float SliderValueWidth = 84f;
@@ -166,7 +166,10 @@ namespace MediKitTwin.Dashboard
         public const int SmallFontSize = 12;
         public const int MonoFontSize = 12;
         public const int BigNumberFontSize = 30;
-        public const int StateFontSize = 28;
+        public const int StateFontSize = 20;
+
+        // 지금 단계를 알리는 큰 글 한 줄이 차지하는 높이. 글자 크기보다 조금 크게 정해, 아래 글과 겹치지 않고 위아래가 딱 맞는다.
+        public const float StateLineHeight = 28f;
 
         // 비활성일 때 그림에 곱하는 투명도
         public const float DisabledAlpha = 0.5f;

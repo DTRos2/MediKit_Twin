@@ -269,11 +269,14 @@ namespace MediKitTwin.EditorTools
             return button.Button;
         }
 
-        // 가는 막대와 둥근 손잡이가 있는 슬라이더. 칸 전체가 눌림을 받아 막대 어디를 눌러도 그 값으로 가고 끌 수 있다.
+        // 가는 막대, 값까지 칠해지는 색 띠, 작은 둥근 손잡이가 있는 슬라이더(윈도 볼륨 막대처럼).
+        // 칸 전체가 눌림을 받아 막대 어디를 눌러도 그 값으로 가고 끌 수 있다.
         private static Slider AddSlider(Transform parent, string name)
         {
             DashboardPalette palette = DashboardPalette.Default;
             float thumbSize = DashboardMetrics.SliderThumbSize;
+            float halfThumb = thumbSize * 0.5f;
+            float trackHeight = DashboardMetrics.SliderTrackHeight;
 
             RectTransform root = UiPrimitives.CreateRect(name, parent);
             UiPrimitives.SetLayout(root, preferredHeight: DashboardMetrics.SliderHeight, flexibleWidth: 1f);
@@ -282,26 +285,49 @@ namespace MediKitTwin.EditorTools
             RectTransform track = UiPrimitives.CreateRect("Track", root);
             track.anchorMin = new Vector2(0f, 0.5f);
             track.anchorMax = new Vector2(1f, 0.5f);
-            track.sizeDelta = new Vector2(0f, DashboardMetrics.SliderTrackHeight);
-            UiPrimitives.AddImage(track, palette.Track, DashboardMetrics.SliderTrackHeight * 0.5f);
+            track.sizeDelta = new Vector2(0f, trackHeight);
+            UiPrimitives.AddImage(track, palette.Track, trackHeight * 0.5f);
+
+            // 색 띠가 늘어나는 구간. 손잡이가 움직이는 구간과 같게 양끝을 손잡이 반지름만큼 뺀다. 그래야 띠 끝이 손잡이 가운데에 온다.
+            // 슬라이더는 띠(Fill)의 오른쪽 앵커만 값에 맞춰 옮기고, 아래 offset은 건드리지 않는다.
+            RectTransform fillArea = UiPrimitives.CreateRect("FillArea", root);
+            fillArea.anchorMin = new Vector2(0f, 0.5f);
+            fillArea.anchorMax = new Vector2(1f, 0.5f);
+            fillArea.offsetMin = new Vector2(halfThumb, -trackHeight * 0.5f);
+            fillArea.offsetMax = new Vector2(-halfThumb, trackHeight * 0.5f);
+
+            // 띠의 왼쪽 끝은 막대 왼쪽 끝까지 손잡이 반지름만큼 더 내밀고, 오른쪽 끝은 손잡이 가운데(값 자리)에 둔다.
+            // 값이 0일 때 남는 반지름만큼의 띠는 손잡이 밑에 가려진다.
+            RectTransform fill = UiPrimitives.CreateRect("Fill", fillArea);
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = new Vector2(0f, 1f);
+            fill.offsetMin = new Vector2(-halfThumb, 0f);
+            fill.offsetMax = Vector2.zero;
+            UiPrimitives.AddImage(fill, palette.Accent, trackHeight * 0.5f);
 
             // 손잡이 가운데가 움직이는 구간. 손잡이가 막대 밖으로 삐져나가지 않게 양끝을 손잡이 반지름만큼 뺀다.
+            // 높이는 손잡이 크기와 같게 둔다. 슬라이더가 손잡이의 위아래 앵커를 0~1로 덮어써서 손잡이 높이가 이 구간의 높이가 되기 때문이다.
             RectTransform handleArea = UiPrimitives.CreateRect("HandleArea", root);
-            UiPrimitives.Stretch(handleArea, thumbSize * 0.5f, 0f, thumbSize * 0.5f, 0f);
+            handleArea.anchorMin = new Vector2(0f, 0.5f);
+            handleArea.anchorMax = new Vector2(1f, 0.5f);
+            handleArea.offsetMin = new Vector2(halfThumb, -halfThumb);
+            handleArea.offsetMax = new Vector2(-halfThumb, halfThumb);
 
+            // 세로 sizeDelta를 0으로 둔다. 0이 아니면 그만큼 손잡이가 세로로 늘어나 동그라미가 타원이 된다.
             RectTransform handle = UiPrimitives.CreateRect("Handle", handleArea);
-            handle.anchorMin = new Vector2(0f, 0.5f);
-            handle.anchorMax = new Vector2(0f, 0.5f);
-            handle.sizeDelta = new Vector2(thumbSize, thumbSize);
-            Image ring = UiPrimitives.AddCircle(handle, palette.AccentThumb);
+            handle.anchorMin = Vector2.zero;
+            handle.anchorMax = new Vector2(0f, 1f);
+            handle.sizeDelta = new Vector2(thumbSize, 0f);
+            Image ring = UiPrimitives.AddCircle(handle, palette.Thumb);
             ring.raycastTarget = true;
 
             RectTransform inner = UiPrimitives.CreateRect("Inner", handle);
             UiPrimitives.Stretch(inner, DashboardMetrics.SliderThumbBorder, DashboardMetrics.SliderThumbBorder, DashboardMetrics.SliderThumbBorder, DashboardMetrics.SliderThumbBorder);
-            UiPrimitives.AddCircle(inner, palette.Thumb);
+            UiPrimitives.AddCircle(inner, palette.Accent);
 
             var slider = root.gameObject.AddComponent<Slider>();
             slider.direction = Slider.Direction.LeftToRight;
+            slider.fillRect = fill;
             slider.handleRect = handle;
             slider.targetGraphic = ring;
             slider.transition = Selectable.Transition.None;
