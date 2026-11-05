@@ -10,6 +10,7 @@ namespace MediKitTwin.ArmA
     /// 준비된 로봇에 카메라, 물건 인식기, 장애물 회피를 만들어 ArmPerception에 채운다. 씬의 충돌체와 링크를 읽는 일을 한곳에 모았다.
     ///  - 카메라: 도구 링크에 달고, 시뮬레이션 인식기를 만들어 보고 결과를 카메라 화면에 남기게 감싼다.
     ///  - 장애물 회피: 링크 충돌체로 충돌 상자를 만들고, 지금 서 있는 자리용 판정(지금 자세에서 출발)과 가늠용 판정(접힌 자세에서 출발)을 만든다.
+///  - 서는 자리의 베이스 겹침: 팔 베이스 링크 상자에 팔을 싣고 다니는 차체 상자를 더해 따진다(차체가 올라선 바닥은 장애물이 아니다).
     /// 장애물로 보지 않는 충돌체: 로봇 자신, 쥔 물건, 팔 베이스 가까이에 붙은 것(굴러가는 베이스의 몸체 등. 팔이 항상 닿아 있다).
     /// </summary>
     public static class ArmPerceptionBuilder
@@ -19,6 +20,7 @@ namespace MediKitTwin.ArmA
 
         /// <param name="solver">도구 자세를 관절 각도로 푸는 쪽. 없으면 장애물 회피와 관절 길 고치기를 쓰지 못한다.</param>
         /// <param name="stowSource">팔을 접는 자세를 알려 주는 쪽. 없으면 가늠할 때도 지금 자세에서 출발한다.</param>
+        /// <param name="carrierRoot">팔을 싣고 다니는 베이스의 루트. 없으면 차체가 레일에 파고드는지는 따지지 않는다.</param>
         /// <param name="log">진행을 알리는 쪽.</param>
         public static void Attach(
             ArmPerception perception,
@@ -26,6 +28,7 @@ namespace MediKitTwin.ArmA
             IGripperHost host,
             ISeededToolSolver solver,
             IArmStowPoseSource stowSource,
+            Transform carrierRoot,
             ToolCameraSettings cameraSettings,
             RecognitionSettings recognitionSettings,
             CollisionAvoidanceSettings collisionSettings,
@@ -40,7 +43,8 @@ namespace MediKitTwin.ArmA
             Func<Pose, string> describeBase = null;
             if (collisionSettings.Enabled)
             {
-                CreateClearanceProbes(model, robotRoot, solver, stowSource, collisionSettings, isIgnored, log, out current, out stowed, out describeBase);
+                CreateClearanceProbes(
+                    model, robotRoot, carrierRoot, solver, stowSource, collisionSettings, isIgnored, log, out current, out stowed, out describeBase);
             }
 
             IGraspRefiner refiner = null;
@@ -86,6 +90,7 @@ namespace MediKitTwin.ArmA
         private static void CreateClearanceProbes(
             IArmModel model,
             Transform robotRoot,
+            Transform carrierRoot,
             ISeededToolSolver solver,
             IArmStowPoseSource stowSource,
             CollisionAvoidanceSettings settings,
@@ -137,27 +142,42 @@ namespace MediKitTwin.ArmA
             stowed = new ArmClearanceProbe(solver, () => StowOrCurrent(model, stowSource, seedBuffer), checker, armBaseNow, jointCount);
 
             log(DescribeVolumes(volumes, linkNames, settings));
-            describeBase = CreateBaseCheck(model, bodies, settings, isIgnored, log);
+            describeBase = CreateBaseCheck(model, bodies, robotRoot, carrierRoot, settings, isIgnored, log);
         }
 
-        // 베이스 링크가 서 있는 자리에서 장애물과 겹치는지 묻는 함수. 팔 링크의 상자는 베이스 링크를 빼고 만들어서 따로 만든다.
+        // 베이스가 서 있는 자리에서 장애물과 겹치는지 묻는 함수. 팔 링크의 상자는 베이스 링크를 빼고 만들어서 따로 만든다.
+        // 베이스 링크 상자에 차체 상자를 더해 따진다. 차체의 충돌체와 차체가 올라선 바닥은 장애물이 아니다.
         private static Func<Pose, string> CreateBaseCheck(
-            IArmModel model, IReadOnlyList<ArticulationBody> bodies, CollisionAvoidanceSettings settings, Predicate<Collider> isIgnored, Action<string> log)
+            IArmModel model,
+            IReadOnlyList<ArticulationBody> bodies,
+            Transform robotRoot,
+            Transform carrierRoot,
+            CollisionAvoidanceSettings settings,
+            Predicate<Collider> isIgnored,
+            Action<string> log)
         {
             if (!settings.AvoidBaseOverlap)
             {
                 return null;
             }
 
-            List<LinkVolume> baseVolumes = BaseVolumeBuilder.Build(model.BaseLink, bodies);
-            if (baseVolumes.Count == 0)
+            List<LinkVolume> volumes = BaseVolumeBuilder.Build(model.BaseLink, bodies);
+            int baseCount = volumes.Count;
+            CarrierBody carrier = settings.AvoidCarrierOverlap
+                ? CarrierVolumeBuilder.Build(carrierRoot, model.BaseLink, robotRoot)
+                : CarrierBody.None;
+            volumes.AddRange(carrier.Volumes);
+            if (volumes.Count == 0)
             {
                 log("팔 베이스 링크에 붙은 충돌체가 없어 베이스가 장애물에 파고드는지는 따지지 않는다.");
                 return null;
             }
 
-            var baseChecker = new BaseClearanceChecker(baseVolumes, new PhysicsObstacleQuery(settings.ObstacleLayers, isIgnored), settings.BaseMarginM);
-            log($"팔 베이스 충돌 상자 {baseVolumes.Count}개를 만들었다. 여유 {settings.BaseMarginM * 100f:0.0}cm.");
+            Predicate<Collider> isGround = GroundSurface.Of(carrier.UndersideY, settings.GroundToleranceM);
+            Predicate<Collider> ignoredForBase = collider => isIgnored(collider) || carrier.Contains(collider) || isGround(collider);
+            var baseChecker = new BaseClearanceChecker(volumes, new PhysicsObstacleQuery(settings.ObstacleLayers, ignoredForBase), settings.BaseMarginM);
+            log($"팔 베이스 충돌 상자 {baseCount}개, 차체 충돌 상자 {carrier.Volumes.Count}개를 만들었다. 여유 {settings.BaseMarginM * 100f:0.0}cm."
+                + (carrier.Volumes.Count > 0 ? $" 차체 밑면 높이 {carrier.UndersideY:0.000}m(+{settings.GroundToleranceM * 100f:0.0}cm) 이하의 바닥은 장애물로 보지 않는다." : string.Empty));
             return pose => baseChecker.TryFindCollision(pose, out string description) ? description : string.Empty;
         }
 

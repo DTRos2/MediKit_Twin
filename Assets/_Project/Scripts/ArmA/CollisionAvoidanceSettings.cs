@@ -28,6 +28,11 @@ namespace MediKitTwin.ArmA
         [Tooltip("켜면 박스 곁에 서기 전에, 그 자리에 선 팔 베이스(고정 베이스 링크)가 컨베이어 레일 같은 장애물에 파고드는지 따져 파고들면 뒤로 물러나 선다. " +
                  "파고든 채 서면 첫 관절이 홈 자세에서 튀어 나가 팔을 접지 못한다.")]
         [SerializeField] private bool _avoidBaseOverlap = true;
+        [Tooltip("켜면 팔 베이스 링크뿐 아니라 팔을 싣고 다니는 차체(바퀴·궤도·받침)도 레일 같은 장애물에 파고드는지 따진다. " +
+                 "차체는 팔 베이스보다 앞뒤로 커서 베이스가 닿지 않아도 차체는 레일을 파고들 수 있다. 끄면 팔 베이스 링크만 따진다.")]
+        [SerializeField] private bool _avoidCarrierOverlap = true;
+        [Tooltip("차체 밑면보다 윗면이 이만큼(m)까지 높은 충돌체는 차체가 올라선 바닥으로 보고 장애물에서 뺀다. 바닥은 차체 상자와 늘 맞닿아 있어서 빼지 않으면 어디에 서도 겹친다.")]
+        [SerializeField, Range(0f, 0.1f)] private float _groundToleranceM = 0.03f;
         [Tooltip("팔 베이스 상자를 이만큼(m) 키워 따진다. 도착 오차로 조금 어긋나 서도 파고들지 않을 여유다.")]
         [SerializeField, Range(0f, 0.05f)] private float _baseMarginM = 0.01f;
         [Tooltip("파고들지 않는 자리를 찾을 때 한 번에 물러나는 거리(m).")]
@@ -38,6 +43,10 @@ namespace MediKitTwin.ArmA
         public bool Enabled => _enabled;
 
         public bool AvoidBaseOverlap => _avoidBaseOverlap;
+
+        public bool AvoidCarrierOverlap => _avoidCarrierOverlap;
+
+        public float GroundToleranceM => _groundToleranceM;
 
         public float BaseMarginM => _baseMarginM;
 

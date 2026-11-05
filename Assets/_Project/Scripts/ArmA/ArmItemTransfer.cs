@@ -205,6 +205,7 @@ namespace MediKitTwin.ArmA
                 host,
                 _toolTarget as ISeededToolSolver,
                 _positioner as IArmStowPoseSource,
+                (_positioner as ArmBasePositionerBehaviour)?.MobileBaseRoot,
                 _camera,
                 _recognition,
                 _collision,

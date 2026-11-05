@@ -141,6 +141,9 @@ namespace MediKitTwin.ArmA
         /// <summary>이 이동 모듈이 옮기는 굴러가는 베이스. 지정되지 않았거나 IMobileBase가 아니면 null이다.</summary>
         public IMobileBase MobileBase => _mobileBase as IMobileBase;
 
+        /// <summary>굴러가는 베이스의 루트(차체와 팔이 그 아래에 있다). 지정되지 않았으면 null이다.</summary>
+        public Transform MobileBaseRoot => _mobileBase != null ? _mobileBase.transform : null;
+
         /// <summary>팔 베이스 위치를 알려 주는 쪽(보통 ArmController). 어느 팔이 이 베이스에 실려 있는지 알아내는 데 쓴다.</summary>
         public MonoBehaviour ArmBaseSource => _armBase;
 
