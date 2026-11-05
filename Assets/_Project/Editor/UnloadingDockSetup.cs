@@ -25,6 +25,29 @@ namespace MediKitTwin.EditorTools
         private const string SlotPrefix = "DockPlace_Slot_";
         private const string DockPointPrefix = "DockPlace_DockPoint_";
         private const string ZonePrefix = "DockPlace_Zone_";
+        private const string DividerPrefix = "DockPlace_Divider_";
+
+        // 구역을 눈으로 가르는 칸막이. 박스(높이 0.10m)가 가려지지 않고 팔이 위로 걸리지 않을 만큼 낮고 얇게 둔다.
+        private const float DividerHeightM = 0.06f;
+        private const float DividerThicknessM = 0.012f;
+        private const string DividerMaterialPath = "Assets/_Project/Materials/DockDivider.mat";
+        private static readonly Color DividerColor = new Color(0.95f, 0.75f, 0.1f);
+
+        // 구역 푯말. 줄이 끝나는 안쪽(+x) 끝에 서서 로봇이 서는 -x쪽을 향한다. 판 아래쪽은 박스(높이 0.10m) 위에 오도록 띄운다.
+        private const string SignPrefix = "DockPlace_Sign_";
+        private const string SignBoardName = "Board";
+        private const string SignTextName = "Text";
+        private const string SignMaterialPath = "Assets/_Project/Materials/DockSign.mat";
+        private const string BuiltinFontName = "LegacyRuntime.ttf";
+        private const float SignWidthM = 0.30f;
+        private const float SignHeightM = 0.12f;
+        private const float SignThicknessM = 0.01f;
+        private const float SignBottomAboveTopM = 0.10f;
+        private const float SignEndInsetM = 0.03f;
+        private const float SignCharacterSize = 0.012f;
+        private const int SignFontSize = 64;
+        private static readonly Color SignBoardColor = new Color(0.1f, 0.1f, 0.1f);
+        private static readonly Color SignTextColor = Color.white;
 
         // 이전 버전이 만들던 이름(구역이 하나였고 DockPlace 폴더 아래에 있었다). 실행할 때 지운다.
         private const string LegacyFolderName = "DockPlace";
@@ -175,6 +198,8 @@ namespace MediKitTwin.EditorTools
                 zones[i].dockPoint = dockPoints[i];
             }
 
+            SetupDividers(dock, bounds, topY, zoneCount);
+
             // 구역(열)마다 칸 하나. 팔 높이는 칸 번호로 정해지므로 Level 0 하나만 둔다.
             var columns = new ShelfStorage.StorageColumn[zoneCount];
             for (int i = 0; i < zoneCount; i++)
@@ -199,10 +224,176 @@ namespace MediKitTwin.EditorTools
 
             stockData.ApplyModifiedProperties();
 
+            SetupSigns(dock, bounds, topY, zoneCount, stockData.FindProperty("_kitCodes"));
+
             Undo.CollapseUndoOperations(group);
             EditorUtility.SetDirty(body.gameObject);
 
             LogResult(body, topY, bounds, zoneCount, slots, dockPoints);
+        }
+
+        // 구역 경계마다 칸막이를 하나씩 세운다(구역 수 + 1개: 양 끝 바깥 경계 포함). 경계는 이웃한 Slot의 z 한가운데이다.
+        // 가장자리(bounds.min.x)에서 안쪽 끝까지 이어져 박스가 밀려 들어가는 줄 전체를 가른다. 눈으로 보는 용도라 콜라이더는 없앤다.
+        private static void SetupDividers(Transform dock, Bounds bounds, float topY, int zoneCount)
+        {
+            Material material = EnsureDividerMaterial();
+            Vector3 parentScale = dock.lossyScale;
+
+            for (int i = 0; i <= zoneCount; i++)
+            {
+                float z = bounds.center.z + (i - zoneCount * 0.5f) * ZonePitchM;
+
+                Transform divider = AgvPlatformSetup.FindInScene(DividerPrefix + i);
+                if (divider == null)
+                {
+                    GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    cube.name = DividerPrefix + i;
+                    Undo.RegisterCreatedObjectUndo(cube, "Create " + cube.name);
+                    divider = cube.transform;
+                }
+
+                if (divider.parent != dock)
+                {
+                    Undo.SetTransformParent(divider, dock, "Move Divider");
+                }
+
+                Collider collider = divider.GetComponent<Collider>();
+                if (collider != null)
+                {
+                    Undo.DestroyObjectImmediate(collider);
+                }
+
+                Undo.RecordObject(divider, "Divider transform");
+                divider.rotation = Quaternion.identity;
+                divider.localScale = new Vector3(
+                    bounds.size.x / Mathf.Max(0.0001f, parentScale.x),
+                    DividerHeightM / Mathf.Max(0.0001f, parentScale.y),
+                    DividerThicknessM / Mathf.Max(0.0001f, parentScale.z));
+                divider.position = new Vector3(bounds.center.x, topY + DividerHeightM * 0.5f, z);
+
+                MeshRenderer meshRenderer = divider.GetComponent<MeshRenderer>();
+                if (meshRenderer != null && material != null)
+                {
+                    Undo.RecordObject(meshRenderer, "Divider material");
+                    meshRenderer.sharedMaterial = material;
+                }
+            }
+        }
+
+        // 구역마다 키트 코드를 적은 푯말을 줄 끝(안쪽 +x)에 세운다. 코드는 UnloadingDockStock의 KitCodes 순서를 따른다.
+        // 푯말 루트는 도크의 비균일 스케일을 상쇄해 글자와 판이 찌그러지지 않게 한다.
+        private static void SetupSigns(Transform dock, Bounds bounds, float topY, int zoneCount, SerializedProperty kitCodes)
+        {
+            Material boardMaterial = EnsureSolidMaterial(SignMaterialPath, SignBoardColor);
+            Font font = Resources.GetBuiltinResource<Font>(BuiltinFontName);
+            Vector3 parentScale = dock.lossyScale;
+            Quaternion toRobot = Quaternion.LookRotation(Vector3.right, Vector3.up);
+
+            for (int i = 0; i < zoneCount; i++)
+            {
+                float z = bounds.center.z + (i - (zoneCount - 1) * 0.5f) * ZonePitchM;
+                string code = kitCodes != null && i < kitCodes.arraySize ? kitCodes.GetArrayElementAtIndex(i).stringValue : i.ToString();
+
+                Transform sign = AgvPlatformSetup.EnsureChild(dock, SignPrefix + i);
+                Undo.RecordObject(sign, "Sign transform");
+                sign.rotation = Quaternion.identity;
+                sign.localScale = new Vector3(
+                    1f / Mathf.Max(0.0001f, parentScale.x),
+                    1f / Mathf.Max(0.0001f, parentScale.y),
+                    1f / Mathf.Max(0.0001f, parentScale.z));
+                sign.position = new Vector3(bounds.max.x - SignEndInsetM, topY + SignBottomAboveTopM + SignHeightM * 0.5f, z);
+
+                Transform board = sign.Find(SignBoardName);
+                if (board == null)
+                {
+                    GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    cube.name = SignBoardName;
+                    Undo.RegisterCreatedObjectUndo(cube, "Create sign board");
+                    Collider collider = cube.GetComponent<Collider>();
+                    if (collider != null)
+                    {
+                        Object.DestroyImmediate(collider);
+                    }
+
+                    cube.transform.SetParent(sign, false);
+                    board = cube.transform;
+                }
+
+                Undo.RecordObject(board, "Sign board");
+                board.localPosition = Vector3.zero;
+                board.localRotation = Quaternion.identity;
+                board.localScale = new Vector3(SignThicknessM, SignHeightM, SignWidthM);
+                MeshRenderer boardRenderer = board.GetComponent<MeshRenderer>();
+                if (boardRenderer != null && boardMaterial != null)
+                {
+                    Undo.RecordObject(boardRenderer, "Sign board material");
+                    boardRenderer.sharedMaterial = boardMaterial;
+                }
+
+                // 글자는 판의 로봇 쪽(-x) 면 바로 앞에 둔다. TextMesh의 앞면은 -Z라 +x를 보게 돌리면 앞면이 -x를 향한다.
+                Transform text = sign.Find(SignTextName);
+                if (text == null)
+                {
+                    var textObject = new GameObject(SignTextName);
+                    Undo.RegisterCreatedObjectUndo(textObject, "Create sign text");
+                    textObject.transform.SetParent(sign, false);
+                    textObject.AddComponent<TextMesh>();
+                    text = textObject.transform;
+                }
+
+                Undo.RecordObject(text, "Sign text transform");
+                text.localPosition = new Vector3(-(SignThicknessM * 0.5f + 0.001f), 0f, 0f);
+                text.localRotation = toRobot;
+                text.localScale = Vector3.one;
+
+                var mesh = text.GetComponent<TextMesh>();
+                Undo.RecordObject(mesh, "Sign text");
+                mesh.font = font;
+                mesh.fontSize = SignFontSize;
+                mesh.characterSize = SignCharacterSize;
+                mesh.anchor = TextAnchor.MiddleCenter;
+                mesh.alignment = TextAlignment.Center;
+                mesh.color = SignTextColor;
+                mesh.text = code;
+
+                // 동적 글꼴은 자기 재질을 렌더러에 줘야 글자가 그려진다.
+                text.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            }
+        }
+
+        private static Material EnsureDividerMaterial()
+        {
+            return EnsureSolidMaterial(DividerMaterialPath, DividerColor);
+        }
+
+        private static Material EnsureSolidMaterial(string path, Color color)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null)
+            {
+                shader = Shader.Find("Standard");
+            }
+
+            if (shader == null)
+            {
+                Debug.LogWarning("[UnloadingDockSetup] 재질에 쓸 셰이더를 찾지 못해 기본 재질을 씁니다.");
+                return null;
+            }
+
+            if (!AssetDatabase.IsValidFolder("Assets/_Project/Materials"))
+            {
+                AssetDatabase.CreateFolder("Assets/_Project", "Materials");
+            }
+
+            var material = new Material(shader) { color = color };
+            AssetDatabase.CreateAsset(material, path);
+            return material;
         }
 
         // 구역이 하나이던 이전 버전의 오브젝트를 지운다.
