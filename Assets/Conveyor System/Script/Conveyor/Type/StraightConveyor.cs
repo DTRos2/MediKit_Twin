@@ -11,13 +11,11 @@ namespace ConveyorSystem
     {
         /// <summary>
         /// Resets the component to its default state.
-        /// Sets the conveyor type to Straight and creates default points if missing.
+        /// Sets the conveyor type to Straight. Missing points are created by OnValidate (editor only).
         /// </summary>
         private void Reset()
         {
             ConveyorType = ConveyorType.Straight;
-            // If there are no points, create them by default
-            CreateDefaultPoints();
         }
 
         /// <summary>
