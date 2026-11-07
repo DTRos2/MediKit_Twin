@@ -1,0 +1,17 @@
+{
+    "name": "MediKitTwin.ArmA",
+    "rootNamespace": "MediKitTwin.ArmA",
+    "references": [
+        "MediKitTwin.Common",
+        "MediKitTwin.Recipes"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

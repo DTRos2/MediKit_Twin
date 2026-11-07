@@ -1,0 +1,16 @@
+{
+    "name": "MediKitTwin.Mobile",
+    "rootNamespace": "MediKitTwin.Mobile",
+    "references": [
+        "MediKitTwin.Common"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

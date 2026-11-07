@@ -1,0 +1,26 @@
+{
+    "name": "MediKitTwin.Demo",
+    "rootNamespace": "MediKitTwin.Demo",
+    "references": [
+        "MediKitTwin.Common",
+        "MediKitTwin.Dashboard",
+        "MediKitTwin.ArmA",
+        "MediKitTwin.Conveyor",
+        "MediKitTwin.Inspection",
+        "MediKitTwin.Inventory",
+        "MediKitTwin.Orders",
+        "MediKitTwin.Pusher",
+        "MediKitTwin.Recipes",
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

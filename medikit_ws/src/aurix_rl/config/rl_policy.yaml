@@ -1,0 +1,13 @@
+# rl_policy_node 파라미터. Unity RosPolicy의 토픽 이름과 같아야 한다.
+rl_policy_node:
+  ros__parameters:
+    policy: random              # random | zero
+    seed: 7
+    # 행동 크기 = 관절 6개 + 그리퍼 1개. 그리퍼 없이 팔만 학습하면 6.
+    action_size: 7
+    observation_topic: /rl/observation
+    action_topic: /rl/action
+    reward_topic: /rl/step_reward
+    episode_topic: /rl/episode_result
+    log_interval_episodes: 10
+    stats_window: 50

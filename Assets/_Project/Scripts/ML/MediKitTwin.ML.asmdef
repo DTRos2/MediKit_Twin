@@ -1,0 +1,17 @@
+{
+    "name": "MediKitTwin.ML",
+    "rootNamespace": "MediKitTwin.ML",
+    "references": [
+        "MediKitTwin.Common",
+        "MediKitTwin.Recipes"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

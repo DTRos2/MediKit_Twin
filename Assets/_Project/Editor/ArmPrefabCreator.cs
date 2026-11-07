@@ -1,0 +1,57 @@
+using System.IO;
+using MediKitTwin.ArmA;
+using MediKitTwin.Common;
+using UnityEditor;
+using UnityEngine;
+
+// 씬의 fr5_robot, ur3_with_gripper를 프리팹으로 저장하고 씬 오브젝트를 그 프리팹의 인스턴스로 연결한다.
+// 컨벤션: 프리팹 접두사 PF_, 한글과 공백 없음, 기능은 프리팹으로 만들고 씬에는 인스턴스만 둔다.
+public static class ArmPrefabCreator
+{
+    private const string Folder = ProjectAssetPaths.PrefabsFolder;
+
+    [MenuItem("Tools/Arm/Create robot prefabs (FR5, UR3)")]
+    private static void CreateBoth()
+    {
+        CreatePrefab("fr5_robot", "PF_FR5Robot");
+        CreatePrefab("ur3_with_gripper", "PF_UR3Robot");
+    }
+
+    private static void CreatePrefab(string sceneObjectName, string prefabName)
+    {
+        GameObject robot = GameObject.Find(sceneObjectName);
+        if (robot == null)
+        {
+            Debug.LogWarning($"씬에서 '{sceneObjectName}'를 찾지 못해 {prefabName}을(를) 건너뛴다.");
+            return;
+        }
+
+        if (PrefabUtility.IsPartOfPrefabInstance(robot))
+        {
+            Debug.LogWarning($"'{sceneObjectName}'는 이미 프리팹 인스턴스다. {prefabName}을(를) 건너뛴다.");
+            return;
+        }
+
+        if (robot.GetComponent<ArmController>() == null)
+        {
+            Debug.LogWarning($"'{sceneObjectName}'에 ArmController가 없다. Tools > Arm > Setup selected robot 을 먼저 실행한다.");
+            return;
+        }
+
+        string path = $"{Folder}/{prefabName}.prefab";
+        if (File.Exists(path))
+        {
+            Debug.LogWarning($"{path}가 이미 있어서 덮어쓰지 않았다. 지우고 다시 만들거나 Prefab Mode에서 수정한다.");
+            return;
+        }
+
+        if (!AssetDatabase.IsValidFolder(Folder))
+        {
+            AssetDatabase.CreateFolder(ProjectAssetPaths.ProjectRoot, ProjectAssetPaths.PrefabsFolderName);
+        }
+
+        GameObject prefab = PrefabUtility.SaveAsPrefabAssetAndConnect(robot, path, InteractionMode.UserAction);
+
+        Debug.Log($"{path}를 만들고 씬의 '{sceneObjectName}'를 인스턴스로 연결했다.", prefab);
+    }
+}

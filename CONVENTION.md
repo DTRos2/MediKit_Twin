@@ -1,6 +1,6 @@
 # MediKit_Twin 협업 컨벤션
 
-> Unity · GitHub (2인 팀) · 요구사항 기준 문서: [docs/AURIX_SRS_V1.1.docx](docs/AURIX_SRS_V1.1.docx)
+> Unity · GitHub (2인 팀) · 요구사항 기준 문서: [docs/AURIX_SRS.docx](docs/AURIX_SRS.docx)
 > 커밋 메시지 규칙은 [COMMIT_RULES.md](COMMIT_RULES.md) 참고
 
 ---
@@ -113,6 +113,7 @@ git push -u origin feature/<이니셜>-<기능>
 - 네임스페이스는 `MediKitTwin.<영역>` 형식을 쓴다. (예: `MediKitTwin.Conveyor`, `MediKitTwin.Inspection`)
 - 불리언은 `is/has/can`으로 시작한다.
 - 설비 사이의 신호는 **`CellEvents` 이벤트 버스로만** 주고받고, 설비끼리 직접 참조하지 않는다.
+- 의존 방향은 어셈블리 정의(asmdef)로 강제한다. `MediKitTwin.Recipes`는 아무것도 참조하지 않고, `MediKitTwin.Common`은 `Recipes`만 참조한다. `Ros`는 `Common`만 참조하고, `Common`은 `Ros`를 참조하지 않는다. 새 폴더(Orders, ArmA 등)에 asmdef를 만들 때는 `Common`만 참조한다.
 
 ### 6-2. 작성 규칙
 
@@ -125,10 +126,12 @@ git push -u origin feature/<이니셜>-<기능>
 ### 6-3. 시뮬레이션 규칙
 
 - **난수는 시드를 받는 `System.Random` 인스턴스**로 만든다. 같은 시드면 같은 키트에서 누락이 발생해야 한다. (FR-04, NFR-06) `UnityEngine.Random` 전역 상태는 누락 규칙에 쓰지 않는다.
-- 시간은 `Time.deltaTime` 등 **시뮬레이션 시간** 기준으로 계산한다. 배속(0.5, 1, 2, 4배)이 로봇, 컨베이어, 하역 로봇, 대시보드 지표에 모두 적용되어야 한다. (FR-15) 실시간 `DateTime`은 지표 계산에 쓰지 않는다.
+- 시간은 `SimClock.Now`(시작·완료 시각, 보충 대기, 타임아웃, 로그 시각)와 `Time.deltaTime`(프레임 이동량)처럼 **시뮬레이션 시간** 기준으로 계산한다. 배속(0.5, 1, 2배)이 로봇, 컨베이어, 하역 로봇, 대시보드 지표에 모두 적용되어야 한다. (FR-15) 실제 시간(`DateTime`, `Time.unscaledTime`)은 지표 계산에 쓰지 않는다. 예외는 ROS 토픽 발행 주기와 설비 주기 통지(`StationAlive`)뿐이다. ROS 제어 모드에서는 `SimClock.SetSpeedLocked(true)`로 1배속에 고정한다. 한 프레임에 하는 계산(IK 풀이, 겹침 확인)은 실제 시간(ms) 예산(`FrameBudget`)을 쓰는데, 예산이 배속과 상관없으면 배속을 올려도 계산에 쓰는 프레임 수가 그대로라 그 시간이 배속 배로 늘어 소요 시간이 배속만큼 줄지 않는다. 프레임 단위로 쉬는 계산을 새로 넣을 때는 예산을 배속만큼 늘린다.
 - **검사 판정 코드는 누락 정답 라벨을 읽지 않는다.** 정답 라벨은 판정이 끝난 뒤 로그 비교에만 쓴다. (FR-06)
 - 키트 종류는 `RecipeSO`로만 구분한다. 키트를 추가할 때 스크립트를 고치지 않고 레시피 파일 1개만 추가해야 한다. (NFR-07)
-- 설비 상태는 `가동 / 대기 / 정지` 중 하나로 통일하고, 생산 로그 CSV는 실행마다 새 파일로 저장한다. (덮어쓰지 않음)
+- 설비 상태는 `가동 / 대기 / 정지` 중 하나로 통일하고, 상태가 바뀔 때 `StationStateChanged`를 보내고, 상태가 같아도 1초마다 `StationAlive`를 보낸다. (`StationHeartbeat`, FR-14) 로거와 주문 관리는 `StationStateChanged`만 구독한다.
+- 생산 로그 CSV는 실행마다 새 파일로 저장한다. (덮어쓰지 않음) 설비는 로그 파일을 직접 다루지 않고, `CellEvents`를 구독하는 로거(`IProductionLog`)가 기록한다.
+- 키트 코드는 대문자 `string`(EM, BL, DX)이다. 재고는 `IStock`, 주문 현황은 `IOrderStatus`, 다음 키트는 `IKitSource`, 박스는 `IBoxSupply`, 판정기는 `IInspector`로만 접근하고 구체 클래스를 직접 참조하지 않는다.
 
 ### 6-4. Unity 메시지 메서드 순서
 
@@ -139,7 +142,15 @@ git push -u origin feature/<이니셜>-<기능>
 - `Update` 안에서 `GetComponent`, `Find*`, `Camera.main`을 호출하지 않는다. `Awake`/`Start`에서 캐싱한다.
 - 매 프레임 `new`(배열, 리스트)나 문자열 연결을 하지 않는다.
 - 태그 비교는 `CompareTag`를 쓴다.
-- 1배속 평균 30 FPS 이상(NFR-01)을 지킨다. 4배속에서 FPS가 20 미만이면 경고를 표시한다.
+- 1배속 평균 30 FPS 이상(NFR-01)을 지킨다. 가장 빠른 배속(2배속)에서 FPS가 20 미만이면 경고를 표시한다.
+
+### 6-6. 물리·충돌 규칙
+
+- 움직이는 베이스 위에 얹는 팔은 **밑동 콜라이더와 베이스 콜라이더 사이를 2cm 이상** 띄운다. 겹치거나 맞닿으면 팔이 선반 쪽으로 뻗을 때 Unity가 PhysX 계산에서 네이티브 크래시(Bug Reporter)로 꺼진다. 접촉은 두 콜라이더의 접촉 거리 합(기본 `defaultContactOffset` 0.01m × 2)부터 생긴다.
+- 간격은 눈에 보이는 메시를 건드리지 않고 **콜라이더만 줄여서** 만든다. (`ArmA.prefab`의 `Base` 콜라이더 윗면을 약 5cm 낮췄다.)
+- 팔이나 베이스의 높이, 위치, 크기를 바꾸면 이 간격을 다시 확인한다.
+- 팔과 받침대의 충돌을 `Physics.IgnoreCollision`으로 끄기보다 간격을 만드는 쪽을 기본으로 한다. 장애물 회피 계산(`ArmPerceptionBuilder.FindMounts`)은 베이스 가까이의 콜라이더를 이미 장애물에서 빼므로, 간격을 만들면 계산과 물리가 같은 전제가 된다.
+- 크래시 로그 보는 법, 원인, 조사 경위는 [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)에 있다.
 
 ---
 
@@ -166,19 +177,47 @@ Unity 데이터 생성기(FR-08) → PNG + labels.csv → PyTorch 학습 → ONN
 ```
 Assets/
 ├─ _Project/
-│  ├─ Scripts/{Orders, Recipes, ArmA, ArmB, Conveyor, Inspection, Pusher, Inventory, Unloader, Dashboard, ML, Common}
+│  ├─ Scripts/{Orders, Recipes, ArmA, ArmB, Conveyor, Inspection, Pusher, Label, Inventory, Unloader, Logging, Dashboard, CameraRig, ML, Rl, Mobile, Demo, Ros, Common}
 │  ├─ Recipes/          # RecipeSO 파일
+│  ├─ Config/           # 설정 에셋: ScenarioConfigSO(시드, 누락 확률, 재고), ShelfLayoutConfigSO(선반 치수, 배치, 위치, 그리퍼 열림 폭, 로봇암 도달 반경), ArmBaseApproachConfigSO(베이스가 서는 거리와 이동 정밀도), ShelfItemLooksSO(구성품 모양), ArmProfileSO
 │  ├─ Prefabs/
 │  ├─ Scenes/
 │  ├─ Materials/
 │  ├─ Models/
 │  └─ ML/Models/        # .onnx
+├─ StreamingAssets/Orders/   # 주문 파일 (FR-01, 빌드에서도 읽기 위해)
+├─ Resources/                # ROSConnectionPrefab (ROS-TCP-Connector가 생성)
 └─ (서드파티 에셋은 _Project 밖에 둔다)
 ml/                    # 파이썬 학습 코드 (데이터셋은 커밋하지 않음)
-docs/                  # SRS, 기획표, WBS, 공정 흐름도
+medikit_ws/           # ROS 2 워크스페이스 (colcon)
+docs/                  # SRS, 기획표, WBS, 공정 흐름도, 트러블슈팅
 ```
 
-- ROS 2 연동(선택 확장)은 10/30 판단 뒤에 필요할 때 `ros2/` 폴더를 추가한다.
+| Scripts 폴더 | 내용 | 요구사항 |
+|---|---|---|
+| `Orders` | 주문 파일 읽기와 교체(`OrderSession`), 주문 대기열, 보류·재개 | FR-01, FR-13, FR-16 |
+| `Recipes` | `RecipeSO`와 레시피 데이터 타입 | FR-02 |
+| `ArmA` | 피킹·키팅, 누락 발생 규칙, 관절 구동·IK·그리퍼(`ArmController`, `IkArmTarget`, `JointGripper`) | FR-03, FR-04 |
+| `Conveyor` | 구역 이송, 구역 점유 | FR-05 |
+| `Inspection` | 슬롯 센서 규칙 판정 (`IInspector`) | FR-06 |
+| `ML` | Sentis 추론, 합성 데이터 생성기 | FR-07, FR-08 |
+| `Pusher` | 불량 배출, 불량 박스 | FR-09 |
+| `ArmB` | 뚜껑 덮기 | FR-10 |
+| `Label` | 병원명·로트 라벨 표시 | FR-11 |
+| `Unloader` | 하역 로봇, AGV 경로 | FR-12 |
+| `Inventory` | 선반 재고, 보충 (`IStock`) | FR-13 |
+| `Logging` | `IProductionLog` 구현, 생산 로그 CSV | FR-14 |
+| `Dashboard` | 지표 표시, 배속 UI. 색·치수·글자 표(`DashboardPalette`, `DashboardMetrics`, `TextSpecs`)와 `Ui/`의 uGUI 재사용 부품(`UiChip`, `UiTag`, `UiStatusLine`, `UiStatTile`, `UiTextRow`, `UiSlotList`, `UiSliderRow`, `UiSwitchRow`, `UiCollapsiblePanel`, `UiScrollListSizer`, `UiFontBinding`, `UiKindButton`, `UiButtonColors`). 대시보드는 IMGUI(`OnGUI`)로 그리지 않는다. 부품은 주문 같은 도메인을 모르고 `Common`과 `UnityEngine.UI`만 참조한다 | FR-14, FR-15 |
+| `CameraRig` | 마우스 오른쪽 버튼 카메라 조작 (Input System 사용) | - |
+| `Mobile` | 바퀴·궤도 위에서 굴러가는 베이스의 이동(`MobileBaseDriver`)과 로봇암 얹기(`MountedBaseFollower`). `Common`만 참조 | - |
+| `Demo` | 화면 시험 패널과 임시 장치(`ConveyorHandoffStub`). **대시보드 패널은 모두 코드로 그리지 않고 계층의 uGUI 오브젝트**이다(주문, 배속, 공정 현황, 컨베이어 속도, 선반 재고, 관절 제어, 키팅 로그, 툴 카메라, 인식 표시). 실행 중에 `Instantiate`나 `new GameObject`로 UI를 만들지 않고, 편집기에서 미리 놓은 줄과 칸을 켜고 끈다(넘치면 "외 N건 더"). 패널 하나는 글(`XxxPanelTexts`), 화면(`XxxPanelView`, 계층 연결만 쥐고 값을 채우며 눌림은 이벤트로 올림), 동작(`XxxPanelPresenter`, 도메인 인터페이스만 앎), 프리팹을 만드는 편집기 도구(`XxxPanelPrefabBuilder`)와 씬에 놓는 도구(`XxxPanelSetup`)로 나뉘고, 씬에 놓는 일은 `Tools > MediKit > Setup Dashboard Panels`(없는 것만 올림) 하나가 맡으며 `Rebuild Dashboard Panel Prefabs`는 프리팹을 처음 모양으로 다시 만든다. 자리는 `DemoPanelSlots`가 정한다. **주문 패널**의 경우: 프리팹 `PF_OrderPanel`(`Prefabs/UI/`)을 씬의 `DashboardCanvas` 아래에 놓고, 화면 `OrderPanelView`와 동작 `OrderPanelPresenter`가 그 오브젝트를 연결한다. 프리팹은 `Tools > MediKit > Setup Order Panel`(없으면 만든다)과 `Rebuild Order Panel Prefabs`(처음 모양으로 다시 만든다)가 만든다. **공정 전체 배속 버튼(FR-15)도 같은 방식의 uGUI 프리팹**이다: `PF_SimSpeedPanel`을 `DashboardCanvas` 아래에 놓고(`Tools > MediKit > Setup Sim Speed Panel`, 허용 배속을 바꾸면 `Rebuild Sim Speed Panel Prefab`), `SimSpeedPanelPresenter`가 `ISimSpeedControl`(기본 구현은 `SimClock`)로 배속을 바꾼다. 컨베이어 속도 슬라이더(`PF_ConveyorSpeedPanel`)와는 별개다. 제품 코드와 분리해 빌드에서 뺄 수 있다. `Common`, `ArmA`, `Inventory`, `Orders` 참조 | - |
+| `Rl` | 강화학습 환경(관측, 행동 해석, 보상, 목표 뽑기). `Common` 인터페이스만 본다 | - |
+| `Ros` | 관절 명령 구독, 상태 발행, 정책 노드 연동(`RosPolicy`) | FR-17, FR-18 |
+| `Common` | `CellEvents`, `SimClock`(배속), `ISimSpeedControl`, `FrameBudget`(프레임당 계산 예산, 배속만큼 늘어난다), 공통 인터페이스 | - |
+
+- 각 Scripts 폴더에는 같은 이름의 asmdef(`MediKitTwin.<폴더명>`)가 있다. `Recipes`, `Common`, `CameraRig`를 뺀 나머지는 `Common`만 참조한다. `CameraRig`는 `Unity.InputSystem`만 참조한다. (6-1)
+- 예외로 `Unloader`는 `Common`에 더해 서드파티 에셋 어셈블리 `Warcool.WarehouseRobot`(`Assets/Warehouse_Robot_Controller/Scripts`의 asmdef)도 참조한다. 하역 로봇의 집기·내리기 동작을 에셋 코드가 맡기 때문이다.
+- ROS 2 노드는 `medikit_ws/`, Unity 쪽 ROS 코드는 `Assets/_Project/Scripts/Ros/`에 둔다.
 
 | 에셋 | 접두사 | 예시 |
 |---|---|---|
